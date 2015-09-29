@@ -1,0 +1,4 @@
+Sep 29 2015
+1. Copied all tar names into data_list.txt
+2. Setting up scripts to automatically extract the data. 
+
