@@ -141,6 +141,8 @@ def get_paths():
 	#Stores the folder names along with the keys
 	paths.proc.folders.key  = osp.join(paths.proc.folders.dr, 'key.txt') 
 	paths.proc.folders.pre  = osp.join(paths.proc.folders.dr, '%s.txt') 
+	#The keys for the algined folders
+	paths.proc.folders.aKey = osp.join(paths.proc.folders.dr, 'key-aligned.txt') 
 	return paths
 
 
@@ -164,6 +166,40 @@ def get_prms():
 	prms.paths = get_paths()
 	return prms
 
+
+def get_folder_keys_all(prms):
+	allKeys, allNames = [], []
+	with open(prms.paths.proc.folders.key, 'r') as f:
+		lines = f.readlines()
+		for l in lines:
+			key, name = l.strip().split()
+			allKeys.append(key)
+			allNames.append(name)
+	return allKeys, allNames 
+
+
+def save_aligned_keys(prms):
+	keys, names = get_folder_keys_all(prms)
+	with open(prms.paths.proc.folders.aKey,'w') as f:
+		for k,n in zip(keys,names):	
+			if 'Aligned' in n:
+				f.write('%s\n' % k)
+
+#Return the name of the folder from the id
+def id2name_folder(prms, folderId):
+	outName = None
+	with open(prms.proc.folders.key, 'r') as f:
+		lines = f.readlines()
+		for l in lines:
+			key, name = l.strip().split()
+			if key == folderId:
+				outName = name	
+	return outName
+  
+
+
+def folderid_to_im_label_files(prms, folderId):
+	pass	
 
 def parse_label_file(fName):
 	label = edict()
