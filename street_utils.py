@@ -17,12 +17,20 @@ def process_folder():
 # Helper function for get_foldernames
 def _find_im_labels(folder):
 	fNames = os.listdir(folder)
-	fNames = [f.strip() for f in fNames]
-	if len(fNames)==1:
-		folder = osp.join(folder, fNames[0])
-		print (folder)
-		return _find_im_labels(folder)
-	return folder
+	fNames = [osp.join(folder, f.strip()) for f in fNames]
+	#If one is directory then all should be dirs
+	if osp.isdir(fNames[0]):
+		dirNames = []
+		for f in fNames:
+			childDir = _find_im_labels(f)	
+			if type(childDir) == list:
+				dirNames = dirNames + childDir
+			else:
+				dirNames = dirNames + [childDir]
+	else:
+		dirNames = [folder]
+	print dirNames
+	return dirNames
 
 ##
 # Find the foldernames in which data is stored
@@ -41,10 +49,16 @@ def get_foldernames(prms):
 ##
 # Save the foldernames along with the folder ids
 def save_foldernames(prms):	
-	fNames = get_foldernames(prms)
+	fNames = sorted(get_foldernames(prms))
 	fid    = open(prms.paths.proc.folders.key, 'w')
+	count  = 0
 	for (i,f) in enumerate(fNames):
-		fid.write('%04d \t %s\n' % (i,f))
+		if len(f) > 1:
+			for ff in f:
+				fid.write('%04d \t %s\n' % (i + 1 + count,ff))
+				count += 1
+		else:
+			fid.write('%04d \t %s\n' % (i + 1 + count,f[0]))
 	fid.close()
 
 ##
@@ -150,3 +164,31 @@ def get_prms():
 	prms.paths = get_paths()
 	return prms
 
+
+def parse_label_file(fName):
+	label = edict()
+	with open(fName, 'r') as f:
+		data = f.readlines()
+		dl   = data[0].strip().split()
+		assert dl[0] == 'd'
+		label.ids    = edict()
+		label.ids.ds = int(dl[1]) #DataSet id
+		label.ids.tg = int(dl[2]) #Target id
+		label.ids.im = int(dl[3]) #Image id
+		label.ids.sv = int(dl[4]) #Street view id
+		#dl[5,6,7] -- target point will skip
+		label.nrml   = [float(n) for n in dl[8:11]]
+		#dl[11,12,13] -- street view point not needed
+		label.dist   = float(dl[14])
+		label.rots   = [float(n) for n in dl[15:18]]
+		assert label.rots[2] == 0, 'Something is wrong %s' % fName	
+		label.align = None
+		if len(data) == 2:
+			al = data[0].strip().split()
+			label.align = edict()
+			#Corrected patch center
+			label.align.loc	 = [float(n) for n in al[0:2]]
+			#Warp matrix	
+			label.align.warp = np.array([float(n) for n in al[2:11]])
+	return label
+			

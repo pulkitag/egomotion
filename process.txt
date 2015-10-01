@@ -2,3 +2,17 @@ Sep 29 2015
 1. Copied all tar names into data_list.txt
 2. Setting up scripts to automatically extract the data. 
 
+#Download the data
+download_tar(prms)
+
+#Untar the files by hand
+
+#Create a list of folders -- this generates a key for each folder. 
+save_foldernames(prms)
+
+#Store the prefixes
+#Folders contain <prefix>.jpg, <prefix>.txt as image, label pairs
+#Extract such prefixes and store them in one file per folder
+save_folder_prefixes(prms)
+
+
