@@ -47,8 +47,44 @@ def save_foldernames(prms):
 		fid.write('%04d \t %s\n' % (i,f))
 	fid.close()
 
+##
+# Read names of all files in the folder
+# Ensure that .jpg and .txt match and save those prefixes
+def read_prefixes_from_folder(dirName):
+	allNames = os.listdir(dirName)
+	#Extract the prefixes
+	imNames   = sorted([f for f in allNames if '.jpg' in f], reverse=True)
+	lbNames   = sorted([f for f in allNames if '.txt' in f], reverse=True)
+	prefixStr = []
+	for (i,imn) in enumerate(imNames):
+		imn = imn[0:-4]
+		if i>= len(lbNames):
+			continue
+		if imn in lbNames[i]:
+			prefixStr = prefixStr + [imn] 
+	return prefixStr
+
+##
+# Save filename prefixes for each folder
+def save_folder_prefixes(prms):
+	fid   = open(prms.paths.proc.folders.key, 'r')
+	lines = [l.strip() for l in fid.readlines()]
+	fid.close()
+	keys, names = [], []
+	for l in lines:
+		key, name = l.split()
+		print (key, name)
+		fName   = prms.paths.proc.folders.pre % key
+		if osp.exists(fName):
+			continue
+		preStrs = read_prefixes_from_folder(name) 
+		with open(fName, 'w') as f:
+			for p in preStrs:
+				f.write('%s \n' % p)
+		
+
 def get_tar_files(prms):
-	with open(prms.paths.tarListFile,'r') as f:
+	with open(prms.paths.tar.fileList,'r') as f:
 		fNames = f.readlines()
 	fNames = [f.strip() for f in fNames]
 	return fNames
@@ -57,7 +93,7 @@ def download_tar(prms):
 	fNames = get_tar_files(prms)
 	for f in fNames:
 		_, name = osp.split(f)
-		outName = osp.join(prms.paths.dirs.tarData, name)
+		outName = osp.join(prms.paths.tar.dr, name)
 		print(outName)
 		if not osp.exists(outName):
 			print ('Downloading')
@@ -70,7 +106,7 @@ def get_paths():
 	#For storing the directories
 	paths.dirs = edict()
 	#The raw data
-	paths.dataDr  = '/data1/pulkitag/data_sets/streetview'
+	paths.dataDr  = '/data0/pulkitag/data_sets/streetview'
 	paths.raw     = edict()
 	paths.raw.dr  = osp.join(paths.dataDr, 'raw')
 	#Processed data
@@ -89,7 +125,8 @@ def get_paths():
 	paths.proc.folders.dr = osp.join(paths.proc.dr, 'folders')
 	_mkdir(paths.proc.folders.dr)
 	#Stores the folder names along with the keys
-	paths.proc.folders.key = osp.join(paths.proc.folders.dr, 'key.txt') 
+	paths.proc.folders.key  = osp.join(paths.proc.folders.dr, 'key.txt') 
+	paths.proc.folders.pre  = osp.join(paths.proc.folders.dr, '%s.txt') 
 	return paths
 
 
@@ -106,9 +143,8 @@ def get_data_files(prms):
 	imNames = [f + '.jpg' for f in prefixStr]
 	lbNames = [f + '.txt' for f in prefixStr]
 	return imNames, lbNames
+
 	 
-
-
 def get_prms():
 	prms = edict()
 	prms.paths = get_paths()
