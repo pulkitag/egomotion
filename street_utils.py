@@ -209,12 +209,14 @@ def get_label_size(labelClass, labelType):
 		raise Exception('%s not recognized' % labelClass)
 	return lSz
 
+##
+#get prms
 def get_prms_v2(labels=['nrml'], nrmlType ='xyz',
 						 ptchType = 'wngtv', 
-						 poseType='quat', labelNrmlz='zScoreScaleSeperate', 
-						 imSz=256, concatLayer='fc6',
+						 poseType='quat', labelNrmlz=None, 
+						 crpSz=256,
 						 numTrain=1e+06, numTest=1e+04,
-						 lossType='classify',
+						 lossType='L2',
 						 randomCrop=True, trnSeq=[]):
 	'''
 		labels    : What labels to use - make it a list for multiple
@@ -229,14 +231,22 @@ def get_prms_v2(labels=['nrml'], nrmlType ='xyz',
 		poseType   : How pose is being used.
 								 euler - as euler angles
 								 quat  - as quaternions
-		nrmlzType  : The way the pose data has been normalized.
-		imSz       : Size of the images being used.
+		labelNrmlz : Normalization of the labels
+								 None - no normalization of labels
+		lossType   : What loss is being used
+								 l2
+								 l1
+								 l2-tukey : l2 loss with tukey biweight
+								 cntrstv  : contrastive
+		cropSz      : Size of the image crop to be used.
 		concatLayer: The layer used for concatentation in siamese training
 		randomCrop  : Whether to randomly crop the images or not. 	
 		trnSeq      : Manually specif train-sequences by hand
+
+		NOTES
+		randomCrop, concatLayer are properties of the training
+                            they should not be in prms, but in caffePrms
 	'''
-	if randomCrop:
-		assert imSz is None, "With Random crop imSz should be set to None"
 	assert type(labels) == list, 'labelType must be a list'
 
 	paths = get_paths()
@@ -253,9 +263,9 @@ def get_prms_v2(labels=['nrml'], nrmlType ='xyz',
 	prms['randomCrop']   = randomCrop
 	prms['trnSeq']       = trnSeq
 
-	prms['numSamples'] = edict()
-	prms['numSamples']['train'] = numTrain
-	prms['numSamples']['test']  = numTest
+	prms.numSamples = edict()
+	prms.numSamples.train = numTrain
+	prms.numSamples.test  = numTest
 
 	#Comute the labelSz and labelStr
 	labelSz, labelStr = 0, ''
@@ -264,46 +274,21 @@ def get_prms_v2(labels=['nrml'], nrmlType ='xyz',
 		labelSz  = labelSz + get_label_size(l, prms.ltype[l])
 	labelStr = labelStr[0:-1]
 
-	expStr = []
-	if lossType=='classify':
-		if classificationType=='independent':
-			expStr.append('los-cls-ind-bn%d' % prms['binCount'])
-		else:
-			raise Exception('classification type not recognized')
-	elif lossType=='regress':
-		pass
-	elif lossType == 'contrastive':
-		#contrastive loss - used for example with the slowness case. 
-		assert prms['pose'] == 'slowness', 'contrastive loss only works for slowness'
-		pass
+	#This should be part of caffe_prms too
+	lossStr = ''
+	if lossType in ['l2', 'l1', 'l2-tukey', 'cntrstv']:
+		lossStr = 'loss-%s' % lossType
 	else:
-		raise Exception('Loss Type not recognized')
-	
-		if not trnSeq==[]:
-			trnStr = ''.join('%d-' % ts for ts in trnSeq)
-			expStr.append('trnSeq-' + trnStr[:-1])
-	
-		expStr = ''.join(s + '_' for s in expStr)
-		expStr = expStr[:-1]
-		if len(expStr) > 0:
-			expStr = expStr + '_'
+		raise Exception('%s loss type not recognized' % lossStr)
 
-		if imSz is not None:
-			imStr = 'imSz%d' % imSz
-			paths['imRootDir'] = os.path.join(paths['imRootDir'], 'imSz%d/'% imSz)
-		else:
-			assert randomCrop, 'imSz should be none only with random cropping'
-			imStr = 'randcrp'
-			paths['imRootDir'] = os.path.join(paths['imRootDir'], 'asJpg/')
-
-			
-
-		expName   = 'mxDiff-%d_pose-%s_nrmlz-%s_%s_concat-%s_nTr-%d'\
-								 % (maxFrameDiff, poseType, nrmlzType, imStr, concatLayer, numTrainSamples) 
-		teExpName =  'mxDiff-%d_pose-%s_nrmlz-%s_%s_concat-%s_nTe-%d'\
-								 % (maxFrameDiff, poseType, nrmlzType, imStr, concatLayer, numTestSamples) 
-		expName   = expStr + expName
-		teExpname = expStr + teExpName 
+	trainExpStr = '%s_%s'% (labelStr, lossStr)
+	testExpStr  = labelStr	
+	expName   = 'mxDiff-%d_pose-%s_nrmlz-%s_%s_concat-%s_nTr-%d'\
+							 % (maxFrameDiff, poseType, nrmlzType, imStr, concatLayer, numTrainSamples) 
+	teExpName =  'mxDiff-%d_pose-%s_nrmlz-%s_%s_concat-%s_nTe-%d'\
+							 % (maxFrameDiff, poseType, nrmlzType, imStr, concatLayer, numTestSamples) 
+	expName   = expStr + expName
+	teExpname = expStr + teExpName 
 
 	prms['expName'] = expName
 
@@ -403,7 +388,8 @@ def parse_label_file(fName):
 			label.align.warp = np.array([float(n) for n in al[2:11]])
 	return label
 		
-
+##
+#Save the normal data
 def save_normals(prms):
 	if prms.isAligned:
 		ids = get_folder_keys_aligned(prms)
