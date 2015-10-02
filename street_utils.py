@@ -52,13 +52,15 @@ def save_foldernames(prms):
 	fNames = sorted(get_foldernames(prms))
 	fid    = open(prms.paths.proc.folders.key, 'w')
 	allNames = []
-	for f in enumerate(fNames):
+	for f in fNames:
 		for ff in f:
-			allNames  = allNames + ff
+			allNames  = allNames + [ff]
 	allNames = sorted(allNames)
 	for (i,f) in enumerate(allNames):
 		fid.write('%04d \t %s\n' % (i + 1 ,f))
 	fid.close()
+	#For safety strip write permissions from the file
+	subprocess.check_call(['chmod a-w %s' % prms.paths.proc.folders.key], shell=True) 
 
 ##
 # Read names of all files in the folder
@@ -79,7 +81,7 @@ def read_prefixes_from_folder(dirName):
 
 ##
 # Save filename prefixes for each folder
-def save_folder_prefixes(prms):
+def save_folder_prefixes(prms, forceWrite=False):
 	fid   = open(prms.paths.proc.folders.key, 'r')
 	lines = [l.strip() for l in fid.readlines()]
 	fid.close()
@@ -88,7 +90,7 @@ def save_folder_prefixes(prms):
 		key, name = l.split()
 		print (key, name)
 		fName   = prms.paths.proc.folders.pre % key
-		if osp.exists(fName):
+		if osp.exists(fName) and (not forceWrite):
 			continue
 		preStrs = read_prefixes_from_folder(name) 
 		with open(fName, 'w') as f:
@@ -185,7 +187,29 @@ def get_prms(isAligned=True):
 	prms.isAligned = isAligned
 	return prms
 
-def get_prms_v2(labelType=['nrml'], nrmlType ='xyz',
+##
+# Get the label dimensions
+def get_label_size(labelClass, labelType):
+	if labelClass == 'nrml':
+		if labelType == 'xyz':
+			lSz = 3
+		else:
+			raise Exception('%s,%s not recognized' % (labelClass, labelType))
+	elif labelClass == 'ptch':
+		if labelType in ['wngtv', 'hngtv']:
+			lSz = 3
+		else:
+			raise Exception('%s,%s not recognized' % (labelClass, labelType))
+	elif labelClass == 'pose':
+		if labelType in ['quat', 'euler']:
+			lSz = 6
+		else:
+			raise Exception('%s,%s not recognized' % (labelClass, labelType))
+	else:
+		raise Exception('%s not recognized' % labelClass)
+	return lSz
+
+def get_prms_v2(labels=['nrml'], nrmlType ='xyz',
 						 ptchType = 'wngtv', 
 						 poseType='quat', labelNrmlz='zScoreScaleSeperate', 
 						 imSz=256, concatLayer='fc6',
@@ -193,7 +217,7 @@ def get_prms_v2(labelType=['nrml'], nrmlType ='xyz',
 						 lossType='classify',
 						 randomCrop=True, trnSeq=[]):
 	'''
-		labelType  : What labels to use - make it a list for multiple
+		labels    : What labels to use - make it a list for multiple
 								 kind of labels
 								 nrml - surface normals
 								 ptch - patch matching
@@ -213,72 +237,48 @@ def get_prms_v2(labelType=['nrml'], nrmlType ='xyz',
 	'''
 	if randomCrop:
 		assert imSz is None, "With Random crop imSz should be set to None"
-	assert type(labelType) == list, 'labelType must be a list'
+	assert type(labels) == list, 'labelType must be a list'
 
 	paths = get_paths()
 	prms  = edict()
-	prms['pose']         = poseType
-	prms['nrmlz']        = nrmlzType
+	prms.labels     = labels
+	prms.ltype      = edict()
+	prms.ltype.nrml = nrmlType
+	prms.ltype.ptch = ptchType
+	prms.ltype.pose = poseType
+	prms['lbNrmlz'] = labelNrmlz
 	prms['imSz']         = imSz
 	prms['concatLayer']  = concatLayer  
 	prms['lossType']     = lossType
 	prms['randomCrop']   = randomCrop
 	prms['trnSeq']       = trnSeq
 
-	prms['numSamples'] = {}
-	prms['numSamples']['train'] = numTrainSamples
-	prms['numSamples']['test']  = numTestSamples
+	prms['numSamples'] = edict()
+	prms['numSamples']['train'] = numTrain
+	prms['numSamples']['test']  = numTest
 
-	if poseType == 'euler':
-		prms['labelSz']  = 6
-		prms['numTrans'] = 3
-		prms['numRot']   = 3
-	elif poseType == 'sigMotion':
-		prms['labelSz']  = 3
-		prms['numTrans'] = 2
-		prms['numRot']   = 1
-	elif poseType == 'slowness':
-		prms['labelSz']  = 1
-		prms['numTrans'] = 0
-		prms['numRot']   = 0
-	elif poseType == 'rotOnly':
-		prms['labelSz']  = 3
-		prms['numTrans'] = 0
-		prms['numRot']   = 3
-	else:
-		raise Exception('PoseType %s not recognized' % poseType)
+	#Comute the labelSz and labelStr
+	labelSz, labelStr = 0, ''
+	for l in sorted(labels):
+		labelStr = labelStr + '%s-%s-' % (l, prms.ltype[l]) 
+		labelSz  = labelSz + get_label_size(l, prms.ltype[l])
+	labelStr = labelStr[0:-1]
 
-	if lossType=='classify' and classificationType=='independent':
-		assert nrmlzType=='zScoreScaleSeperate'
-		#See iPython Notebook label visualization
-		#All the labels are normalized to the same range and then put them in
-		# bins
-		binSz    = (1.0/7)*maxFrameDiff
-		numBins  = 10
-		binRange         = np.linspace(-binSz*numBins, binSz*numBins, 2*numBins)
-		prms['binRange'] = binRange 
-		prms['binCount'] = 2 * numBins + 2 #+2 for lower and greater than the bounds
-
-	if isOld:
-		expName = 'consequent_pose-%s_nrmlz-%s_imSz%d'\
-								 % (poseType, nrmlzType, imSz) 
-		teExpName = expName
-	else:
-		expStr = []
-		if lossType=='classify':
-			if classificationType=='independent':
-				expStr.append('los-cls-ind-bn%d' % prms['binCount'])
-			else:
-				raise Exception('classification type not recognized')
-		elif lossType=='regress':
-			pass
-		elif lossType == 'contrastive':
-			#contrastive loss - used for example with the slowness case. 
-			assert prms['pose'] == 'slowness', 'contrastive loss only works for slowness'
-			pass
+	expStr = []
+	if lossType=='classify':
+		if classificationType=='independent':
+			expStr.append('los-cls-ind-bn%d' % prms['binCount'])
 		else:
-			raise Exception('Loss Type not recognized')
-		
+			raise Exception('classification type not recognized')
+	elif lossType=='regress':
+		pass
+	elif lossType == 'contrastive':
+		#contrastive loss - used for example with the slowness case. 
+		assert prms['pose'] == 'slowness', 'contrastive loss only works for slowness'
+		pass
+	else:
+		raise Exception('Loss Type not recognized')
+	
 		if not trnSeq==[]:
 			trnStr = ''.join('%d-' % ts for ts in trnSeq)
 			expStr.append('trnSeq-' + trnStr[:-1])
