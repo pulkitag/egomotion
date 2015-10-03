@@ -210,92 +210,85 @@ def get_label_size(labelClass, labelType):
 	return lSz
 
 ##
+class LabelNLoss(object):
+	def __init__(self, labelClass, labelType, loss):
+		self.label_     = labelClass
+		self.labelType_ = labelType
+		self.loss_      = loss
+		#augLbSz_ - augmented labelSz to include the ignore label option
+		self.augLbSz_, self.lbSz_  = self.get_label_sz()
+		self.lbStr_     = '%s-%s' % (self.label_, self.labelType_)
+		
+	def get_label_sz(self):
+		lbSz = get_label_size(self.label_, self.labelType_) 
+		if self.loss_ in ['l2', 'l1', 'l2-tukey']:
+			augLbSz = lbSz + 1
+		else:
+			augLbSz = lbSz
+		return augLbSz, lbSz
+
+##
 #get prms
-def get_prms_v2(labels=['nrml'], nrmlType ='xyz',
-						 ptchType = 'wngtv', 
-						 poseType='quat', labelNrmlz=None, 
+def get_prms_v2(labels=['nrml'], labelType=['xyz'], 
+						 labelNrmlz=None, 
 						 crpSz=256,
 						 numTrain=1e+06, numTest=1e+04,
-						 lossType='L2',
-						 randomCrop=True, trnSeq=[]):
+						 lossType=['l2'],
+						 trnSeq=[]):
 	'''
 		labels    : What labels to use - make it a list for multiple
-								 kind of labels
+								kind of labels
 								 nrml - surface normals
+									 xyz - as nx, ny, nz
 								 ptch - patch matching
-		nrmlType   : How is normal data represented
-								 xyz - as nx, ny, nz
-		ptchType   : How is patch data represented
-								 wngtv - weak negatives 
-								 hngtv = hard negatices
-		poseType   : How pose is being used.
-								 euler - as euler angles
-								 quat  - as quaternions
+									 wngtv - weak negatives 
+									 hngtv = hard negatices
+								 pose - relative pose	
+									 euler - as euler angles
+									 quat  - as quaternions
 		labelNrmlz : Normalization of the labels
-								 None - no normalization of labels
+								 	None - no normalization of labels
 		lossType   : What loss is being used
-								 l2
-								 l1
-								 l2-tukey : l2 loss with tukey biweight
-								 cntrstv  : contrastive
+								 	l2
+								 	l1
+								 	l2-tukey : l2 loss with tukey biweight
+								 	cntrstv  : contrastive
 		cropSz      : Size of the image crop to be used.
-		concatLayer: The layer used for concatentation in siamese training
-		randomCrop  : Whether to randomly crop the images or not. 	
 		trnSeq      : Manually specif train-sequences by hand
 
 		NOTES
+		I have tried to form prms so that they have enough information to specify
+		the data formation and generation of window files. 
 		randomCrop, concatLayer are properties of the training
                             they should not be in prms, but in caffePrms
 	'''
-	assert type(labels) == list, 'labelType must be a list'
+	assert type(labels) == list, 'labels must be a list'
+	assert type(lossType) == list, 'lossType should be list'
+	assert len(lossType) == len(labels)
+	assert len(labels)   == len(labelType)
 
 	paths = get_paths()
 	prms  = edict()
-	prms.labels     = labels
-	prms.ltype      = edict()
-	prms.ltype.nrml = nrmlType
-	prms.ltype.ptch = ptchType
-	prms.ltype.pose = poseType
+	prms.labels = []
+	for lb,lbT,ls in zip(labels, labelType, lossType):
+		prms.labels = prms.labels + LabelNLoss(lb, lbT, ls)
 	prms['lbNrmlz'] = labelNrmlz
-	prms['imSz']         = imSz
-	prms['concatLayer']  = concatLayer  
-	prms['lossType']     = lossType
-	prms['randomCrop']   = randomCrop
+	prms['crpSz']        = crpSz
 	prms['trnSeq']       = trnSeq
 
 	prms.numSamples = edict()
 	prms.numSamples.train = numTrain
 	prms.numSamples.test  = numTest
 
-	#Comute the labelSz and labelStr
-	labelSz, labelStr = 0, ''
-	for l in sorted(labels):
-		labelStr = labelStr + '%s-%s-' % (l, prms.ltype[l]) 
-		labelSz  = labelSz + get_label_size(l, prms.ltype[l])
-	labelStr = labelStr[0:-1]
-
-	#This should be part of caffe_prms too
-	lossStr = ''
-	if lossType in ['l2', 'l1', 'l2-tukey', 'cntrstv']:
-		lossStr = 'loss-%s' % lossType
-	else:
-		raise Exception('%s loss type not recognized' % lossStr)
-
-	trainExpStr = '%s_%s'% (labelStr, lossStr)
-	testExpStr  = labelStr	
-	expName   = 'mxDiff-%d_pose-%s_nrmlz-%s_%s_concat-%s_nTr-%d'\
-							 % (maxFrameDiff, poseType, nrmlzType, imStr, concatLayer, numTrainSamples) 
-	teExpName =  'mxDiff-%d_pose-%s_nrmlz-%s_%s_concat-%s_nTe-%d'\
-							 % (maxFrameDiff, poseType, nrmlzType, imStr, concatLayer, numTestSamples) 
-	expName   = expStr + expName
-	teExpname = expStr + teExpName 
-
+	expStr = ''.join(['%s_' % lb.lbStr_ for lb in prms.labels])
+	expName   = '%s_crpSz%d_nTr-%d' % (expStr, crpSz, numTrain) 
+	teExpName = '%s_crpSz%d_nTe-%d' % (expStr, crpSz, numTest)
 	prms['expName'] = expName
 
 	paths['windowFile'] = {}
-	paths['windowFile']['train'] = os.path.join(paths['windowDir'], 'train_%s.txt' % expName)
-	paths['windowFile']['test']  = os.path.join(paths['windowDir'], 'test_%s.txt'  % teExpName)
-	paths['resFile']       = os.path.join(paths['resDir'], expName, '%s.h5')
+	paths['windowFile']['train'] = osp.join(paths['windowDir'], 'train_%s.txt' % expName)
+	paths['windowFile']['test']  = osp.join(paths['windowDir'], 'test_%s.txt'  % teExpName)
+	paths['resFile']       = osp.join(paths['resDir'], expName, '%s.h5')
 
 	prms['paths'] = paths
 	#Get the pose stats
@@ -303,8 +296,6 @@ def get_prms_v2(labels=['nrml'], nrmlType ='xyz',
 	prms['poseStats']['mu'], prms['poseStats']['sd'], prms['poseStats']['scale'] =\
 						get_pose_stats(prms)
 	return prms
-
-
 
 ##
 # Get key for all the folders
