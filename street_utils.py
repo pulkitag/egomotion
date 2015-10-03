@@ -6,6 +6,7 @@ import os
 import pdb
 import subprocess
 import matplotlib.pyplot as plt
+import mydisplay as mydisp
 
 def _mkdir(fName):
 	if not osp.exists(fName):
@@ -437,20 +438,38 @@ def show_images(prms, folderId):
 #Show the groups of images that have the same target point
 def show_image_groups(prms, folderId):
 	grps = get_target_groups(prms, folderId)
-	imNames, _ = folderid_to_im_label_files(prms, folderId)
+	imNames, lbNames = folderid_to_im_label_files(prms, folderId)
 	plt.ion()
 	plt.figure()
-	for g in grps[0:-1]:
+	for ig, g in enumerate(grps[0:-1]):
 		st = g
-		en = grps[g+1]
+		en = grps[ig+1]
+		print (st,en)
 		count = 0
-		for i in range(st,en+1):
+		axl = []
+		pltCount = 0
+		for i in range(st,en):
 			im = plt.imread(imNames[i])
-			if count < 6:
-				ax = plt.subplot(3,2,count+1)
+			lb = parse_label_file(lbNames[i])
+			isPlot = True
+			if lb.align is not None:
+				loc = (lb.align.loc[0], lb.align.loc[1])
+				#loc = (lb.align.loc[1], lb.align.loc[0])
+			else:
+				isPlot = False
+				print ('Align info not found')
+				rows, cols, _ = im.shape
+				loc = (int(rows/2.0), int(cols/2.0))
+			if count < 9 and isPlot:
+				ax = plt.subplot(3,3,count+1)
+				im = mydisp.box_on_im(im, loc, 15)
 				ax.imshow(im)			
-				ax.draw()
+				plt.draw()
+				axl.append(ax)
+				pltCount += 1
 			count += 1
 		inp = raw_input('Press a key to continue')
 		if inp=='q':
 			return
+		for c in range(pltCount):
+			axl[c].cla()
