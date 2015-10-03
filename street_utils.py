@@ -5,6 +5,7 @@ from pycaffe_config import cfg
 import os
 import pdb
 import subprocess
+import matplotlib.pyplot as plt
 
 def _mkdir(fName):
 	if not osp.exists(fName):
@@ -399,4 +400,13 @@ def save_normals(prms):
 											lb.nrml[1], lb.nrml[2]))
 				count += 1
 	
- 
+
+def show_images(prms, folderId):
+	imNames, _ = folderid_to_im_label_files(prms, folderId)	
+	plt.ion()
+	for imn in imNames:
+		im = plt.imread(imn)
+		plt.imshow(im)
+		inp = raw_input('Press a key to continue')
+		if inp=='q':
+			return
