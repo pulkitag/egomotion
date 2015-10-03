@@ -299,6 +299,29 @@ def get_prms_v2(labels=['nrml'], labelType=['xyz'],
 	return prms
 
 ##
+#Read all the prefixes
+def get_prefixes(prms, folderId):
+	with open(prms.paths.proc.folders.pre % folderId,'r') as f:
+		prefixes = [p.strip() for p in f.readlines()]
+	return prefixes
+
+##
+#From the prefixes figure out the groups of images that look at the same point
+def get_target_groups(prms, folderId):
+	prefixes = get_prefixes(prms, folderId)
+	S        = []
+	prev     = None
+	count    = 0
+	for (i,p) in enumerate(prefixes):	
+		_,_,_,grp = p.split('_')
+		if not(grp == prev):
+			S.append(count)
+			prev = grp
+		count += 1
+	return S
+			
+
+##
 # Get key for all the folders
 def get_folder_keys_all(prms):
 	allKeys, allNames = [], []
@@ -407,6 +430,27 @@ def show_images(prms, folderId):
 	for imn in imNames:
 		im = plt.imread(imn)
 		plt.imshow(im)
+		inp = raw_input('Press a key to continue')
+		if inp=='q':
+			return
+
+#Show the groups of images that have the same target point
+def show_image_groups(prms, folderId):
+	grps = get_target_groups(prms, folderId)
+	imNames, _ = folderid_to_im_label_files(prms, folderId)
+	plt.ion()
+	plt.figure()
+	for g in grps[0:-1]:
+		st = g
+		en = grps[g+1]
+		count = 0
+		for i in range(st,en+1):
+			im = plt.imread(imNames[i])
+			if count < 6:
+				ax = plt.subplot(3,2,count+1)
+				ax.imshow(im)			
+				ax.draw()
+			count += 1
 		inp = raw_input('Press a key to continue')
 		if inp=='q':
 			return
