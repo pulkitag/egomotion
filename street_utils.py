@@ -388,9 +388,10 @@ def parse_label_file(fName):
 		label.ids.tg = int(dl[2]) #Target id
 		label.ids.im = int(dl[3]) #Image id
 		label.ids.sv = int(dl[4]) #Street view id
-		#dl[5,6,7] -- target point will skip
+		label.pts    = edict()
+		label.pts.target = [float(n) for n in dl[5:8]] #Target point
 		label.nrml   = [float(n) for n in dl[8:11]]
-		#dl[11,12,13] -- street view point not needed
+		label.pts.camera = [float(n) for n in dl[11:14]] #street view point not needed
 		label.dist   = float(dl[14])
 		label.rots   = [float(n) for n in dl[15:18]]
 		assert label.rots[2] == 0, 'Something is wrong %s' % fName	
@@ -451,19 +452,25 @@ def show_image_groups(prms, folderId):
 		for i in range(st,en):
 			im = plt.imread(imNames[i])
 			lb = parse_label_file(lbNames[i])
-			isPlot = True
 			if lb.align is not None:
+				isAlgn = True
 				loc = (lb.align.loc[0], lb.align.loc[1])
 				#loc = (lb.align.loc[1], lb.align.loc[0])
 			else:
-				isPlot = False
+				isAlgn = False
 				print ('Align info not found')
 				rows, cols, _ = im.shape
 				loc = (int(rows/2.0), int(cols/2.0))
-			if count < 9 and isPlot:
+			if count < 9:
 				ax = plt.subplot(3,3,count+1)
-				im = mydisp.box_on_im(im, loc, 15)
-				ax.imshow(im)			
+				if isAlgn:
+					im = mydisp.box_on_im(im, loc, 27)
+				else:
+					im = mydisp.box_on_im(im, loc, 27, 'b')
+				ax.imshow(im)
+				ax.set_title(('cm: (%.4f, %.4f, %.4f)'
+											+ '\n dist: %.4f, head: %.3f, pitch: %.3f, yaw: %3f')\
+										% (tuple(lb.pts.camera + [lb.dist] + lb.rots))) 	
 				plt.draw()
 				axl.append(ax)
 				pltCount += 1
