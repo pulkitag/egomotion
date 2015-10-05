@@ -109,6 +109,18 @@ def parse_label_file(fName):
 	return label
 		
 
+def get_group_counts(prms):
+	dat = pickle.load(open(prms.paths.proc.countFile, 'r'))
+	if prms.isAligned:
+		keys   = get_folder_keys_aligned(prms)	
+	else:
+		keys,_ = get_folder_keys_all(prms)	
+	count = 0
+	for k in keys:
+		count += dat['groupCount'][k]
+	return count
+			
+
 def show_images(prms, folderId):
 	imNames, _ = folderid_to_im_label_files(prms, folderId)	
 	plt.ion()

@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import mydisplay as mydisp
 import h5py as h5
 import pickle
+import street_utils as su
 
 def get_tar_files(prms):
 	with open(prms.paths.tar.fileList,'r') as f:
@@ -121,7 +122,49 @@ def save_folder_prefixes(prms, forceWrite=False):
 			for p in preStrs:
 				f.write('%s \n' % p)
 		
+##
+# Store for each folder the number of prefixes
+# and number of groups. 	
+def save_counts(prms):
+	keys,_ = su.get_folder_keys_all(prms)	
+	prefixCount = edict()
+	groupCount  = edict()
+	for k in keys:
+		print(k)
+		prefix = su.get_prefixes(prms, k)
+		prefixCount[k] = len(prefix)
+		grps = su.get_target_groups(prms, k)
+		groupCount[k] = len(grps)
+	pickle.dump({'prefixCount': prefixCount, 'groupCount': groupCount},
+						 open(prms.paths.proc.countFile, 'w'))
 
+##
+# Save the groups
+def save_groups(prms, isAlignedOnly=True):
+	grpKeyStr = '%07d'
+	if isAlignedOnly:
+		keys   = su.get_folder_keys_aligned(prms)	
+	else:
+		keys,_ = su.get_folder_keys_all(prms)	
+	for k in keys:
+		imNames, lbNames = su.folderid_to_im_label_files(prms, k)
+		print(k)
+		#Determine groups
+		grps = su.get_target_groups(prms, k)
+		#Read the labels of each group and save them
+		grpLabels = edict()
+		for ig, g in enumerate(grps[0:-1]):
+			st = g
+			en = grps[ig+1]
+			grpKey = grpKeyStr % ig	
+			grpLabels[grpKey]      = edict()
+			grpLabels[grpKey].num  = en - st
+			grpLabels[grpKey].data = []
+			for i in range(st,en):
+				grpLabels[grpKey].data.append(su.parse_label_file(lbNames[i]))
+		pickle.dump({'groups': grpLabels}, 
+							open(prms.paths.label.grps % k, 'w'))	
+					
 ##
 #Save the normal data
 def save_normals(prms):
@@ -141,19 +184,5 @@ def save_normals(prms):
 				fid.write('%s \t %f \t %f \t %f\n' % (imfStr,lb.nrml[0],
 											lb.nrml[1], lb.nrml[2]))
 				count += 1
-
-##
-# Store for each folder the number of prefixes
-# and number of groups. 	
-def save_counts(prms):
-	keys = get_folder_keys_all(prms)	
-	prefixCount = edict()
-	groupCount  = edict()
-	for k in keys:
-		prefix = get_prefixes(prms, k)
-		prefixCount[k] = len(prefix)
-		grps = get_target_groups(prms, k)
-		groupCount[k] = len(grps)
-	pickle.dump(open(prms.paths.proc.countFile,'w')
 
 

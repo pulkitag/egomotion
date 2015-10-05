@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import mydisplay as mydisp
 import h5py as h5
 import pickle
-import street_io as stio
 
 def _mkdir(fName):
 	if not osp.exists(fName):
@@ -46,14 +45,19 @@ def get_paths():
 	paths.proc.folders.aKey = osp.join(paths.proc.folders.dr, 'key-aligned.txt') 
 
 	#Count info
-	paths.proc.countFile = osp.join(paths.folders.dr, 'counts.h5')	
+	paths.proc.countFile = osp.join(paths.proc.folders.dr, 'counts.h5')	
 
 	#Label data
 	paths.label    = edict()
 	paths.label.dr   = osp.join(paths.proc.dr, 'labels')
+	#Store the normals
 	nrmlDir          = osp.join(paths.label.dr, 'nrml')
 	_mkdir(nrmlDir)
-	paths.label.nrml = osp.join(nrmlDir, '%s.txt')		 
+	paths.label.nrml = osp.join(nrmlDir, '%s.txt')
+	#The data is chunked as groups - so we will save them 
+	grpsDir          = osp.join(paths.label.dr, 'groups')
+	_mkdir(grpsDir)
+	paths.label.grps = osp.join(grpsDir, '%s.pkl')
 
 	#Window data file
 	paths.exp    = edict()
@@ -110,12 +114,14 @@ class LabelNLoss(object):
 
 ##
 #get prms
-def get_prms_v2(labels=['nrml'], labelType=['xyz'], 
+def get_prms(isAligned=True, 
+						 labels=['nrml'], labelType=['xyz'], 
 						 labelNrmlz=None, 
 						 crpSz=256,
 						 numTrain=1e+06, numTest=1e+04,
 						 lossType=['l2'],
-						 trnSeq=[]):
+						 trnSeq=[], 
+						 tePct=1.0, teGap=5):
 	'''
 		labels    : What labels to use - make it a list for multiple
 								kind of labels
@@ -135,7 +141,9 @@ def get_prms_v2(labels=['nrml'], labelType=['xyz'],
 								 	l2-tukey : l2 loss with tukey biweight
 								 	cntrstv  : contrastive
 		cropSz      : Size of the image crop to be used.
-		trnSeq      : Manually specif train-sequences by hand
+		tePct       : % of groups to be labelled as test
+		teGap       : The number of groups that should be skipped before and after test
+									to ensure there are very low chances of overlap
 
 		NOTES
 		I have tried to form prms so that they have enough information to specify
@@ -150,6 +158,7 @@ def get_prms_v2(labels=['nrml'], labelType=['xyz'],
 
 	paths = get_paths()
 	prms  = edict()
+	prms.isAligned = isAligned
 	prms.labels = []
 	for lb,lbT,ls in zip(labels, labelType, lossType):
 		prms.labels = prms.labels + LabelNLoss(lb, lbT, ls)
@@ -174,17 +183,8 @@ def get_prms_v2(labels=['nrml'], labelType=['xyz'],
 	prms['paths'] = paths
 	#Get the pose stats
 	prms['poseStats'] = {}
-	prms['poseStats']['mu'], prms['poseStats']['sd'], prms['poseStats']['scale'] =\
-						get_pose_stats(prms)
+	#prms['poseStats']['mu'], prms['poseStats']['sd'], prms['poseStats']['scale'] =\
+	#					get_pose_stats(prms)
 	return prms
-
-##
-# Get the prms 
-def get_prms(isAligned=True):
-	prms = edict()
-	prms.paths = get_paths()
-	prms.isAligned = isAligned
-	return prms
-
 
 
