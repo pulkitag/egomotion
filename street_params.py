@@ -47,6 +47,10 @@ def get_paths():
 	#Count info
 	paths.proc.countFile = osp.join(paths.proc.folders.dr, 'counts.h5')	
 
+	#Get the file containing the split data
+	splitsDr = osp.join(paths.proc.dr, 'train_test_splits')
+	paths.proc.splitsFile = osp.join(splitsDr, '%s.pkl') 
+
 	#Label data
 	paths.label    = edict()
 	paths.label.dr   = osp.join(paths.proc.dr, 'labels')
@@ -59,10 +63,10 @@ def get_paths():
 	_mkdir(grpsDir)
 	paths.label.grps = osp.join(grpsDir, '%s.pkl')
 
-	#Window data file
 	paths.exp    = edict()
 	paths.exp.dr = osp.join(paths.dataDr, 'exp')
 	_mkdir(paths.exp.dr)
+	#Window data file
 	paths.exp.window    = edict()
 	paths.exp.window.dr = osp.join(paths.exp.dr, 'window-files')
 	_mkdir(paths.exp.window.dr) 
@@ -117,7 +121,7 @@ class LabelNLoss(object):
 def get_prms(isAligned=True, 
 						 labels=['nrml'], labelType=['xyz'], 
 						 labelNrmlz=None, 
-						 crpSz=256,
+						 crpSz=101,
 						 numTrain=1e+06, numTest=1e+04,
 						 lossType=['l2'],
 						 trnSeq=[], 
@@ -161,24 +165,28 @@ def get_prms(isAligned=True,
 	prms.isAligned = isAligned
 	prms.labels = []
 	for lb,lbT,ls in zip(labels, labelType, lossType):
-		prms.labels = prms.labels + LabelNLoss(lb, lbT, ls)
+		prms.labels = prms.labels + [LabelNLoss(lb, lbT, ls)]
 	prms['lbNrmlz'] = labelNrmlz
 	prms['crpSz']        = crpSz
 	prms['trnSeq']       = trnSeq
 
-	prms.numSamples = edict()
-	prms.numSamples.train = numTrain
-	prms.numSamples.test  = numTest
+	prms.splits = edict()
+	prms.splits.numTrain = numTrain
+	prms.splits.numTest  = numTest
+	prms.splits.tePct    = tePct
+	prms.splits.teGap    = teGap
+	prms.splits.randSeed = 3
 
-	expStr = ''.join(['%s_' % lb.lbStr_ for lb in prms.labels])
-	expName   = '%s_crpSz%d_nTr-%d' % (expStr, crpSz, numTrain) 
-	teExpName = '%s_crpSz%d_nTe-%d' % (expStr, crpSz, numTest)
+	expStr = ''.join(['%s_' % lb.lbStr_ for lb in prms.labels])[0:-1]
+	expName   = '%s_crpSz%d_nTr-%.2e' % (expStr, crpSz, numTrain) 
+	teExpName = '%s_crpSz%d_nTe-%.2e' % (expStr, crpSz, numTest)
 	prms['expName'] = expName
 
 	paths['windowFile'] = {}
-	paths['windowFile']['train'] = osp.join(paths['windowDir'], 'train_%s.txt' % expName)
-	paths['windowFile']['test']  = osp.join(paths['windowDir'], 'test_%s.txt'  % teExpName)
-	paths['resFile']       = osp.join(paths['resDir'], expName, '%s.h5')
+	windowDir = paths.exp.window.dr
+	paths['windowFile']['train'] = osp.join(windowDir, 'train_%s.txt' % expName)
+	paths['windowFile']['test']  = osp.join(windowDir, 'test_%s.txt'  % teExpName)
+	#paths['resFile']       = osp.join(paths['resDir'], expName, '%s.h5')
 
 	prms['paths'] = paths
 	#Get the pose stats

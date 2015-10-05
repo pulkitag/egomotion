@@ -108,7 +108,8 @@ def parse_label_file(fName):
 			label.align.warp = np.array([float(n) for n in al[2:11]])
 	return label
 		
-
+##
+#Get the overall count of number of groups in the dataset
 def get_group_counts(prms):
 	dat = pickle.load(open(prms.paths.proc.countFile, 'r'))
 	if prms.isAligned:
@@ -119,7 +120,16 @@ def get_group_counts(prms):
 	for k in keys:
 		count += dat['groupCount'][k]
 	return count
-			
+		
+##
+#Get the train and test splits
+def get_train_test_splits(prms):
+	'''
+		This data is provided as 
+		key(folderId), group ids  
+	'''	
+	pass	
+	
 
 def show_images(prms, folderId):
 	imNames, _ = folderid_to_im_label_files(prms, folderId)	
