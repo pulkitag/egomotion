@@ -184,7 +184,7 @@ def save_train_test_splits(prms, isForceWrite=False):
 		randSeed  = prms.splits.randSeed + 2 * int(k)	
 		randState = np.random.RandomState(randSeed) 
 		#Read the groups of the fodler
-		grps = ['%07d' % ig for (ig,g) in enumerate(su.get_target_groups(prms, k))]
+		grps = ['%07d' % ig for (ig,g) in enumerate(su.get_target_groups(prms, k)[0:-1])]
 		N    = len(grps)
 		print('Folder: %s, num groups: %d' % (k,N))
 		teN  = int((prms.splits.tePct/100.0) * N)	

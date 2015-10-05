@@ -136,6 +136,31 @@ def get_train_test_splits(prms, folderId):
 	splits = edict(pickle.load(open(fName,'r')))
 	return splits.splits
 
+##
+#Get the raw labels
+def get_raw_labels(prms, folderId, setName='train'):
+	'''
+		Labels for a particular split
+	'''
+	#Find the groups belogning to the split
+	splits = get_train_test_splits(prms, folderId)
+	gids   = splits[setName]
+	#Read labels from the folder 
+	lbFile = prms.paths.label.grps % folderId
+	lbData = pickle.load(open(lbFile,'r'))
+	lbData = lbData['groups']
+	lb     = []
+	for g in gids:
+		try:
+			lb.append(lbData[g])
+		except:
+			pdb.set_trace()
+	return lb
+
+##
+#Process the labels according to prms
+
+
 def show_images(prms, folderId):
 	imNames, _ = folderid_to_im_label_files(prms, folderId)	
 	plt.ion()
