@@ -49,6 +49,7 @@ def get_paths():
 
 	#Get the file containing the split data
 	splitsDr = osp.join(paths.proc.dr, 'train_test_splits')
+	_mkdir(splitsDr)
 	paths.proc.splitsFile = osp.join(splitsDr, '%s.pkl') 
 
 	#Label data
@@ -72,7 +73,6 @@ def get_paths():
 	_mkdir(paths.exp.window.dr) 
 	paths.exp.window.tr = osp.join(paths.exp.window.dr, 'train-%s.txt')
 	paths.exp.window.te = osp.join(paths.exp.window.dr, 'test-%s.txt')
-	
 	return paths
 
 
@@ -177,8 +177,14 @@ def get_prms(isAligned=True,
 	prms.splits.teGap    = teGap
 	prms.splits.randSeed = 3
 
-	expStr = ''.join(['%s_' % lb.lbStr_ for lb in prms.labels])[0:-1]
-	expName   = '%s_crpSz%d_nTr-%.2e' % (expStr, crpSz, numTrain) 
+	#Form the splits file
+	splitsStr = 'tePct%.1f_teGap%d_teSeed%d' % (tePct, teGap, prms.splits.randSeed) 
+	paths.proc.splitsFile = paths.proc.splitsFile % (splitsStr + '/%s') 	
+	splitDr, _ = osp.split(paths.proc.splitsFile)
+	_mkdir(splitDr)
+
+	expStr    = ''.join(['%s_' % lb.lbStr_ for lb in prms.labels[0:-1]])
+	expName   = '%s_crpSz%d_nTr-%.2e' % (expStr, crpSz, numTrain)
 	teExpName = '%s_crpSz%d_nTe-%.2e' % (expStr, crpSz, numTest)
 	prms['expName'] = expName
 

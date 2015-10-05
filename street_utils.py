@@ -53,6 +53,14 @@ def get_folder_keys_aligned(prms):
 		keys = [k.strip() for k in keys]
 	return keys		
 
+##
+#Get the keys for a folder
+def get_folder_keys(prms):
+	if prms.isAligned:
+		keys = get_folder_keys_aligned(prms)
+	else:
+		keys,_   = get_folder_keys_all(prms)
+	return keys
 
 ##
 #Return the name of the folder from the id
@@ -123,13 +131,10 @@ def get_group_counts(prms):
 		
 ##
 #Get the train and test splits
-def get_train_test_splits(prms):
-	'''
-		This data is provided as 
-		key(folderId), group ids  
-	'''	
-	pass	
-	
+def get_train_test_splits(prms, folderId):
+	fName  = prms.paths.proc.splitsFile % folderId
+	splits = edict(pickle.load(open(fName,'r')))
+	return splits.splits
 
 def show_images(prms, folderId):
 	imNames, _ = folderid_to_im_label_files(prms, folderId)	
