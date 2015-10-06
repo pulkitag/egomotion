@@ -140,10 +140,10 @@ def make_loss_proto(prms, cPrms):
 		nrmlDef1 = mpu.ProtoDef(defFile)
 		nrmlDef2 = mpu.ProtoDef(defFile)
 		#Structure the two defs
-		nrmlDef1.set_layer_property('nrml_fc', 'name', 'nrml_1_fc')
-		nrmlDef1.set_layer_property('nrml_1_fc','top', 'nrml_1_fc')
-		nrmlDef2.set_layer_property('nrml_fc', 'name', 'nrml_2_fc')
-		nrmlDef2.set_layer_property('nrml_2_fc','top', 'nrml_2_fc')
+		nrmlDef1.set_layer_property('nrml_fc', 'name', '"nrml_1_fc"')
+		nrmlDef1.set_layer_property('nrml_1_fc','top', '"nrml_1_fc"')
+		nrmlDef2.set_layer_property('nrml_fc', 'name', '"nrml_2_fc"')
+		nrmlDef2.set_layer_property('nrml_2_fc','top', '"nrml_2_fc"')
 		#Merge the two defs			 	
 		lbDef = _merge_defs(nrmlDef1, nrmlDef2)
 	elif 'nrml' in prms.labelNames:
@@ -160,9 +160,10 @@ def make_data_proto(prms, cPrms):
 	if len(prms.labelNames)==1:
 			#Modify the label and data top names
 		if prms.labelNames[0]=='nrml':
-			dataDef.set_layer_property('window_data', 'top', 'data')
-			top2 = mpu.make_key('top', ['top'])
-			dataDef.set_layer_property('window_data', top2, 'nrml_label')
+			for ph in ['TRAIN', 'TEST']:
+				dataDef.set_layer_property('window_data', 'top', '"data"', phase=ph)
+				top2 = mpu.make_key('top', ['top'])
+				dataDef.set_layer_property('window_data', top2, '"nrml_label"', phase=ph)
 		elif prms.labelNames[0]=='pose':
 			pass
 		elif prms.labelNames[0]=='ptch':
@@ -172,6 +173,7 @@ def make_data_proto(prms, cPrms):
 		sliceFile = '%s_layers.protoxt' % prms.labelNameStr
 		sliceDef  = mpu.ProtoDef(osp.join(baseFilePath, sliceFile))
 		dataDef   = _merge_defs(dataDef, sliceDef)	
+	#Set to the new window files
 	return dataDef
 
 ##
