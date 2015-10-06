@@ -157,10 +157,21 @@ def make_data_proto(prms, cPrms):
 	baseFilePath = prms.paths.baseNetsDr
 	dataFile     = osp.join(baseFilePath, 'data_layers.prototxt')
 	dataDef      = mpu.ProtoDef(dataFile)
-	#Add slicing of labels		
-	sliceFile = '%s_layers.protoxt' % prms.labelNameStr
-	sliceDef  = mpu.ProtoDef(osp.join(baseFilePath, sliceFile))
-	dataDef   = _merge_defs(dataDef, sliceDef)	
+	if len(prms.labelNames)==1:
+			#Modify the label and data top names
+		if prms.labelNames[0]=='nrml':
+			dataDef.set_layer_property('window_data', 'top', 'data')
+			top2 = mpu.make_key('top', ['top'])
+			dataDef.set_layer_property('window_data', top2, 'nrml_label')
+		elif prms.labelNames[0]=='pose':
+			pass
+		elif prms.labelNames[0]=='ptch':
+			pass
+	else:
+		#Add slicing of labels	
+		sliceFile = '%s_layers.protoxt' % prms.labelNameStr
+		sliceDef  = mpu.ProtoDef(osp.join(baseFilePath, sliceFile))
+		dataDef   = _merge_defs(dataDef, sliceDef)	
 	return dataDef
 
 ##
@@ -184,40 +195,9 @@ def setup_experiment(prms, cPrms):
 	protoDef = _merge_defs([dataDef, netDef, lossDef])
 	#Get the solver definition file
 	solDef   = cPrms['solver']
-	return protoDef, solDef
-		
+	#Experiment Object	
 	caffeExp = get_experiment_object(prms, cPrms)
 	caffeExp.init_from_external(solDef, protoDef)
-
-	
-	if prms['lossType'] == 'classify':
-		for t in range(trnSz):
-			caffeExp.set_layer_property('translation_fc_%d' % (t+1), ['inner_product_param', 'num_output'],
-									prms['binCount'], phase='TRAIN')
-		for r in range(rotSz):
-			caffeExp.set_layer_property('rotation_fc_%d' % (r+1), ['inner_product_param', 'num_output'],
-									prms['binCount'], phase='TRAIN')
-	elif prms['lossType'] == 'contrastive':
-		caffeExp.set_layer_property('loss', ['contrastive_loss_param', 'margin'],
-								cPrms['contrastiveMargin'])
-	else:
-		#Regression loss basically
-		#Set the size of the rotation and translation layers
-		caffeExp.set_layer_property('translation_fc', ['inner_product_param', 'num_output'],
-								trnSz, phase='TRAIN')
-		caffeExp.set_layer_property('rotation_fc', ['inner_product_param', 'num_output'],
-								rotSz, phase='TRAIN')
-
-	if prms['lossType'] in ['contrastive']:
-		pass
-	else:
-		#Decide the slice point for the label
-		#The slice point is decided by the translation labels.
-		if trnSz == 0:
-			slcPt = 1
-		else:
-			slcPt = trnSz	
-		caffeExp.set_layer_property('slice_label', ['slice_param', 'slice_point'], slcPt)	
 	return caffeExp
 
 

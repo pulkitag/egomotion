@@ -74,6 +74,14 @@ def get_paths():
 	_mkdir(paths.exp.window.dr) 
 	paths.exp.window.tr = osp.join(paths.exp.window.dr, 'train-%s.txt')
 	paths.exp.window.te = osp.join(paths.exp.window.dr, 'test-%s.txt')
+	#Snapshot dir
+	paths.exp.snapshot    = edict()
+	paths.exp.snapshot.dr = osp.join(paths.exp.dr, 'snapshots') 
+	_mkdir(paths.exp.snapshot.dr)
+
+	#For legacy reasons
+	paths.expDir  = osp.join(paths.exp.dr, 'caffe-files')
+	paths.snapDir = paths.exp.snapshot.dr
 	return paths
 
 
@@ -196,7 +204,8 @@ def get_prms(isAligned=True,
 	splitDr, _ = osp.split(paths.proc.splitsFile)
 	_mkdir(splitDr)
 
-	expStr    = ''.join(['%s_' % lb.lbStr_ for lb in prms.labels[0:-1]])
+	expStr    = ''.join(['%s_' % lb.lbStr_ for lb in prms.labels])
+	expStr    = expStr[0:-1]
 	expName   = '%s_crpSz%d_nTr-%.2e' % (expStr, crpSz, numTrain)
 	teExpName = '%s_crpSz%d_nTe-%.2e' % (expStr, crpSz, numTest)
 	prms['expName'] = expName
