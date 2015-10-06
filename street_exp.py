@@ -7,15 +7,17 @@ import my_pycaffe_utils as mpu
 # Parameters required to specify the n/w architecture
 def get_nw_prms(**kwargs):
 	dArgs = edict()
+	dArgs.netName     = 'alexnet'
 	dArgs.concatLayer = 'fc6'
 	dArgs.concatDrop  = False
 	dArgs.contextPad  = 24
 	dArgs.imSz        = 227
 	dArgs.imgntMean   = False
 	dArgs = mpu.get_defaults(kwargs, dArgs)
-	expStr = 'cnct-%s_cnctDrp%d_contPad%d_imSz%d_imgntMean%d'\
-						% (dArgs.concatLayer, dArgs.concatDrop, dArgs.contextPad,
-							 dArgs.imSz, dArgs.imgntMean)
+	expStr = 'net-%s_cnct-%s_cnctDrp%d_contPad%d_imSz%d_imgntMean%d'\
+						%(dArgs.netName, dArgs.concatLayer, dArgs.concatDrop, 
+							dArgs.contextPad,
+							dArgs.imSz, dArgs.imgntMean)
 	dArgs.expStr = expStr 
 	return dArgs 
 
@@ -83,62 +85,57 @@ def get_caffe_prms(nwPrms, lrPrms, finePrms=None, isScratch=True, deviceId=1):
 	caffePrms['solver'] = lrPrms.solver
 	return caffePrms
 
+#Adapt the ProtoDef for the data layers
+#Helper function for setup_experiment
+def _adapt_data_proto(protoDef, prms, cPrms):
+	#Get the source file for the train and test layers
+	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'source'],
+			'"%s"' % prms['paths']['windowFile']['train'], phase='TRAIN')
+	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'source'],
+			'"%s"' % prms['paths']['windowFile']['test'], phase='TEST')
+
+	#Set the root folder
+	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'root_folder'],
+			'"%s"' % prms['paths']['imRootDir'], phase='TRAIN')
+	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'root_folder'],
+			'"%s"' % prms['paths']['imRootDir'], phase='TEST')
+
+	if prms['randomCrop']:
+		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
+			'true', phase='TRAIN')
+		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
+			'true', phase='TEST')
+	
+
+def make_loss_proto(prms, cPrms):
+	
+
+
 def setup_experiment(prms, cPrms):
-	#The size of the labels
-	if prms['pose'] == 'euler':
-		rotSz = 3
-		trnSz = 3
-	elif prms['pose'] == 'sigMotion':
-		rotSz = 1
-		trnSz = 2
-	elif prms['pose'] == 'rotOnly':
-		rotSz = 3
-		trnSz = 0
-	elif prms['pose'] == 'slowness':
-		pass
+	#Get the protodef for the n/w architecture
+	if prms.isSiamese:
+		netFileStr = '%s_window_siamese_%s.prototxt'
 	else:
-		raise Exception('Unrecognized %s pose type' % prms['pose'])
-
-	#The base file to start with
-	baseFileStr  = 'kitti_siamese_window_%s' % cPrms['concatLayer']
-	if prms['lossType'] == 'classify':
-		baseStr = '_cls-trn%d-rot%d' % (trnSz, rotSz)
-		if cPrms['convConcat']:
-			baseStr = baseStr + '_concat_conv'
-		if cPrms['isMySimple']:
-			baseStr = baseStr + '_mysimple'
-	elif prms['lossType'] in ['contrastive']:
-		baseStr =  '_%s' % prms['lossType']
-	else:
-		baseStr = ''
-	baseFile = os.path.join(baseFilePath, baseFileStr + baseStr + '.prototxt')
-	print baseFile
-
-	protoDef = mpu.ProtoDef(baseFile)	 
+		netFileStr = '%s_window_%s.prototxt'
+	netFile = netFileStr % (cPrms.nwPrms.netName,
+												 cPrms.nwPrms.concatLayer) 
+	netFile = osp.join(baseFilePath, netFile)
+	netDef  = mpu.ProtoDef(netFile)
+	#Data protodef
+	dataFile = '%s_layers.protoxt' % prms.labelNames
+	dataFile = osp.join(baseFilePath, dataFile)
+	dataDef  = mpu.ProtoDef(dataFile)
+	#Loss protodef
+	lossFile = '%s_loss_layers.protoxt' % prms.labelNames	
+	lossFile = osp.join(baseFilePath, lossFile)
+	lossDef  = mpu.ProtoDef(lossFile)
+	#Get the solver definition file
 	solDef   = cPrms['solver']
 	
 	caffeExp = get_experiment_object(prms, cPrms)
 	caffeExp.init_from_external(solDef, protoDef)
 
-	#Get the source file for the train and test layers
-	caffeExp.set_layer_property('window_data', ['generic_window_data_param', 'source'],
-			'"%s"' % prms['paths']['windowFile']['train'], phase='TRAIN')
-	caffeExp.set_layer_property('window_data', ['generic_window_data_param', 'source'],
-			'"%s"' % prms['paths']['windowFile']['test'], phase='TEST')
-
-	#Set the root folder
-	caffeExp.set_layer_property('window_data', ['generic_window_data_param', 'root_folder'],
-			'"%s"' % prms['paths']['imRootDir'], phase='TRAIN')
-	caffeExp.set_layer_property('window_data', ['generic_window_data_param', 'root_folder'],
-			'"%s"' % prms['paths']['imRootDir'], phase='TEST')
-
-	if prms['randomCrop']:
-		caffeExp.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
-			'true', phase='TRAIN')
-		caffeExp.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
-			'true', phase='TEST')
 	
-
 	if prms['lossType'] == 'classify':
 		for t in range(trnSz):
 			caffeExp.set_layer_property('translation_fc_%d' % (t+1), ['inner_product_param', 'num_output'],

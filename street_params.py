@@ -159,13 +159,20 @@ def get_prms(isAligned=True,
 	assert type(lossType) == list, 'lossType should be list'
 	assert len(lossType) == len(labels)
 	assert len(labels)   == len(labelType)
+	#Assert that labels are sorted
+	sortLabels = sorted(labels)
+	for i,l in enumerate(labels):
+		assert(l == sortLabels[i])
 
 	paths = get_paths()
 	prms  = edict()
 	prms.isAligned = isAligned
 	prms.labels = []
+	prms.labelNames = ''
 	for lb,lbT,ls in zip(labels, labelType, lossType):
 		prms.labels = prms.labels + [LabelNLoss(lb, lbT, ls)]
+		prms.labelNames = prms.labelNames + '_%s' % lb
+	prms.labelNames = prms.labelNames[1:]
 	prms['lbNrmlz'] = labelNrmlz
 	prms['crpSz']        = crpSz
 	prms['trnSeq']       = trnSeq
