@@ -108,7 +108,14 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 	
 
 def make_loss_proto(prms, cPrms):
-	
+	allDefs = []
+	if prms.isSiamese and 'nrml' in prms.labels:
+		defFile = osp.join(baseFilePath, 'nrml_loss_layers.prototxt')
+		nrmlDef1 = mpu.ProtoDef(defFile)
+		nrmlDef2 = mpu.ProtoDef(defFile)
+		#Structure the two defs
+
+		#Merge the two defs			 	
 
 
 def setup_experiment(prms, cPrms):

@@ -168,11 +168,11 @@ def get_prms(isAligned=True,
 	prms  = edict()
 	prms.isAligned = isAligned
 	prms.labels = []
-	prms.labelNames = ''
+	prms.labelNames, prms.labelNameStr = labels, ''
 	for lb,lbT,ls in zip(labels, labelType, lossType):
 		prms.labels = prms.labels + [LabelNLoss(lb, lbT, ls)]
-		prms.labelNames = prms.labelNames + '_%s' % lb
-	prms.labelNames = prms.labelNames[1:]
+		prms.labelNameStr = prms.labelNameStr + '_%s' % lb
+	prms.labelNameStr = prms.labelNameStr[1:]
 	prms['lbNrmlz'] = labelNrmlz
 	prms['crpSz']        = crpSz
 	prms['trnSeq']       = trnSeq
