@@ -141,7 +141,7 @@ def get_train_test_splits(prms, folderId):
 
 ##
 #Get the raw labels
-def get_raw_labels_ims(prms, folderId, setName='train'):
+def get_raw_labels(prms, folderId, setName='train'):
 	'''
 		Labels for a particular split
 	'''
@@ -166,7 +166,7 @@ def get_raw_labels_ims(prms, folderId, setName='train'):
 def get_raw_labels_all(prms, setName='train'):
 	keys = get_folder_keys(prms)
 	lb   = []
-	for k in keys:
+	for k in [keys[0]]:
 		lb.append(get_raw_labels(prms, k, setName=setName))
 	return lb
 	
@@ -174,16 +174,22 @@ def get_raw_labels_all(prms, setName='train'):
 #Process the labels according to prms
 def get_labels(prms, setName='train'):
 	rawLb = get_raw_labels_all(prms, setName=setName)
-	N  = length(lb)
+	N  = len(rawLb)
 	#get the labels
 	perm  = np.random.permutation(N)
 	rawLb = [rawLb[p] for p in perm]
+	lb, prefix = [], []
 	for (i,rl) in enumerate(rawLb):
-		lb = []
-		for ll in prms.labels:
-			if ll == 'nrml':
-				lb.append(rl.nrml + [1])			
-								
+		for lbType in prms.labels:
+			if lbType.label_ == 'nrml':
+				#1 because we are going to have this as input to the
+				# ignore euclidean loss layer
+				for i in range(rl.num):
+					lb.append(rl[i].data.nrml + [1])
+					prefix.append(rl.prefix[i].strip())			
+	return lb, prefix					
+	
+				
 def show_images(prms, folderId):
 	imNames, _ = folderid_to_im_label_files(prms, folderId)	
 	plt.ion()

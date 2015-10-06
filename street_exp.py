@@ -11,11 +11,13 @@ def get_nw_prms(**kwargs):
 	dArgs.concatDrop  = False
 	dArgs.contextPad  = 24
 	dArgs.imSz        = 227
-	dArgs.extraFc     = False
-	dArgs.extraFcDrop = False
 	dArgs.imgntMean   = False
 	dArgs = mpu.get_defaults(kwargs, dArgs)
- 	return dArgs 
+	expStr = 'cnct-%s_cnctDrp%d_contPad%d_imSz%d_imgntMean%d'\
+						% (dArgs.concatLayer, dArgs.concatDrop, dArgs.contextPad,
+							 dArgs.imSz, dArgs.imgntMean)
+	dArgs.expStr = expStr 
+	return dArgs 
 
 ##
 # Parameters that specify the learning
@@ -23,28 +25,16 @@ def get_lr_prms(**kwargs):
 	dArgs = edict()
 	dArgs.batchSz = 128
 	dArgs.stepSz  = 20000	
-	dArgs = mpu.get_defaults(kwargs, dArgs)
+	dArgs  = mpu.get_defaults(kwargs, dArgs)
+	expStr = 'batchSz%d_stepSz%d' % (dArgs.batchSz, dArgs.stepSz)
+	dArgs.expStr = expStr 
+	
  	return dArgs 
 
-
-class LossPrms(object):
-	def 
-
 ##
-# Parameter specifying the loss
-def get_loss_prms(
-
-def get_caffe_prms(concatLayer='fc6', concatDrop=False, isScratch=True, deviceId=1, 
-									contextPad=24, imSz=227, convConcat=False,
-									imgntMean=False, 
-									isFineTune=False, sourceModelIter=150000,
-								  lrAbove=None, contrastiveMargin=None,
-									fine_base_lr=0.001, fineRunNum=1, fineNumData=1, 
-									fineMaxLayer=None, fineDataSet='sun',
-									fineMaxIter = 40000, addDrop=False, extraFc=False,
-									stepsize=20000, batchSz=128):
+# Parameters for fine-tuning
+def get_finetune_prms(**kwargs):
 	'''
-		convConcat     : Concatenate the siamese net using the convolution layers
 		sourceModelIter: The number of model iterations of the source model to consider
 		fine_max_iter  : The maximum iterations to which the target model should be trained.
 		lrAbove        : If learning is to be performed some layer. 
@@ -53,31 +43,29 @@ def get_caffe_prms(concatLayer='fc6', concatDrop=False, isScratch=True, deviceId
 		fineNumData    : The amount of data to be used for the finetuning. 
 		fineMaxLayer   : The maximum layer of the source n/w that should be considered.  
 	''' 
-	caffePrms = {}
-	caffePrms['concatLayer'] = concatLayer
-	caffePrms['deviceId']    = deviceId
-	caffePrms['contextPad']  = contextPad
-	caffePrms['imgntMean']   = imgntMean
-	caffePrms['stepsize']    = stepsize
-	caffePrms['imSz']        = imSz
-	caffePrms['convConcat']  = convConcat
-	caffePrms['batchSz']     = batchSz
-	caffePrms['isMySimple']  = isMySimple
-	caffePrms['contrastiveMargin'] = contrastiveMargin
-	caffePrms['fine']              = {}
-	caffePrms['fine']['modelIter'] = sourceModelIter
-	caffePrms['fine']['lrAbove']   = lrAbove
-	caffePrms['fine']['base_lr']   = fine_base_lr
-	caffePrms['fine']['runNum']    = fineRunNum
-	caffePrms['fine']['numData']   = fineNumData
-	caffePrms['fine']['maxLayer']  = fineMaxLayer
-	caffePrms['fine']['dataset']   = fineDataSet
-	caffePrms['fine']['max_iter']  = fineMaxIter
-	caffePrms['fine']['addDrop']   = addDrop
-	caffePrms['fine']['extraFc']   = extraFc
-	caffePrms['fine']['gamma']     = 0.5
-	caffePrms['fine']['prms']      = None
-	caffePrms['fine']['muFile']    = None
+	dArgs = edict()
+	dArgs.base_lr = 0.001
+	dArgs.runNum  = 1
+	dArgs.maxLayer = None
+	dArgs.lrAbove  = None
+	dArgs.dataset  = 'sun'
+	dArgs.maxIter  = 40000
+	dArgs.extraFc     = False
+	dArgs.extraFcDrop = False
+	dArgs.sourceModelIter = 60000 
+	dArgs = mpu.get_defaults(kwargs, dArgs)
+ 	return dArgs 
+
+
+def get_caffe_prms(nwPrms, lrPrms, finePrms=None, isScratch=True, deviceId=1): 
+									
+	caffePrms = edict()
+	caffePrms.deviceId  = deviceId
+	caffePrms.isScratch = isScratch
+	caffePrms.nwPrms    = copy.deepcopy(nwPrms)
+	caffePrms.lrPrms    = copy.deepcopy(lrPrms)
+	caffePrms.finePrms  = copy.deepcopy(finePrms)
+
 	expStr = []
 	expStr.append('con-%s' % concatLayer)
 	if isScratch:
