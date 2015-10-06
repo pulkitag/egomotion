@@ -1,78 +1,3 @@
-name: "KittiNet"
-layer {
-	name: "window_data"
-	top:  "pair_data"
-	top:  "pair_label"
-	type: "GenericWindowData"
-	generic_window_data_param {
-		source: "/data0/pulkitag/kitti/window-files/test_mxDiff-7_pose-sigMotion_nrmlz-zScoreScaleSeperate_imSz256_concat-fc6_nTe-10000.txt"
-		root_folder: "/data0/pulkitag/data_sets/kitti/odometry/dataset/sequences/imSz256/"
-		crop_size: 227
-		batch_size: 128
-		context_pad: 24
-		random_crop: false
-	}
-	transform_param {
-			mean_file: "/data0/pulkitag/kitti/lmdb-store/kitti_mean.binaryproto" 
-	}
-	include {
-		phase: TRAIN
-	}
-}
-layer {
-	name: "window_data"
-	top:  "pair_data"
-	top:  "pair_label"
-	type: "GenericWindowData"
-	generic_window_data_param {
-		source: "/data0/pulkitag/kitti/window-files/test_mxDiff-7_pose-sigMotion_nrmlz-zScoreScaleSeperate_imSz256_concat-fc6_nTe-10000.txt"
-		root_folder: "/data0/pulkitag/data_sets/kitti/odometry/dataset/sequences/imSz256/" 
-		crop_size: 227
-		batch_size: 50
-		context_pad: 24
-		random_crop: false
-	}
-	transform_param {
-		mean_file: "/data0/pulkitag/kitti/lmdb-store/kitti_mean.binaryproto" 
-	}
-	include {
-		phase: TEST
-	}
-}
-
-layer {
-  name: "slice_pair"
-  type: "Slice"
-  bottom: "pair_data"
-  top: "data"
-  top: "data_p"
-  slice_param {
-    slice_dim: 1
-    slice_point: 3
-  }
-}
-layer {
-  name: "slice_label"
-  type: "Slice"
-  bottom: "pair_label"
-  top: "translation_label"
-  top: "rotation_label_1"
-  slice_param {
-    slice_dim: 1
-    slice_point: 2
-  }
-}
-layer {
-  name: "slice_translation_label"
-  type: "Slice"
-  bottom: "translation_label"
-  top: "translation_label_1"
-  top: "translation_label_2"
-  slice_param {
-    slice_dim: 1
-    slice_point: 1
-  }
-}
 layer {
   name: "conv1"
   type: "Convolution"
@@ -607,16 +532,16 @@ layer {
 }
 
 layer {
-  name: "concat"
+  name: "concat_fc6"
   type: "Concat"
   bottom: "fc6"
   bottom: "fc6_p"
-  top: "concat"
+  top: "concat_fc6"
 }
 layer {
   name: "common_fc7"
   type: "InnerProduct"
-  bottom: "concat"
+  bottom: "concat_fc6"
   top: "common_fc7"
   param {
     lr_mult: 1
@@ -643,131 +568,5 @@ layer {
   type: "ReLU"
   bottom: "common_fc7"
   top: "common_fc7"
-}
-layer {
-	name: "drop7"
-	type: "Dropout"
-	bottom: "common_fc7"
-	top: "common_fc7"
-	dropout_param {
-		dropout_ratio: 0.5
-	}
-}
-layer {
-  name: "translation_fc_1"
-  type: "InnerProduct"
-  bottom: "common_fc7"
-  top: "translation_fc_1"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 2
-    decay_mult: 0
-  }
-  inner_product_param {
-    num_output: 3
-    weight_filler {
-      type: "gaussian"
-      std: 0.005
-    }
-    bias_filler {
-      type: "constant"
-      value: 1
-    }
-  }
-}
-layer {
-  name: "translation_fc_2"
-  type: "InnerProduct"
-  bottom: "common_fc7"
-  top: "translation_fc_2"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 2
-    decay_mult: 0
-  }
-  inner_product_param {
-    num_output: 3
-    weight_filler {
-      type: "gaussian"
-      std: 0.005
-    }
-    bias_filler {
-      type: "constant"
-      value: 1
-    }
-  }
-}
-layer {
-  name: "rotation_fc_1"
-  type: "InnerProduct"
-  bottom: "common_fc7"
-  top: "rotation_fc_1"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 2
-    decay_mult: 0
-  }
-  inner_product_param {
-    num_output: 3
-    weight_filler {
-      type: "gaussian"
-      std: 0.005
-    }
-    bias_filler {
-      type: "constant"
-      value: 1
-    }
-  }
-}
-layer {
-  name: "translation_loss_1"
-  type: "SoftmaxWithLoss"
-  bottom: "translation_fc_1"
-  bottom: "translation_label_1"
-  top: "translation_loss_1"
-}
-layer {
-  name: "translation_acc_1"
-  type: "Accuracy"
-  bottom: "translation_fc_1"
-  bottom: "translation_label_1"
-  top: "translation_acc_1"
-}
-layer {
-  name: "translation_loss_2"
-  type: "SoftmaxWithLoss"
-  bottom: "translation_fc_2"
-  bottom: "translation_label_2"
-  top: "translation_loss_2"
-}
-layer {
-  name: "translation_acc_2"
-  type: "Accuracy"
-  bottom: "translation_fc_2"
-  bottom: "translation_label_2"
-  top: "translation_acc_2"
-}
-layer {
-  name: "rotation_loss_1"
-  type: "SoftmaxWithLoss"
-  bottom: "rotation_fc_1"
-  bottom: "rotation_label_1"
-  top: "rotation_loss_1"
-}
-layer {
-  name: "rotation_acc_1"
-  type: "Accuracy"
-  bottom: "rotation_fc_1"
-  bottom: "rotation_label_1"
-  top: "rotation_acc_1"
 }
 
