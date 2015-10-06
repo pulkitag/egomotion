@@ -31,6 +31,7 @@ def get_paths():
 	#The Code directory
 	paths.code    = edict()
 	paths.code.dr = '/home/ubuntu/code/streetview'
+	paths.baseNetsDr = osp.join(paths.code.dr, 'base_files')
 	#List of tar files
 	paths.tar.fileList = osp.join(paths.code.dr, 'data_list.txt') 
 
@@ -173,6 +174,11 @@ def get_prms(isAligned=True,
 		prms.labels = prms.labels + [LabelNLoss(lb, lbT, ls)]
 		prms.labelNameStr = prms.labelNameStr + '_%s' % lb
 	prms.labelNameStr = prms.labelNameStr[1:]
+	if 'ptch' in labels or 'pose' in labels:
+		prms.isSiamese = True
+	else:
+		prms.isSiamese = False
+
 	prms['lbNrmlz'] = labelNrmlz
 	prms['crpSz']        = crpSz
 	prms['trnSeq']       = trnSeq

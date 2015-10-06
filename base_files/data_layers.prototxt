@@ -40,14 +40,4 @@ layer {
 	}
 }
 
-layer {
-  name: "slice_pair"
-  type: "Slice"
-  bottom: "pair_data"
-  top: "data"
-  top: "data_p"
-  slice_param {
-    slice_dim: 1
-    slice_point: 3
-  }
-}
+

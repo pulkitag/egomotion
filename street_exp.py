@@ -2,6 +2,8 @@ import os.path as osp
 import numpy as np
 import street_utils as su
 import my_pycaffe_utils as mpu
+from easydict import EasyDict as edict
+import copy
 
 ##
 # Parameters required to specify the n/w architecture
@@ -32,16 +34,18 @@ def get_lr_prms(**kwargs):
 	dArgs.gamma     = 0.5
 	dArgs.weight_decay = 0.0005 
 	dArgs  = mpu.get_defaults(kwargs, dArgs)
-	expStr = 'batchSz%d_stepSz%d_blr%.5f_mxItr%.2e_gamma%.2f_wdecay%.6f'\
-					 % (dArgs.batchsize, dArgs.stepsize, dArgs.base_lr,
-							dArgs.max_iter, dArgs.gamma, dArgs.weight_decay)
-	dArgs.expStr = expStr
 	#Make the solver 
 	solArgs = edict({'test_iter': 100, 'test_interval': 1000,
 						 'snapshot': 1000, 'debug_info': 'true'})
 	for k in dArgs.keys():
+		if k in ['batchsize']:
+			continue
 		solArgs[k] = copy.deepcopy(dArgs[k])
 	dArgs.solver = mpu.make_solver(**solArgs)	
+	expStr = 'batchSz%d_stepSz%.0e_blr%.5f_mxItr%.1e_gamma%.2f_wdecay%.6f'\
+					 % (dArgs.batchsize, dArgs.stepsize, dArgs.base_lr,
+							dArgs.max_iter, dArgs.gamma, dArgs.weight_decay)
+	dArgs.expStr = expStr
 	return dArgs 
 
 ##
@@ -85,6 +89,13 @@ def get_caffe_prms(nwPrms, lrPrms, finePrms=None, isScratch=True, deviceId=1):
 	caffePrms['solver'] = lrPrms.solver
 	return caffePrms
 
+
+def get_default_caffe_prms():
+	nwPrms = get_nw_prms()
+	lrPrms = get_lr_prms()
+	cPrms  = get_caffe_prms(nwPrms, lrPrms)
+	return cPrms
+
 #Adapt the ProtoDef for the data layers
 #Helper function for setup_experiment
 def _adapt_data_proto(protoDef, prms, cPrms):
@@ -105,20 +116,57 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 			'true', phase='TRAIN')
 		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
 			'true', phase='TEST')
-	
 
+
+##
+#Merge the definition of multiple layers
+def _merge_defs(defs): 
+	allDef = copy.deepcopy(defs[0])
+	for d in defs[1:]:
+		setNames = ['TRAIN', 'TEST']
+		for s in setNames:
+			trNames = d.get_all_layernames(phase=s)
+			for t in trNames:
+				trLayer = d.get_layer(t, phase=s)		
+				allDef.add_layer(t, trLayer, phase=s)
+	return allDef
+
+##
+# The proto definitions for the loss
 def make_loss_proto(prms, cPrms):
-	allDefs = []
-	if prms.isSiamese and 'nrml' in prms.labels:
+	baseFilePath = prms.paths.baseNetsDr
+	if prms.isSiamese and 'nrml' in prms.labelNames:
 		defFile = osp.join(baseFilePath, 'nrml_loss_layers.prototxt')
 		nrmlDef1 = mpu.ProtoDef(defFile)
 		nrmlDef2 = mpu.ProtoDef(defFile)
 		#Structure the two defs
-
+		nrmlDef1.set_layer_property('nrml_fc', 'name', 'nrml_1_fc')
+		nrmlDef1.set_layer_property('nrml_1_fc','top', 'nrml_1_fc')
+		nrmlDef2.set_layer_property('nrml_fc', 'name', 'nrml_2_fc')
+		nrmlDef2.set_layer_property('nrml_2_fc','top', 'nrml_2_fc')
 		#Merge the two defs			 	
+		lbDef = _merge_defs(nrmlDef1, nrmlDef2)
+	elif 'nrml' in prms.labelNames:
+		defFile = osp.join(baseFilePath, 'nrml_loss_layers.prototxt')
+		lbDef   = mpu.ProtoDef(defFile)
+	return lbDef	
 
+##
+#The proto definitions for the data
+def make_data_proto(prms, cPrms):
+	baseFilePath = prms.paths.baseNetsDr
+	dataFile     = osp.join(baseFilePath, 'data_layers.prototxt')
+	dataDef      = mpu.ProtoDef(dataFile)
+	#Add slicing of labels		
+	sliceFile = '%s_layers.protoxt' % prms.labelNameStr
+	sliceDef  = mpu.ProtoDef(osp.join(baseFilePath, sliceFile))
+	dataDef   = _merge_defs(dataDef, sliceDef)	
+	return dataDef
 
+##
+#Setup the experiment
 def setup_experiment(prms, cPrms):
+	baseFilePath = prms.paths.baseNetsDr
 	#Get the protodef for the n/w architecture
 	if prms.isSiamese:
 		netFileStr = '%s_window_siamese_%s.prototxt'
@@ -129,16 +177,15 @@ def setup_experiment(prms, cPrms):
 	netFile = osp.join(baseFilePath, netFile)
 	netDef  = mpu.ProtoDef(netFile)
 	#Data protodef
-	dataFile = '%s_layers.protoxt' % prms.labelNames
-	dataFile = osp.join(baseFilePath, dataFile)
-	dataDef  = mpu.ProtoDef(dataFile)
+	dataDef  = make_data_proto(prms, cPrms)
 	#Loss protodef
-	lossFile = '%s_loss_layers.protoxt' % prms.labelNames	
-	lossFile = osp.join(baseFilePath, lossFile)
-	lossDef  = mpu.ProtoDef(lossFile)
+	lossDef  = make_loss_proto(prms, cPrms)
+	#Merge all defs
+	protoDef = _merge_defs([dataDef, netDef, lossDef])
 	#Get the solver definition file
 	solDef   = cPrms['solver']
-	
+	return protoDef, solDef
+		
 	caffeExp = get_experiment_object(prms, cPrms)
 	caffeExp.init_from_external(solDef, protoDef)
 
