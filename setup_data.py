@@ -147,7 +147,7 @@ def save_groups(prms, isAlignedOnly=True):
 	else:
 		keys,_ = su.get_folder_keys_all(prms)	
 	for k in keys:
-		imNames, lbNames = su.folderid_to_im_label_files(prms, k)
+		imNames, lbNames, prefixes = su.folderid_to_im_label_files(prms, k, opPrefix=True)
 		print(k)
 		#Determine groups
 		grps = su.get_target_groups(prms, k)
@@ -159,9 +159,11 @@ def save_groups(prms, isAlignedOnly=True):
 			grpKey = grpKeyStr % ig	
 			grpLabels[grpKey]      = edict()
 			grpLabels[grpKey].num  = en - st
-			grpLabels[grpKey].data = []
+			grpLabels[grpKey].prefix  = []
+			grpLabels[grpKey].data    = []
 			for i in range(st,en):
 				grpLabels[grpKey].data.append(su.parse_label_file(lbNames[i]))
+				grpLabels[grpKey].prefix.append(prefixes[i])
 		pickle.dump({'groups': grpLabels}, 
 							open(prms.paths.label.grps % k, 'w'))	
 

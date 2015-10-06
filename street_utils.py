@@ -76,7 +76,7 @@ def id2name_folder(prms, folderId):
 
 ##
 # Get the names and labels of the files of a certain id 
-def folderid_to_im_label_files(prms, folderId):
+def folderid_to_im_label_files(prms, folderId, opPrefix=False):
 	with open(prms.paths.proc.folders.pre % folderId,'r') as f:
 		prefixes = f.readlines()
 		folder   = id2name_folder(prms, folderId)
@@ -84,7 +84,10 @@ def folderid_to_im_label_files(prms, folderId):
 		for p in prefixes:
 			imNames.append(osp.join(folder, '%s.jpg' % p.strip()))
 			lbNames.append(osp.join(folder, '%s.txt' % p.strip()))
-	return imNames, lbNames	
+	if opPrefix:
+		return imNames, lbNames, prefixes
+	else:
+		return imNames, lbNames	
 
 ##
 # Read the labels
@@ -138,7 +141,7 @@ def get_train_test_splits(prms, folderId):
 
 ##
 #Get the raw labels
-def get_raw_labels(prms, folderId, setName='train'):
+def get_raw_labels_ims(prms, folderId, setName='train'):
 	'''
 		Labels for a particular split
 	'''
@@ -150,6 +153,7 @@ def get_raw_labels(prms, folderId, setName='train'):
 	lbData = pickle.load(open(lbFile,'r'))
 	lbData = lbData['groups']
 	lb     = []
+	im     = []
 	for g in gids:
 		try:
 			lb.append(lbData[g])
@@ -158,9 +162,28 @@ def get_raw_labels(prms, folderId, setName='train'):
 	return lb
 
 ##
+#Get all the raw labels
+def get_raw_labels_all(prms, setName='train'):
+	keys = get_folder_keys(prms)
+	lb   = []
+	for k in keys:
+		lb.append(get_raw_labels(prms, k, setName=setName))
+	return lb
+	
+##
 #Process the labels according to prms
-
-
+def get_labels(prms, setName='train'):
+	rawLb = get_raw_labels_all(prms, setName=setName)
+	N  = length(lb)
+	#get the labels
+	perm  = np.random.permutation(N)
+	rawLb = [rawLb[p] for p in perm]
+	for (i,rl) in enumerate(rawLb):
+		lb = []
+		for ll in prms.labels:
+			if ll == 'nrml':
+				lb.append(rl.nrml + [1])			
+								
 def show_images(prms, folderId):
 	imNames, _ = folderid_to_im_label_files(prms, folderId)	
 	plt.ion()
