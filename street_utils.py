@@ -188,20 +188,46 @@ def get_raw_labels_all(prms, setName='train'):
 ##
 #Process the labels according to prms
 def get_labels(prms, setName='train'):
+	#The main quantity that requires randomization is patch matching
+	#So we will base this code around that. 
 	rawLb = get_raw_labels_all(prms, setName=setName)
 	N  = len(rawLb)
+	oldState  = np.random.get_state()
+	randSeed  = 1001
+	randState = np.random.RandomState(randSeed)
+	perm1     = randState.permutation(N)
+	perm2     = randState.permutation(N)	
+	perms     = zip(perm1,perm2)
 	#get the labels
-	perm  = np.random.permutation(N)
-	rawLb = [rawLb[p] for p in perm]
 	lb, prefix = [], []
-	for (i,rl) in enumerate(rawLb):
+	for (i, perm) in enumerate(perms):
+		p1, p2 = perm
 		for lbType in prms.labels:
 			if lbType.label_ == 'nrml':
 				#1 because we are going to have this as input to the
 				# ignore euclidean loss layer
+				rl = rawLb[p1]
 				for i in range(rl.num):
 					lb.append(rl.data[i].nrml)
-					prefix.append((rl.folderId, rl.prefix[i].strip()))			
+					prefix.append((rl.folderId, rl.prefix[i].strip(), None, None))
+			if lbType.label_ == 'ptch':
+				prob = randState.rand()
+				rl1  = rawLb[p1]
+				rl2  = rawLb[p2]
+				localPerm1 = randState.permutation(rl1.num)
+				localPerm2 = randState.permutation(rl2.num)
+				if prob > lbType.posFrac_:
+					#Sample positive
+					lb.append([1])	
+					prefix.append((rl1.folderId, rl1.prefix[localPerm1[0]].strip(),
+												 rl1.folderId, rl1.prefix[localPerm1[1]].strip()))
+				else:
+					#Sample negative			
+					lb.append([0])
+					prefix.append((rl1.folderId, rl1.prefix[localPerm1[0]].strip(),
+												 rl2.folderId, rl2.prefix[localPerm2[0]].strip()))
+
+	np.random.set_state(oldState)		
 	return lb, prefix					
 
 ##
@@ -214,8 +240,11 @@ def prefix2imname(prms, prefixes):
 	print fList
 	imNames = []
 	for pf in prefixes:
-		f, p = pf
-		imNames.append(osp.join(fList[f], p+'.jpg'))
+		f1, p1, f2, p2 = pf
+		if f2 is not None:
+			imNames.append([osp.join(fList[f1], p1+'.jpg'), osp.join(fList[f2], p2 +'.jpg')])
+		else:
+			imNames.append([osp.join(fList[f1], p1+'.jpg'), None])
 	return imNames
 
 ##
@@ -243,8 +272,10 @@ def make_window_file(prms, setNames=['test', 'train']):
 		gen = mpio.GenericWindowWriter(prms['paths']['windowFile'][s],
 						len(imNames1), numImPerExample, prms['labelSz'])
 		for i in range(len(imNames1)):
-			l1 = [imNames1[i], [ch, h, w], [minW, minH, maxW, maxH]]
-			gen.write(lb[i], l1)
+			line = []
+			for n in range(numImPerExample):
+				line.append([imNames1[i][n], [ch, h, w], [minW, minH, maxW, maxH]])
+			gen.write(lb[i], *line)
 		gen.close()
 
 				

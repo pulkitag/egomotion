@@ -90,10 +90,10 @@ def get_caffe_prms(nwPrms, lrPrms, finePrms=None, isScratch=True, deviceId=1):
 	return caffePrms
 
 
-def get_default_caffe_prms():
+def get_default_caffe_prms(deviceId=1):
 	nwPrms = get_nw_prms()
 	lrPrms = get_lr_prms()
-	cPrms  = get_caffe_prms(nwPrms, lrPrms)
+	cPrms  = get_caffe_prms(nwPrms, lrPrms, deviceId=deviceId)
 	return cPrms
 
 
@@ -149,6 +149,10 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 			'"%s"' % rootDir, phase='TRAIN')
 	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'root_folder'],
 			'"%s"' % rootDir, phase='TEST')
+	
+	#Set the batch size
+	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'batch_size'],
+			'%d' % cPrms.lrPrms.batchsize , phase='TRAIN')
 
 	#if prms['randomCrop']:
 	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
@@ -218,6 +222,36 @@ def setup_experiment(prms, cPrms):
 	caffeExp = get_experiment_object(prms, cPrms)
 	caffeExp.init_from_external(solDef, protoDef)
 	return caffeExp
+
+def make_experiment(prms, cPrms, isFine=False, resumeIter=None, 
+										srcModelFile=None, srcDefFile=None):
+	'''
+		Specifying the srcModelFile is a hack to overwrite a model file to 
+		use with pretraining. 
+	'''
+	if isFine:
+		caffeExp = setup_experiment_finetune(prms, cPrms, srcDefFile=srcDefFile)
+		if srcModelFile is None:
+			#Get the model name from the source experiment.
+			srcCaffeExp  = setup_experiment(prms, cPrms)
+			if cPrms['fine']['modelIter'] is not None:
+				modelFile = srcCaffeExp.get_snapshot_name(cPrms['fine']['modelIter'])
+			else:
+				modelFile = None
+	else:
+		caffeExp  = setup_experiment(prms, cPrms)
+		modelFile = None
+
+	if resumeIter is not None:
+		modelFile = None
+
+	if srcModelFile is not None:
+		modelFile = srcModelFile
+
+	caffeExp.make(modelFile=modelFile, resumeIter=resumeIter)
+	return caffeExp	
+
+
 
 def get_experiment_object(prms, cPrms):
 	caffeExp = mpu.CaffeExperiment(prms['expName'], cPrms['expStr'], 
