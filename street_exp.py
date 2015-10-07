@@ -14,7 +14,7 @@ def get_nw_prms(**kwargs):
 	dArgs.concatDrop  = False
 	dArgs.contextPad  = 24
 	dArgs.imSz        = 227
-	dArgs.imgntMean   = False
+	dArgs.imgntMean   = True
 	dArgs = mpu.get_defaults(kwargs, dArgs)
 	expStr = 'net-%s_cnct-%s_cnctDrp%d_contPad%d_imSz%d_imgntMean%d'\
 						%(dArgs.netName, dArgs.concatLayer, dArgs.concatDrop, 
@@ -134,6 +134,10 @@ def make_loss_proto(prms, cPrms):
 #Adapt the ProtoDef for the data layers
 #Helper function for setup_experiment
 def _adapt_data_proto(protoDef, prms, cPrms):
+	if prms.isAligned:
+		rootDir = '/data0/pulkitag/data_sets/streetview/raw/ssd105/Amir/WashingtonAligned/'
+	else:
+		raise Exception('rootDir is not defined')
 	#Get the source file for the train and test layers
 	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'source'],
 			'"%s"' % prms['paths']['windowFile']['train'], phase='TRAIN')
@@ -142,15 +146,26 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 
 	#Set the root folder
 	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'root_folder'],
-			'"%s"' % prms['paths']['imRootDir'], phase='TRAIN')
+			'"%s"' % rootDir, phase='TRAIN')
 	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'root_folder'],
-			'"%s"' % prms['paths']['imRootDir'], phase='TEST')
+			'"%s"' % rootDir, phase='TEST')
 
-	if prms['randomCrop']:
-		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
-			'true', phase='TRAIN')
-		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
-			'true', phase='TEST')
+	#if prms['randomCrop']:
+	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
+		'false', phase='TRAIN')
+	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
+		'false', phase='TEST')
+
+	#Set the mean file
+	if cPrms.nwPrms.imgntMean:
+		if prms.isSiamese:
+			fName = '/data0/pulkitag/caffe_models/ilsvrc2012_mean.binaryproto'
+		else:
+			fName = '/data0/pulkitag/caffe_models/ilsvrc2012_mean_for_siamese.binaryproto'
+		for p in ['TRAIN', 'TEST']:
+			protoDef.set_layer_property('window_data', ['transform_param', 'mean_file'],
+				'"%s"' % fName, phase=p)
+	
 
 ##
 #The proto definitions for the data

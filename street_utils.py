@@ -208,10 +208,14 @@ def get_labels(prms, setName='train'):
 # Convert a prefix and folder into the image name
 def prefix2imname(prms, prefixes):
 	fList   = get_folder_list(prms)
+	for ff in fList.keys():
+		drName    = fList[ff].split('/')[-1]
+		fList[ff] = drName
+	print fList
 	imNames = []
 	for pf in prefixes:
 		f, p = pf
-		imNames.append(osp.join(f, p+'.jpg'))
+		imNames.append(osp.join(fList[f], p+'.jpg'))
 	return imNames
 
 ##
