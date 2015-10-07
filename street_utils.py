@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import mydisplay as mydisp
 import h5py as h5
 import pickle
+import my_pycaffe_io as mpio
 
 ##
 #Get the prefixes for a specific folderId
@@ -61,6 +62,20 @@ def get_folder_keys(prms):
 	else:
 		keys,_   = get_folder_keys_all(prms)
 	return keys
+
+##
+#Get the list of all folders
+def get_folder_list(prms):
+	allKeys, allNames = get_folder_keys_all(prms)
+	fList = edict()
+	for (k,n) in zip(allKeys, allNames):
+		fList[k] = n
+	if prms.isAligned:
+		aKeys = get_folder_keys(prms)
+		for k in fList.keys():
+			if k not in aKeys:
+				del fList[k]
+	return fList	
 
 ##
 #Return the name of the folder from the id
@@ -167,7 +182,7 @@ def get_raw_labels_all(prms, setName='train'):
 	keys = get_folder_keys(prms)
 	lb   = []
 	for k in [keys[0]]:
-		lb.append(get_raw_labels(prms, k, setName=setName))
+		lb = lb + get_raw_labels(prms, k, setName=setName)
 	return lb
 	
 ##
@@ -185,10 +200,49 @@ def get_labels(prms, setName='train'):
 				#1 because we are going to have this as input to the
 				# ignore euclidean loss layer
 				for i in range(rl.num):
-					lb.append(rl[i].data.nrml + [1])
-					prefix.append(rl.prefix[i].strip())			
+					lb.append(rl.data[i].nrml)
+					prefix.append((rl.folderId, rl.prefix[i].strip()))			
 	return lb, prefix					
-	
+
+##
+# Convert a prefix and folder into the image name
+def prefix2imname(prms, prefixes):
+	fList   = get_folder_list(prms)
+	imNames = []
+	for pf in prefixes:
+		f, p = pf
+		imNames.append(osp.join(f, p+'.jpg'))
+	return imNames
+
+##
+#Make the window files
+def make_window_file(prms, setNames=['test', 'train']):
+	if len(prms.labelNames)==1 and prms.labelNames[0] == 'nrml':
+		numImPerExample = 1
+	else:
+		numImPerExample = 2	
+
+	#Assuming the size of images
+	h, w, ch = 640, 640, 3
+	hCenter, wCenter = int(h/2), int(w/2)
+	cr = int(prms.crpSz/2)
+	minH = max(0, hCenter - cr)
+	maxH = min(h, hCenter + cr)
+	minW = max(0, wCenter - cr)
+	maxW = min(w, wCenter + cr)  
+
+	for s in setNames:
+		#Get the im-label data
+		lb, prefix = get_labels(prms, s)
+		imNames1 = prefix2imname(prms, prefix)
+		#The output file
+		gen = mpio.GenericWindowWriter(prms['paths']['windowFile'][s],
+						len(imNames1), numImPerExample, prms['labelSz'])
+		for i in range(len(imNames1)):
+			l1 = [imNames1[i], [ch, h, w], [minW, minH, maxW, maxH]]
+			gen.write(lb[i], l1)
+		gen.close()
+
 				
 def show_images(prms, folderId):
 	imNames, _ = folderid_to_im_label_files(prms, folderId)	

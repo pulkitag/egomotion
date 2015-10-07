@@ -96,27 +96,6 @@ def get_default_caffe_prms():
 	cPrms  = get_caffe_prms(nwPrms, lrPrms)
 	return cPrms
 
-#Adapt the ProtoDef for the data layers
-#Helper function for setup_experiment
-def _adapt_data_proto(protoDef, prms, cPrms):
-	#Get the source file for the train and test layers
-	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'source'],
-			'"%s"' % prms['paths']['windowFile']['train'], phase='TRAIN')
-	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'source'],
-			'"%s"' % prms['paths']['windowFile']['test'], phase='TEST')
-
-	#Set the root folder
-	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'root_folder'],
-			'"%s"' % prms['paths']['imRootDir'], phase='TRAIN')
-	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'root_folder'],
-			'"%s"' % prms['paths']['imRootDir'], phase='TEST')
-
-	if prms['randomCrop']:
-		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
-			'true', phase='TRAIN')
-		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
-			'true', phase='TEST')
-
 
 ##
 #Merge the definition of multiple layers
@@ -152,6 +131,28 @@ def make_loss_proto(prms, cPrms):
 	return lbDef	
 
 ##
+#Adapt the ProtoDef for the data layers
+#Helper function for setup_experiment
+def _adapt_data_proto(protoDef, prms, cPrms):
+	#Get the source file for the train and test layers
+	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'source'],
+			'"%s"' % prms['paths']['windowFile']['train'], phase='TRAIN')
+	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'source'],
+			'"%s"' % prms['paths']['windowFile']['test'], phase='TEST')
+
+	#Set the root folder
+	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'root_folder'],
+			'"%s"' % prms['paths']['imRootDir'], phase='TRAIN')
+	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'root_folder'],
+			'"%s"' % prms['paths']['imRootDir'], phase='TEST')
+
+	if prms['randomCrop']:
+		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
+			'true', phase='TRAIN')
+		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
+			'true', phase='TEST')
+
+##
 #The proto definitions for the data
 def make_data_proto(prms, cPrms):
 	baseFilePath = prms.paths.baseNetsDr
@@ -174,6 +175,7 @@ def make_data_proto(prms, cPrms):
 		sliceDef  = mpu.ProtoDef(osp.join(baseFilePath, sliceFile))
 		dataDef   = _merge_defs(dataDef, sliceDef)	
 	#Set to the new window files
+	_adapt_data_proto(dataDef, prms, cPrms)
 	return dataDef
 
 ##
@@ -201,8 +203,6 @@ def setup_experiment(prms, cPrms):
 	caffeExp = get_experiment_object(prms, cPrms)
 	caffeExp.init_from_external(solDef, protoDef)
 	return caffeExp
-
-
 
 def get_experiment_object(prms, cPrms):
 	caffeExp = mpu.CaffeExperiment(prms['expName'], cPrms['expStr'], 

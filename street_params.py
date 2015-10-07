@@ -119,7 +119,7 @@ class LabelNLoss(object):
 		
 	def get_label_sz(self):
 		lbSz = get_label_size(self.label_, self.labelType_) 
-		if self.loss_ in ['l2', 'l1', 'l2-tukey']:
+		if not(self.label_ == 'nrml') and self.loss_ in ['l2', 'l1', 'l2-tukey']:
 			augLbSz = lbSz + 1
 		else:
 			augLbSz = lbSz
@@ -176,11 +176,15 @@ def get_prms(isAligned=True,
 	paths = get_paths()
 	prms  = edict()
 	prms.isAligned = isAligned
-	prms.labels = []
+	
+	#Label infoo
+	prms.labelSz = 0
+	prms.labels  = []
 	prms.labelNames, prms.labelNameStr = labels, ''
 	for lb,lbT,ls in zip(labels, labelType, lossType):
 		prms.labels = prms.labels + [LabelNLoss(lb, lbT, ls)]
 		prms.labelNameStr = prms.labelNameStr + '_%s' % lb
+		prms.labelSz      = prms.labelSz + prms.labels[-1].get_label_sz()[0]
 	prms.labelNameStr = prms.labelNameStr[1:]
 	if 'ptch' in labels or 'pose' in labels:
 		prms.isSiamese = True
