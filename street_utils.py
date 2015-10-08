@@ -231,6 +231,7 @@ def show_image_groups(prms, folderId):
 					im = mydisp.box_on_im(im, loc, 27)
 				else:
 					im = mydisp.box_on_im(im, loc, 27, 'b')
+				print im.shape
 				ax.imshow(im)
 				ax.set_title(('cm: (%.4f, %.4f, %.4f)'
 											+ '\n dist: %.4f, head: %.3f, pitch: %.3f, yaw: %3f')\
