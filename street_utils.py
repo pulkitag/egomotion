@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import mydisplay as mydisp
 import h5py as h5
 import pickle
+import my_pycaffe_io as mpio
 
 ##
 #Get the prefixes for a specific folderId
@@ -61,6 +62,20 @@ def get_folder_keys(prms):
 	else:
 		keys,_   = get_folder_keys_all(prms)
 	return keys
+
+##
+#Get the list of all folders
+def get_folder_list(prms):
+	allKeys, allNames = get_folder_keys_all(prms)
+	fList = edict()
+	for (k,n) in zip(allKeys, allNames):
+		fList[k] = n
+	if prms.isAligned:
+		aKeys = get_folder_keys(prms)
+		for k in fList.keys():
+			if k not in aKeys:
+				del fList[k]
+	return fList	
 
 ##
 #Return the name of the folder from the id
@@ -166,29 +181,103 @@ def get_raw_labels(prms, folderId, setName='train'):
 def get_raw_labels_all(prms, setName='train'):
 	keys = get_folder_keys(prms)
 	lb   = []
-	for k in [keys[0]]:
-		lb.append(get_raw_labels(prms, k, setName=setName))
+	for k in keys:
+		lb = lb + get_raw_labels(prms, k, setName=setName)
 	return lb
 	
 ##
 #Process the labels according to prms
 def get_labels(prms, setName='train'):
+	#The main quantity that requires randomization is patch matching
+	#So we will base this code around that. 
 	rawLb = get_raw_labels_all(prms, setName=setName)
 	N  = len(rawLb)
+	oldState  = np.random.get_state()
+	randSeed  = 1001
+	randState = np.random.RandomState(randSeed)
+	perm1     = randState.permutation(N)
+	perm2     = randState.permutation(N)	
+	perms     = zip(perm1,perm2)
 	#get the labels
-	perm  = np.random.permutation(N)
-	rawLb = [rawLb[p] for p in perm]
 	lb, prefix = [], []
-	for (i,rl) in enumerate(rawLb):
+	for (i, perm) in enumerate(perms):
+		p1, p2 = perm
 		for lbType in prms.labels:
 			if lbType.label_ == 'nrml':
 				#1 because we are going to have this as input to the
 				# ignore euclidean loss layer
+				rl = rawLb[p1]
 				for i in range(rl.num):
-					lb.append(rl[i].data.nrml + [1])
-					prefix.append(rl.prefix[i].strip())			
+					lb.append(rl.data[i].nrml)
+					prefix.append((rl.folderId, rl.prefix[i].strip(), None, None))
+			if lbType.label_ == 'ptch':
+				prob = randState.rand()
+				rl1  = rawLb[p1]
+				rl2  = rawLb[p2]
+				localPerm1 = randState.permutation(rl1.num)
+				localPerm2 = randState.permutation(rl2.num)
+				if prob > lbType.posFrac_:
+					#Sample positive
+					lb.append([1])	
+					prefix.append((rl1.folderId, rl1.prefix[localPerm1[0]].strip(),
+												 rl1.folderId, rl1.prefix[localPerm1[1]].strip()))
+				else:
+					#Sample negative			
+					lb.append([0])
+					prefix.append((rl1.folderId, rl1.prefix[localPerm1[0]].strip(),
+												 rl2.folderId, rl2.prefix[localPerm2[0]].strip()))
+
+	np.random.set_state(oldState)		
 	return lb, prefix					
-	
+
+##
+# Convert a prefix and folder into the image name
+def prefix2imname(prms, prefixes):
+	fList   = get_folder_list(prms)
+	for ff in fList.keys():
+		drName    = fList[ff].split('/')[-1]
+		fList[ff] = drName
+	print fList
+	imNames = []
+	for pf in prefixes:
+		f1, p1, f2, p2 = pf
+		if f2 is not None:
+			imNames.append([osp.join(fList[f1], p1+'.jpg'), osp.join(fList[f2], p2 +'.jpg')])
+		else:
+			imNames.append([osp.join(fList[f1], p1+'.jpg'), None])
+	return imNames
+
+##
+#Make the window files
+def make_window_file(prms, setNames=['test', 'train']):
+	if len(prms.labelNames)==1 and prms.labelNames[0] == 'nrml':
+		numImPerExample = 1
+	else:
+		numImPerExample = 2	
+
+	#Assuming the size of images
+	h, w, ch = 640, 640, 3
+	hCenter, wCenter = int(h/2), int(w/2)
+	cr = int(prms.crpSz/2)
+	minH = max(0, hCenter - cr)
+	maxH = min(h, hCenter + cr)
+	minW = max(0, wCenter - cr)
+	maxW = min(w, wCenter + cr)  
+
+	for s in setNames:
+		#Get the im-label data
+		lb, prefix = get_labels(prms, s)
+		imNames1 = prefix2imname(prms, prefix)
+		#The output file
+		gen = mpio.GenericWindowWriter(prms['paths']['windowFile'][s],
+						len(imNames1), numImPerExample, prms['labelSz'])
+		for i in range(len(imNames1)):
+			line = []
+			for n in range(numImPerExample):
+				line.append([imNames1[i][n], [ch, h, w], [minW, minH, maxW, maxH]])
+			gen.write(lb[i], *line)
+		gen.close()
+
 				
 def show_images(prms, folderId):
 	imNames, _ = folderid_to_im_label_files(prms, folderId)	

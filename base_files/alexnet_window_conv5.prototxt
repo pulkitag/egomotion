@@ -221,10 +221,10 @@ layer {
   top: "conv5"
 }
 layer {
-  name: "common_fc6"
+  name: "common_fc"
   type: "InnerProduct"
   bottom: "conv5"
-  top: "common_fc6"
+  top: "common_fc"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -248,7 +248,7 @@ layer {
 layer {
   name: "relu6"
   type: "ReLU"
-  bottom: "common_fc6"
-  top: "common_fc6"
+  bottom: "common_fc"
+  top: "common_fc"
 }
 

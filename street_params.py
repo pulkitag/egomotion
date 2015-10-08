@@ -95,12 +95,15 @@ def get_label_size(labelClass, labelType):
 			raise Exception('%s,%s not recognized' % (labelClass, labelType))
 	elif labelClass == 'ptch':
 		if labelType in ['wngtv', 'hngtv']:
-			lSz = 3
+			#It is just going to be a softmax loss
+			lSz = 1
 		else:
 			raise Exception('%s,%s not recognized' % (labelClass, labelType))
 	elif labelClass == 'pose':
-		if labelType in ['quat', 'euler']:
-			lSz = 6
+		if labelType in ['quat']:
+			lSz = 4
+		elif labelType in ['euler']:
+			lSz = 3
 		else:
 			raise Exception('%s,%s not recognized' % (labelClass, labelType))
 	else:
@@ -109,17 +112,21 @@ def get_label_size(labelClass, labelType):
 
 ##
 class LabelNLoss(object):
-	def __init__(self, labelClass, labelType, loss):
+	def __init__(self, labelClass, labelType, loss, ptchPosFrac=0.5):
 		self.label_     = labelClass
 		self.labelType_ = labelType
 		self.loss_      = loss
 		#augLbSz_ - augmented labelSz to include the ignore label option
 		self.augLbSz_, self.lbSz_  = self.get_label_sz()
 		self.lbStr_     = '%s-%s' % (self.label_, self.labelType_)
+		if labelClass == 'ptch':
+			self.posFrac_ = ptchPosFrac
+			self.lbStr_   = self.lbStr_ + '-posFrac%.1f' % self.posFrac_ 	
+	
 		
 	def get_label_sz(self):
 		lbSz = get_label_size(self.label_, self.labelType_) 
-		if self.loss_ in ['l2', 'l1', 'l2-tukey']:
+		if not(self.label_ == 'nrml') and self.loss_ in ['l2', 'l1', 'l2-tukey']:
 			augLbSz = lbSz + 1
 		else:
 			augLbSz = lbSz
@@ -129,12 +136,13 @@ class LabelNLoss(object):
 #get prms
 def get_prms(isAligned=True, 
 						 labels=['nrml'], labelType=['xyz'], 
+						 lossType=['l2'],
 						 labelNrmlz=None, 
 						 crpSz=101,
 						 numTrain=1e+06, numTest=1e+04,
-						 lossType=['l2'],
 						 trnSeq=[], 
-						 tePct=1.0, teGap=5):
+						 tePct=1.0, teGap=5,
+						 ptchPosFrac=0.5):
 	'''
 		labels    : What labels to use - make it a list for multiple
 								kind of labels
@@ -157,6 +165,7 @@ def get_prms(isAligned=True,
 		tePct       : % of groups to be labelled as test
 		teGap       : The number of groups that should be skipped before and after test
 									to ensure there are very low chances of overlap
+		ptchPosFrac : The fraction of the positive patches in the matching
 
 		NOTES
 		I have tried to form prms so that they have enough information to specify
@@ -176,11 +185,15 @@ def get_prms(isAligned=True,
 	paths = get_paths()
 	prms  = edict()
 	prms.isAligned = isAligned
-	prms.labels = []
+	
+	#Label infoo
+	prms.labelSz = 0
+	prms.labels  = []
 	prms.labelNames, prms.labelNameStr = labels, ''
 	for lb,lbT,ls in zip(labels, labelType, lossType):
-		prms.labels = prms.labels + [LabelNLoss(lb, lbT, ls)]
+		prms.labels = prms.labels + [LabelNLoss(lb, lbT, ls, ptchPosFrac=ptchPosFrac)]
 		prms.labelNameStr = prms.labelNameStr + '_%s' % lb
+		prms.labelSz      = prms.labelSz + prms.labels[-1].get_label_sz()[0]
 	prms.labelNameStr = prms.labelNameStr[1:]
 	if 'ptch' in labels or 'pose' in labels:
 		prms.isSiamese = True

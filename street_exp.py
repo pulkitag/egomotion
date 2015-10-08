@@ -14,7 +14,7 @@ def get_nw_prms(**kwargs):
 	dArgs.concatDrop  = False
 	dArgs.contextPad  = 24
 	dArgs.imSz        = 227
-	dArgs.imgntMean   = False
+	dArgs.imgntMean   = True
 	dArgs = mpu.get_defaults(kwargs, dArgs)
 	expStr = 'net-%s_cnct-%s_cnctDrp%d_contPad%d_imSz%d_imgntMean%d'\
 						%(dArgs.netName, dArgs.concatLayer, dArgs.concatDrop, 
@@ -32,11 +32,11 @@ def get_lr_prms(**kwargs):
 	dArgs.base_lr   = 0.001
 	dArgs.max_iter  = 250000
 	dArgs.gamma     = 0.5
-	dArgs.weight_decay = 0.0005 
+	dArgs.weight_decay = 0.0005
 	dArgs  = mpu.get_defaults(kwargs, dArgs)
 	#Make the solver 
 	solArgs = edict({'test_iter': 100, 'test_interval': 1000,
-						 'snapshot': 1000, 'debug_info': 'true'})
+						 'snapshot': 1000, 'debug_info': 'false'})
 	for k in dArgs.keys():
 		if k in ['batchsize']:
 			continue
@@ -90,32 +90,11 @@ def get_caffe_prms(nwPrms, lrPrms, finePrms=None, isScratch=True, deviceId=1):
 	return caffePrms
 
 
-def get_default_caffe_prms():
+def get_default_caffe_prms(deviceId=1):
 	nwPrms = get_nw_prms()
 	lrPrms = get_lr_prms()
-	cPrms  = get_caffe_prms(nwPrms, lrPrms)
+	cPrms  = get_caffe_prms(nwPrms, lrPrms, deviceId=deviceId)
 	return cPrms
-
-#Adapt the ProtoDef for the data layers
-#Helper function for setup_experiment
-def _adapt_data_proto(protoDef, prms, cPrms):
-	#Get the source file for the train and test layers
-	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'source'],
-			'"%s"' % prms['paths']['windowFile']['train'], phase='TRAIN')
-	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'source'],
-			'"%s"' % prms['paths']['windowFile']['test'], phase='TEST')
-
-	#Set the root folder
-	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'root_folder'],
-			'"%s"' % prms['paths']['imRootDir'], phase='TRAIN')
-	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'root_folder'],
-			'"%s"' % prms['paths']['imRootDir'], phase='TEST')
-
-	if prms['randomCrop']:
-		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
-			'true', phase='TRAIN')
-		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
-			'true', phase='TEST')
 
 
 ##
@@ -149,7 +128,51 @@ def make_loss_proto(prms, cPrms):
 	elif 'nrml' in prms.labelNames:
 		defFile = osp.join(baseFilePath, 'nrml_loss_layers.prototxt')
 		lbDef   = mpu.ProtoDef(defFile)
+	elif 'ptch' in prms.labelNames:
+		defFile = osp.join(baseFilePath, 'ptch_loss_layers.prototxt')
+		lbDef   = mpu.ProtoDef(defFile)
 	return lbDef	
+
+##
+#Adapt the ProtoDef for the data layers
+#Helper function for setup_experiment
+def _adapt_data_proto(protoDef, prms, cPrms):
+	if prms.isAligned:
+		rootDir = '/data0/pulkitag/data_sets/streetview/raw/ssd105/Amir/WashingtonAligned/'
+	else:
+		raise Exception('rootDir is not defined')
+	#Get the source file for the train and test layers
+	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'source'],
+			'"%s"' % prms['paths']['windowFile']['train'], phase='TRAIN')
+	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'source'],
+			'"%s"' % prms['paths']['windowFile']['test'], phase='TEST')
+
+	#Set the root folder
+	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'root_folder'],
+			'"%s"' % rootDir, phase='TRAIN')
+	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'root_folder'],
+			'"%s"' % rootDir, phase='TEST')
+	
+	#Set the batch size
+	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'batch_size'],
+			'%d' % cPrms.lrPrms.batchsize , phase='TRAIN')
+
+	#if prms['randomCrop']:
+	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
+		'false', phase='TRAIN')
+	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
+		'false', phase='TEST')
+
+	#Set the mean file
+	if cPrms.nwPrms.imgntMean:
+		if prms.isSiamese:
+			fName = '/data0/pulkitag/caffe_models/ilsvrc2012_mean.binaryproto'
+		else:
+			fName = '/data0/pulkitag/caffe_models/ilsvrc2012_mean_for_siamese.binaryproto'
+		for p in ['TRAIN', 'TEST']:
+			protoDef.set_layer_property('window_data', ['transform_param', 'mean_file'],
+				'"%s"' % fName, phase=p)
+	
 
 ##
 #The proto definitions for the data
@@ -157,23 +180,26 @@ def make_data_proto(prms, cPrms):
 	baseFilePath = prms.paths.baseNetsDr
 	dataFile     = osp.join(baseFilePath, 'data_layers.prototxt')
 	dataDef      = mpu.ProtoDef(dataFile)
+	appendFlag   = True
 	if len(prms.labelNames)==1:
-			#Modify the label and data top names
-		if prms.labelNames[0]=='nrml':
-			for ph in ['TRAIN', 'TEST']:
-				dataDef.set_layer_property('window_data', 'top', '"data"', phase=ph)
-				top2 = mpu.make_key('top', ['top'])
-				dataDef.set_layer_property('window_data', top2, '"nrml_label"', phase=ph)
-		elif prms.labelNames[0]=='pose':
-			pass
-		elif prms.labelNames[0]=='ptch':
-			pass
-	else:
+		lbName = '"%s_label"' % prms.labelNames[0]
+		top2 = mpu.make_key('top', ['top'])
+		for ph in ['TRAIN', 'TEST']:
+			dataDef.set_layer_property('window_data', top2, lbName, phase=ph)
+			if prms.labelNames[0] == 'nrml':
+				dataDef.set_layer_property('window_data', 'top', 
+																		'"data"', phase=ph)
+				appendFlag = False
+			else:
+				appendFlag = True
+	
+	if appendFlag:
 		#Add slicing of labels	
-		sliceFile = '%s_layers.protoxt' % prms.labelNameStr
+		sliceFile = '%s_layers.prototxt' % prms.labelNameStr
 		sliceDef  = mpu.ProtoDef(osp.join(baseFilePath, sliceFile))
-		dataDef   = _merge_defs(dataDef, sliceDef)	
+		dataDef   = _merge_defs([dataDef, sliceDef])	
 	#Set to the new window files
+	_adapt_data_proto(dataDef, prms, cPrms)
 	return dataDef
 
 ##
@@ -201,6 +227,34 @@ def setup_experiment(prms, cPrms):
 	caffeExp = get_experiment_object(prms, cPrms)
 	caffeExp.init_from_external(solDef, protoDef)
 	return caffeExp
+
+def make_experiment(prms, cPrms, isFine=False, resumeIter=None, 
+										srcModelFile=None, srcDefFile=None):
+	'''
+		Specifying the srcModelFile is a hack to overwrite a model file to 
+		use with pretraining. 
+	'''
+	if isFine:
+		caffeExp = setup_experiment_finetune(prms, cPrms, srcDefFile=srcDefFile)
+		if srcModelFile is None:
+			#Get the model name from the source experiment.
+			srcCaffeExp  = setup_experiment(prms, cPrms)
+			if cPrms['fine']['modelIter'] is not None:
+				modelFile = srcCaffeExp.get_snapshot_name(cPrms['fine']['modelIter'])
+			else:
+				modelFile = None
+	else:
+		caffeExp  = setup_experiment(prms, cPrms)
+		modelFile = None
+
+	if resumeIter is not None:
+		modelFile = None
+
+	if srcModelFile is not None:
+		modelFile = srcModelFile
+
+	caffeExp.make(modelFile=modelFile, resumeIter=resumeIter)
+	return caffeExp	
 
 
 

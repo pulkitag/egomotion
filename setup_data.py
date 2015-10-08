@@ -28,6 +28,26 @@ def download_tar(prms):
 			subprocess.check_call(['gsutil cp %s %s' % (f, outName)], shell=True) 
 	print ('All Files copied')
 
+
+##
+# Helper function for get_foldernames
+def _find_im_labels(folder):
+	fNames = os.listdir(folder)
+	fNames = [osp.join(folder, f.strip()) for f in fNames]
+	#If one is directory then all should be dirs
+	if osp.isdir(fNames[0]):
+		dirNames = []
+		for f in fNames:
+			childDir = _find_im_labels(f)	
+			if type(childDir) == list:
+				dirNames = dirNames + childDir
+			else:
+				dirNames = dirNames + [childDir]
+	else:
+		dirNames = [folder]
+	print dirNames
+	return dirNames
+
 ##
 # Find the foldernames in which data is stored
 def get_foldernames(prms):
@@ -66,26 +86,6 @@ def save_aligned_keys(prms):
 		for k,n in zip(keys,names):	
 			if 'Aligned' in n:
 				f.write('%s\n' % k)
-
-
-##
-# Helper function for get_foldernames
-def _find_im_labels(folder):
-	fNames = os.listdir(folder)
-	fNames = [osp.join(folder, f.strip()) for f in fNames]
-	#If one is directory then all should be dirs
-	if osp.isdir(fNames[0]):
-		dirNames = []
-		for f in fNames:
-			childDir = _find_im_labels(f)	
-			if type(childDir) == list:
-				dirNames = dirNames + childDir
-			else:
-				dirNames = dirNames + [childDir]
-	else:
-		dirNames = [folder]
-	print dirNames
-	return dirNames
 
 ##
 # Read names of all files in the folder
@@ -159,8 +159,9 @@ def save_groups(prms, isAlignedOnly=True):
 			grpKey = grpKeyStr % ig	
 			grpLabels[grpKey]      = edict()
 			grpLabels[grpKey].num  = en - st
-			grpLabels[grpKey].prefix  = []
-			grpLabels[grpKey].data    = []
+			grpLabels[grpKey].prefix   = []
+			grpLabels[grpKey].data     = []
+			grpLabels[grpKey].folderId = k
 			for i in range(st,en):
 				grpLabels[grpKey].data.append(su.parse_label_file(lbNames[i]))
 				grpLabels[grpKey].prefix.append(prefixes[i])
