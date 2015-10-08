@@ -539,10 +539,10 @@ layer {
   top: "concat_fc6"
 }
 layer {
-  name: "common_fc7"
+  name: "common_fc"
   type: "InnerProduct"
   bottom: "concat_fc6"
-  top: "common_fc7"
+  top: "common_fc"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -566,7 +566,7 @@ layer {
 layer {
   name: "relu7"
   type: "ReLU"
-  bottom: "common_fc7"
-  top: "common_fc7"
+  bottom: "common_fc"
+  top: "common_fc"
 }
 

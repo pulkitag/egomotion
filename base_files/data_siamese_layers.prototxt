@@ -1,0 +1,43 @@
+name: "StreetNet"
+layer {
+	name: "window_data"
+	top:  "pair_data"
+	top:  "pair_label"
+	type: "GenericWindowData"
+	generic_window_data_param {
+		source: "/data0/pulkitag/kitti/window-files/test_mxDiff-7_pose-sigMotion_nrmlz-zScoreScaleSeperate_imSz256_concat-fc6_nTe-10000.txt"
+		root_folder: "/data0/pulkitag/data_sets/kitti/odometry/dataset/sequences/imSz256/"
+		crop_size: 227
+		batch_size: 128
+		context_pad: 24
+		random_crop: false
+	}
+	transform_param {
+			mean_file: "/data0/pulkitag/kitti/lmdb-store/kitti_mean.binaryproto" 
+	}
+	include {
+		phase: TRAIN
+	}
+}
+layer {
+	name: "window_data"
+	top:  "pair_data"
+	top:  "pair_label"
+	type: "GenericWindowData"
+	generic_window_data_param {
+		source: "/data0/pulkitag/kitti/window-files/test_mxDiff-7_pose-sigMotion_nrmlz-zScoreScaleSeperate_imSz256_concat-fc6_nTe-10000.txt"
+		root_folder: "/data0/pulkitag/data_sets/kitti/odometry/dataset/sequences/imSz256/" 
+		crop_size: 227
+		batch_size: 50
+		context_pad: 24
+		random_crop: false
+	}
+	transform_param {
+		mean_file: "/data0/pulkitag/kitti/lmdb-store/kitti_mean.binaryproto" 
+	}
+	include {
+		phase: TEST
+	}
+}
+
+

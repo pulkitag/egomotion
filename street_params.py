@@ -136,10 +136,10 @@ class LabelNLoss(object):
 #get prms
 def get_prms(isAligned=True, 
 						 labels=['nrml'], labelType=['xyz'], 
+						 lossType=['l2'],
 						 labelNrmlz=None, 
 						 crpSz=101,
 						 numTrain=1e+06, numTest=1e+04,
-						 lossType=['l2'],
 						 trnSeq=[], 
 						 tePct=1.0, teGap=5,
 						 ptchPosFrac=0.5):

@@ -32,11 +32,11 @@ def get_lr_prms(**kwargs):
 	dArgs.base_lr   = 0.001
 	dArgs.max_iter  = 250000
 	dArgs.gamma     = 0.5
-	dArgs.weight_decay = 0.0005 
+	dArgs.weight_decay = 0.0005
 	dArgs  = mpu.get_defaults(kwargs, dArgs)
 	#Make the solver 
 	solArgs = edict({'test_iter': 100, 'test_interval': 1000,
-						 'snapshot': 1000, 'debug_info': 'true'})
+						 'snapshot': 1000, 'debug_info': 'false'})
 	for k in dArgs.keys():
 		if k in ['batchsize']:
 			continue
@@ -128,6 +128,9 @@ def make_loss_proto(prms, cPrms):
 	elif 'nrml' in prms.labelNames:
 		defFile = osp.join(baseFilePath, 'nrml_loss_layers.prototxt')
 		lbDef   = mpu.ProtoDef(defFile)
+	elif 'ptch' in prms.labelNames:
+		defFile = osp.join(baseFilePath, 'ptch_loss_layers.prototxt')
+		lbDef   = mpu.ProtoDef(defFile)
 	return lbDef	
 
 ##
@@ -177,22 +180,24 @@ def make_data_proto(prms, cPrms):
 	baseFilePath = prms.paths.baseNetsDr
 	dataFile     = osp.join(baseFilePath, 'data_layers.prototxt')
 	dataDef      = mpu.ProtoDef(dataFile)
+	appendFlag   = True
 	if len(prms.labelNames)==1:
-			#Modify the label and data top names
-		if prms.labelNames[0]=='nrml':
-			for ph in ['TRAIN', 'TEST']:
-				dataDef.set_layer_property('window_data', 'top', '"data"', phase=ph)
-				top2 = mpu.make_key('top', ['top'])
-				dataDef.set_layer_property('window_data', top2, '"nrml_label"', phase=ph)
-		elif prms.labelNames[0]=='pose':
-			pass
-		elif prms.labelNames[0]=='ptch':
-			pass
-	else:
+		lbName = '"%s_label"' % prms.labelNames[0]
+		top2 = mpu.make_key('top', ['top'])
+		for ph in ['TRAIN', 'TEST']:
+			dataDef.set_layer_property('window_data', top2, lbName, phase=ph)
+			if prms.labelNames[0] == 'nrml':
+				dataDef.set_layer_property('window_data', 'top', 
+																		'"data"', phase=ph)
+				appendFlag = False
+			else:
+				appendFlag = True
+	
+	if appendFlag:
 		#Add slicing of labels	
-		sliceFile = '%s_layers.protoxt' % prms.labelNameStr
+		sliceFile = '%s_layers.prototxt' % prms.labelNameStr
 		sliceDef  = mpu.ProtoDef(osp.join(baseFilePath, sliceFile))
-		dataDef   = _merge_defs(dataDef, sliceDef)	
+		dataDef   = _merge_defs([dataDef, sliceDef])	
 	#Set to the new window files
 	_adapt_data_proto(dataDef, prms, cPrms)
 	return dataDef
