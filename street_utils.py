@@ -10,6 +10,8 @@ import mydisplay as mydisp
 import h5py as h5
 import pickle
 import my_pycaffe_io as mpio
+import re
+import matplotlib.path as mplPath
 
 ##
 #Get the prefixes for a specific folderId
@@ -278,7 +280,37 @@ def make_window_file(prms, setNames=['test', 'train']):
 			gen.write(lb[i], *line)
 		gen.close()
 
-				
+
+##
+#Read the coordinates of DC that need to be geofenced. 
+def read_coordinates(fName):
+	coords   = []
+	readFlag = False
+	with open(fName,'r') as f:
+		lines = f.readlines()
+		for l in lines:
+			#Detect the end of a set of coordinates
+			if 'coordinates' in l	and readFlag==True:
+				readFlag = False
+				continue
+			if readFlag:
+				print l	
+				coords.append([float(c) for c in re.split('\,+|\ +', l.strip())])
+			if 'coordinates' in l and not readFlag:
+				readFlag = True
+
+	cArr = []
+	for c in coords:
+		cArr.append(np.array(c).reshape((len(c)/3,3))[:,0:2])
+	return cArr
+
+def make_polygon(coords):
+	return mplPath.Path(coords)
+
+def is_coord_inside(polygon,cord):
+	return polygon.contains_point(cord)
+
+	
 def show_images(prms, folderId):
 	imNames, _ = folderid_to_im_label_files(prms, folderId)	
 	plt.ion()
