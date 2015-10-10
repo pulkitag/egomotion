@@ -236,4 +236,13 @@ def get_prms(isAligned=True,
 	#					get_pose_stats(prms)
 	return prms
 
+##
+#Get normals for 
+def get_prms_nrml(**kwargs):
+	return get_prms(labels=['nrml'], labelType=['xyz'], lossType=['l2'], **kwargs)
+		
+def get_prms_ptch(**kwargs):
+	return get_prms(labels=['ptch'], labelType=['wngtv'], lossType=['l2'], **kwargs)
 
+def get_prms_pose(**kwargs):
+	return get_prms(labels=['pose'], labelType=['quat'], lossType=['l2'], **kwargs)

@@ -12,6 +12,7 @@ import pickle
 import my_pycaffe_io as mpio
 import re
 import matplotlib.path as mplPath
+import rot_utils as ru
 
 ##
 #Get the prefixes for a specific folderId
@@ -212,7 +213,7 @@ def get_labels(prms, setName='train'):
 				for i in range(rl.num):
 					lb.append(rl.data[i].nrml)
 					prefix.append((rl.folderId, rl.prefix[i].strip(), None, None))
-			if lbType.label_ == 'ptch':
+			elif lbType.label_ == 'ptch':
 				prob = randState.rand()
 				rl1  = rawLb[p1]
 				rl2  = rawLb[p2]
@@ -228,7 +229,20 @@ def get_labels(prms, setName='train'):
 					lb.append([0])
 					prefix.append((rl1.folderId, rl1.prefix[localPerm1[0]].strip(),
 												 rl2.folderId, rl2.prefix[localPerm2[0]].strip()))
-
+			elif lbType.label_ == 'pose':
+				rl1        = rawLb[p1]
+				localPerm1 = randState.permutation(rl1.num)
+				y1, x1, z1 = rl1[localPerm1[0]].rot
+				y2, x2, z2 = rl2[localPerm1[1]].rot
+				if lbType.labelType_ == 'euler':
+					lb.append([z2 - z1, y2 - y1, x2 - x1]) 
+				elif lbType.labelType_ == 'quat':
+					quat = ru.euler2quat(z2-z1, y2-y1, x2-x1)
+					lb.append([quat]) 
+				else:
+					raise Exception('Type not recognized')	
+			else:
+				raise Exception('Type not recognized')	
 	np.random.set_state(oldState)		
 	return lb, prefix					
 
