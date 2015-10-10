@@ -9,10 +9,35 @@ import matplotlib.pyplot as plt
 import mydisplay as mydisp
 import h5py as h5
 import pickle
+import matplotlib.path as mplPath
+import re
 
 def _mkdir(fName):
 	if not osp.exists(fName):
 		os.makedirs(fName)
+
+##
+#Read the coordinates of DC that need to be geofenced. 
+def read_geo_coordinates(fName):
+	coords   = []
+	readFlag = False
+	with open(fName,'r') as f:
+		lines = f.readlines()
+		for l in lines:
+			#Detect the end of a set of coordinates
+			if 'coordinates' in l	and readFlag==True:
+				readFlag = False
+				continue
+			if readFlag:
+				#print l	
+				coords.append([float(c) for c in re.split('\,+|\ +', l.strip())])
+			if 'coordinates' in l and not readFlag:
+				readFlag = True
+	cArr = []
+	for c in coords:
+		cArr.append(mplPath.Path(np.array(c).reshape((len(c)/3,3))[:,0:2]))
+	return cArr
+
 
 def get_paths():
 	paths      = edict()
@@ -79,6 +104,9 @@ def get_paths():
 	paths.exp.snapshot.dr = osp.join(paths.exp.dr, 'snapshots') 
 	_mkdir(paths.exp.snapshot.dr)
 
+	#Paths for geofence data
+	paths.geoFile = osp.join(paths.code.dr, 'geofence', '%s.txt')
+
 	#For legacy reasons
 	paths.expDir  = osp.join(paths.exp.dr, 'caffe-files')
 	paths.snapDir = paths.exp.snapshot.dr
@@ -142,7 +170,8 @@ def get_prms(isAligned=True,
 						 numTrain=1e+06, numTest=1e+04,
 						 trnSeq=[], 
 						 tePct=1.0, teGap=5,
-						 ptchPosFrac=0.5):
+						 ptchPosFrac=0.5, 
+						 geoFence=None):
 	'''
 		labels    : What labels to use - make it a list for multiple
 								kind of labels
@@ -201,8 +230,9 @@ def get_prms(isAligned=True,
 		prms.isSiamese = False
 
 	prms['lbNrmlz'] = labelNrmlz
-	prms['crpSz']        = crpSz
-	prms['trnSeq']       = trnSeq
+	prms['crpSz']   = crpSz
+	prms['trnSeq']  = trnSeq
+	prms.geoPoly    = None 	
 
 	prms.splits = edict()
 	prms.splits.numTrain = numTrain
@@ -219,6 +249,10 @@ def get_prms(isAligned=True,
 
 	expStr    = ''.join(['%s_' % lb.lbStr_ for lb in prms.labels])
 	expStr    = expStr[0:-1]
+	if geoFence is not None:
+		expStr     = '%s_geo-%s' % (expStr, geoFence)
+		paths.geoFile = paths.geoFile % geoFence
+		prms.geoPoly  = read_geo_coordinates(paths.geoFile) 
 	expName   = '%s_crpSz%d_nTr-%.2e' % (expStr, crpSz, numTrain)
 	teExpName = '%s_crpSz%d_nTe-%.2e' % (expStr, crpSz, numTest)
 	prms['expName'] = expName

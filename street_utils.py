@@ -158,6 +158,27 @@ def get_train_test_splits(prms, folderId):
 	return splits.splits
 
 ##
+#polygon of type mplPath
+def is_geo_coord_inside(polygon,cord):
+	return polygon.contains_point(cord)
+
+
+##
+#Find if a group is inside the geofence
+def is_group_in_geo(prms, grp):
+	isInside = False
+	if prms.geoPoly is None:
+		return True
+	else:
+		#Even if a single target point is inside the geo
+		#fence count as true
+		for geo in prms.geoPoly:
+			for i in range(grp.num):
+				cc = grp.data[i].pts.target
+				isInside = isInside or is_geo_coord_inside(geo, (cc[1], cc[0]))	
+	return isInside
+
+##
 #Get the raw labels
 def get_raw_labels(prms, folderId, setName='train'):
 	'''
@@ -174,7 +195,9 @@ def get_raw_labels(prms, folderId, setName='train'):
 	im     = []
 	for g in gids:
 		try:
-			lb.append(lbData[g])
+			isInside = is_group_in_geo(prms, lbData[g])
+			if isInside:
+				lb.append(lbData[g])
 		except:
 			pdb.set_trace()
 	return lb
@@ -295,36 +318,9 @@ def make_window_file(prms, setNames=['test', 'train']):
 		gen.close()
 
 
-##
-#Read the coordinates of DC that need to be geofenced. 
-def read_coordinates(fName):
-	coords   = []
-	readFlag = False
-	with open(fName,'r') as f:
-		lines = f.readlines()
-		for l in lines:
-			#Detect the end of a set of coordinates
-			if 'coordinates' in l	and readFlag==True:
-				readFlag = False
-				continue
-			if readFlag:
-				print l	
-				coords.append([float(c) for c in re.split('\,+|\ +', l.strip())])
-			if 'coordinates' in l and not readFlag:
-				readFlag = True
 
-	cArr = []
-	for c in coords:
-		cArr.append(np.array(c).reshape((len(c)/3,3))[:,0:2])
-	return cArr
 
-def make_polygon(coords):
-	return mplPath.Path(coords)
-
-def is_coord_inside(polygon,cord):
-	return polygon.contains_point(cord)
-
-	
+#Polygon should be of type mplPath	
 def show_images(prms, folderId):
 	imNames, _ = folderid_to_im_label_files(prms, folderId)	
 	plt.ion()
