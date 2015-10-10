@@ -30,7 +30,7 @@ def get_paths():
 	paths.tar.dr  = osp.join(paths.dataDr, 'tar')
 	#The Code directory
 	paths.code    = edict()
-	paths.code.dr = '/home/ubuntu/code/streetview'
+	paths.code.dr = cfg.STREETVIEW_CODE_PATH
 	paths.baseNetsDr = osp.join(paths.code.dr, 'base_files')
 	#List of tar files
 	paths.tar.fileList = osp.join(paths.code.dr, 'data_list.txt') 

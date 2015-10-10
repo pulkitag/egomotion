@@ -28,6 +28,20 @@ def download_tar(prms):
 			subprocess.check_call(['gsutil cp %s %s' % (f, outName)], shell=True) 
 	print ('All Files copied')
 
+##
+#Untar the files and then delete them. 
+def untar_and_del(prms):
+	fNames = get_tar_files(prms)	
+	suffix = []
+	for f in fNames:
+		suffix.append(osp.split(f)[1])
+	fNames = [osp.join(prms.paths.tar.dr, s) for s in suffix]
+	for f in fNames:
+		if not osp.exists(f):
+			continue
+		subprocess.check_call(['tar -xf %s -C %s' % (f, prms.paths.raw.dr)],shell=True) 
+		subprocess.check_call(['rm %s' % f],shell=True) 
+	return fNames	
 
 ##
 # Helper function for get_foldernames
