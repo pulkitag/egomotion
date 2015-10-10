@@ -230,8 +230,8 @@ def get_labels(prms, setName='train'):
 			elif lbType.label_ == 'pose':
 				rl1        = rawLb[p1]
 				localPerm1 = randState.permutation(rl1.num)
-				y1, x1, z1 = rl1[localPerm1[0]].rot
-				y2, x2, z2 = rl2[localPerm1[1]].rot
+				y1, x1, z1 = rl1.data[localPerm1[0]].rots
+				y2, x2, z2 = rl1.data[localPerm1[1]].rots
 				if lbType.labelType_ == 'euler':
 					lb.append([z2 - z1, y2 - y1, x2 - x1]) 
 				elif lbType.labelType_ == 'quat':

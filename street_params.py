@@ -127,7 +127,8 @@ class LabelNLoss(object):
 	def get_label_sz(self):
 		lbSz = get_label_size(self.label_, self.labelType_) 
 		if not(self.label_ == 'nrml') and self.loss_ in ['l2', 'l1', 'l2-tukey']:
-			augLbSz = lbSz + 1
+			#augLbSz = lbSz + 1
+			augLbSz  = lbSz
 		else:
 			augLbSz = lbSz
 		return augLbSz, lbSz
