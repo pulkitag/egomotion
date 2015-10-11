@@ -255,19 +255,22 @@ def get_labels(prms, setName='train'):
 												 rl2.folderId, rl2.prefix[localPerm2[0]].strip()))
 			elif lbType.label_ == 'pose':
 				rl1        = rawLb[p1]
-				localPerm1 = randState.permutation(rl1.num)
-				y1, x1, z1 = rl1.data[localPerm1[0]].rots
-				y2, x2, z2 = rl1.data[localPerm1[1]].rots
-				if lbType.labelType_ == 'euler':
-					lb.append([z2 - z1, y2 - y1, x2 - x1]) 
-				elif lbType.labelType_ == 'quat':
-					quat = ru.euler2quat(z2-z1, y2-y1, x2-x1)
-					q1, q2, q3, q4 = quat
-					lb.append([q1, q2, q3, q4]) 
-				else:
-					raise Exception('Type not recognized')	
-				prefix.append((rl1.folderId, rl1.prefix[localPerm1[0]].strip(),
-											 rl1.folderId, rl1.prefix[localPerm1[1]].strip()))
+				for n1 in range(rl1.num):
+					for n2 in range(n1+1, rl1.num):
+						if rl1.data[n1].align is None or rl1.data[n2].align is None:
+							continue	 
+						y1, x1, z1 = rl1.data[n1].rots
+						y2, x2, z2 = rl1.data[n2].rots
+						if lbType.labelType_ == 'euler':
+							lb.append([z2 - z1, y2 - y1, x2 - x1]) 
+						elif lbType.labelType_ == 'quat':
+							quat = ru.euler2quat(z2-z1, y2-y1, x2-x1)
+							q1, q2, q3, q4 = quat
+							lb.append([q1, q2, q3, q4]) 
+						else:
+							raise Exception('Type not recognized')	
+						prefix.append((rl1.folderId, rl1.prefix[n1].strip(),
+													 rl1.folderId, rl1.prefix[n2].strip()))
 			else:
 				raise Exception('Type not recognized')	
 	np.random.set_state(oldState)		
