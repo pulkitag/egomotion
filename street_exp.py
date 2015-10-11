@@ -37,7 +37,7 @@ def get_lr_prms(**kwargs):
 	dArgs  = mpu.get_defaults(kwargs, dArgs)
 	#Make the solver 
 	solArgs = edict({'test_iter': 100, 'test_interval': 1000,
-						 'snapshot': 1000, 'debug_info': 'false'})
+						 'snapshot': 1000, 'debug_info': 'true'})
 	for k in dArgs.keys():
 		if k in ['batchsize']:
 			continue
@@ -270,6 +270,68 @@ def make_experiment(prms, cPrms, isFine=False, resumeIter=None,
 	return caffeExp	
 
 
+def get_experiment_accuracy(prms, cPrms):
+	#This will contain the log file name
+	exp = setup_experiment(prms, cPrms)
+	#For getting the names of losses	
+	lossDef  = make_loss_proto(prms, cPrms)
+	lNames    = lossDef.get_all_layernames()
+	lossNames = [l for l in lNames if 'loss' in l or 'acc' in l]
+		
+
+def read_log(fileName):
+	'''
+	'''
+	fid = open(fileName,'r')
+	trainLines, trainIter = [], []
+	testLines, testIter   = [], []
+	iterNum   = None
+	#Read the test lines in the log
+	while True:
+		l = fid.readline()
+		if not l:
+			break
+		if 'Iteration' in l:
+			iterNum  = int(l.split()[5][0:-1]) 
+		if 'Test' in l and ('loss' in l or 'acc' in l):
+			testLines.append(l)
+			testIter.append(iterNum)
+		if 'Train' in l and ('loss' in l or 'acc' in l):
+			trainLines.append(l)
+			trainIter.append(iterNum)
+	fid.close()
+	return testLines, testIter, trainLines, trainIter
+
+##
+#Read the loss values from a log file
+def log2loss(fName, lossNames):
+	testLines, testIter, trainLines, trainIter = read_log(fName)
+	N = len(lossNames)
+	assert(len(testLines)==N*len(testIter))
+	assert(len(trainLines)==N*len(trainIter))
+		
+	testData, trainData = {}, {}
+	for t in lossNames:
+		testData[t], trainData[t] = [], []
+		#Parse the test data
+		for l in testLines:
+			if t in l:
+				data = l.split()
+				#print data
+				assert data[8] == t
+				testData[t].append(float(data[-6]))
+		#Parse the train data
+		for l in trainLines:
+			if t in l:
+				data = l.split()
+				assert data[8] == t
+				trainData[t].append(float(data[-6]))
+		for t in lossNames:
+			testData[t]  = np.array(testData[t])
+			trainData[t] = np.array(trainData[t])
+	testData['iters']  = np.array(testIter)
+	trainData['iters'] = np.array(trainIter)
+	return testData, trainData
 
 def get_experiment_object(prms, cPrms):
 	caffeExp = mpu.CaffeExperiment(prms['expName'], cPrms['expStr'], 

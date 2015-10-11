@@ -8,6 +8,5 @@ def run_smallnet_pool4_pose():
 							 concatLayer='pool4')
 	lPrms = se.get_lr_prms(batchsize=256)
 	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=[0,1])
-	return prms, cPrms
 	exp   = se.make_experiment(prms, cPrms)
 	exp.run()	 
