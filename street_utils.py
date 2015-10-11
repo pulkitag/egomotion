@@ -265,6 +265,8 @@ def get_labels(prms, setName='train'):
 					lb.append([quat]) 
 				else:
 					raise Exception('Type not recognized')	
+				prefix.append((rl1.folderId, rl1.prefix[localPerm1[0]].strip(),
+											 rl1.folderId, rl1.prefix[localPerm1[1]].strip()))
 			else:
 				raise Exception('Type not recognized')	
 	np.random.set_state(oldState)		
