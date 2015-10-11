@@ -214,7 +214,7 @@ layer {
   }
 }
 layer {
-  name: "relu4"
+  name: "relu_common"
   type: "ReLU"
   bottom: "common_fc"
   top: "common_fc"
