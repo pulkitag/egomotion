@@ -257,7 +257,7 @@ def get_labels(prms, setName='train'):
 				rl1        = rawLb[p1]
 				for n1 in range(rl1.num):
 					for n2 in range(n1+1, rl1.num):
-						if rl1[n1].align is None or rl1[n2].align is None:
+						if rl1.data[n1].align is None or rl1.data[n2].align is None:
 							continue	 
 						y1, x1, z1 = rl1.data[n1].rots
 						y2, x2, z2 = rl1.data[n2].rots
