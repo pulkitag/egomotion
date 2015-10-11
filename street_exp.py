@@ -18,11 +18,14 @@ def get_nw_prms(**kwargs):
 	dArgs.imSz        = 227
 	dArgs.imgntMean   = True
 	dArgs.maxJitter   = 11
+	dArgs.randCrop    = False
 	dArgs = mpu.get_defaults(kwargs, dArgs)
 	expStr = 'net-%s_cnct-%s_cnctDrp%d_contPad%d_imSz%d_imgntMean%d_jit%d'\
 						%(dArgs.netName, dArgs.concatLayer, dArgs.concatDrop, 
 							dArgs.contextPad,
 							dArgs.imSz, dArgs.imgntMean, dArgs.maxJitter)
+	if dArgs.randCrop:
+		expStr = '%s_randCrp%d' % (expStr, dArgs.randCrop)
 	dArgs.expStr = expStr 
 	return dArgs 
 
@@ -167,7 +170,7 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 	for p in ['TRAIN', 'TEST']:
 		#Random Crop
 		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
-			'false', phase=p)
+			'%s' % str(cPrms.nwPrms.randCrop).lower(), phase=p)
 		#maxJitter
 		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'max_jitter'],
 			cPrms.nwPrms.maxJitter, phase=p)
