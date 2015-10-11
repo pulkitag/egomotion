@@ -4,6 +4,8 @@ import street_utils as su
 import my_pycaffe_utils as mpu
 from easydict import EasyDict as edict
 import copy
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 
 ##
 # Parameters required to specify the n/w architecture
@@ -272,12 +274,30 @@ def make_experiment(prms, cPrms, isFine=False, resumeIter=None,
 
 def get_experiment_accuracy(prms, cPrms):
 	#This will contain the log file name
-	exp = setup_experiment(prms, cPrms)
+	exp     = setup_experiment(prms, cPrms)
+	logFile = exp.expFile_.logTrain_	
 	#For getting the names of losses	
 	lossDef  = make_loss_proto(prms, cPrms)
 	lNames    = lossDef.get_all_layernames()
 	lossNames = [l for l in lNames if 'loss' in l or 'acc' in l]
-		
+	return log2loss(logFile, lossNames)
+
+def plot_experiment_accuracy(prms, cPrms, svFile=None):
+	testData, trainData = get_experiment_accuracy(prms, cPrms)
+	plt.figure()
+	ax = plt.subplot(111)
+	for k in testData.keys():
+		if k == 'iters':
+			continue
+		ax.plot(testData['iters'][1:], testData[k][1:],'r',  linewidth=3.0)
+	for k in trainData.keys():
+		if k == 'iters':
+			continue
+		ax.plot(trainData['iters'][1:], trainData[k][1:],'b',  linewidth=3.0)
+	if svFile is not None:
+		with PdfPages(svFile) as pdf:
+			pdf.savefig()
+
 
 def read_log(fileName):
 	'''
