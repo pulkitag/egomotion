@@ -261,7 +261,8 @@ def get_labels(prms, setName='train'):
 					lb.append([z2 - z1, y2 - y1, x2 - x1]) 
 				elif lbType.labelType_ == 'quat':
 					quat = ru.euler2quat(z2-z1, y2-y1, x2-x1)
-					lb.append([quat]) 
+					q1, q2, q3, q4 = quat
+					lb.append([q1, q2, q3, q4]) 
 				else:
 					raise Exception('Type not recognized')	
 				prefix.append((rl1.folderId, rl1.prefix[localPerm1[0]].strip(),
