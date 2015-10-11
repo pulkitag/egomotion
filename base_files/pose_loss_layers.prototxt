@@ -12,7 +12,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 6
+    num_output: 4
     weight_filler {
       type: "gaussian"
       std: 0.005
@@ -25,7 +25,7 @@ layer {
 }
 layer {
   name: "pose_loss"
-  type: "EuclideanLossWithIgnore"
+  type: "EuclideanLoss"
   bottom: "pose_fc"
   bottom: "pose_label"
   top: "pose_loss"

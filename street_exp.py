@@ -12,14 +12,15 @@ def get_nw_prms(**kwargs):
 	dArgs.netName     = 'alexnet'
 	dArgs.concatLayer = 'fc6'
 	dArgs.concatDrop  = False
-	dArgs.contextPad  = 24
+	dArgs.contextPad  = 0
 	dArgs.imSz        = 227
 	dArgs.imgntMean   = True
+	dArgs.maxJitter   = 11
 	dArgs = mpu.get_defaults(kwargs, dArgs)
-	expStr = 'net-%s_cnct-%s_cnctDrp%d_contPad%d_imSz%d_imgntMean%d'\
+	expStr = 'net-%s_cnct-%s_cnctDrp%d_contPad%d_imSz%d_imgntMean%d_jit%d'\
 						%(dArgs.netName, dArgs.concatLayer, dArgs.concatDrop, 
 							dArgs.contextPad,
-							dArgs.imSz, dArgs.imgntMean)
+							dArgs.imSz, dArgs.imgntMean, dArgs.maxJitter)
 	dArgs.expStr = expStr 
 	return dArgs 
 
@@ -128,8 +129,12 @@ def make_loss_proto(prms, cPrms):
 	elif 'nrml' in prms.labelNames:
 		defFile = osp.join(baseFilePath, 'nrml_loss_layers.prototxt')
 		lbDef   = mpu.ProtoDef(defFile)
+		idx     = prms.labelNames.index('nrml')
 	elif 'ptch' in prms.labelNames:
 		defFile = osp.join(baseFilePath, 'ptch_loss_layers.prototxt')
+		lbDef   = mpu.ProtoDef(defFile)
+	elif 'pose' in prms.labelNames:
+		defFile = osp.join(baseFilePath, 'pose_loss_layers.prototxt')
 		lbDef   = mpu.ProtoDef(defFile)
 	return lbDef	
 
@@ -157,11 +162,16 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'batch_size'],
 			'%d' % cPrms.lrPrms.batchsize , phase='TRAIN')
 
-	#if prms['randomCrop']:
-	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
-		'false', phase='TRAIN')
-	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
-		'false', phase='TEST')
+	for p in ['TRAIN', 'TEST']:
+		#Random Crop
+		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
+			'false', phase=p)
+		#maxJitter
+		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'max_jitter'],
+			cPrms.nwPrms.maxJitter, phase=p)
+		#Context Pad
+		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'context_pad'],
+			cPrms.nwPrms.contextPad, phase=p)
 
 	#Set the mean file
 	if cPrms.nwPrms.imgntMean:

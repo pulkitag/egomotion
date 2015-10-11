@@ -234,7 +234,8 @@ def get_labels(prms, setName='train'):
 				# ignore euclidean loss layer
 				rl = rawLb[p1]
 				for i in range(rl.num):
-					lb.append(rl.data[i].nrml)
+					#Ignore the last dimension as its always 0.
+					lb.append(rl.data[i].nrml[0:2])
 					prefix.append((rl.folderId, rl.prefix[i].strip(), None, None))
 			elif lbType.label_ == 'ptch':
 				prob = randState.rand()
