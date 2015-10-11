@@ -14,11 +14,14 @@ def smallnet_pool4_pose(isRun=False):
 	else:
 		return prms, cPrms	
 
-def run_smallnet_pool4_nrml():
+def run_smallnet_pool4_nrml(isRun=False):
 	prms  = sp.get_prms_nrml(geoFence='dc-v1')
 	nPrms = se.get_nw_prms(imSz=101, netName='smallnet',
 							 concatLayer='pool4')
 	lPrms = se.get_lr_prms(batchsize=256)
 	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=[0,1,2,3])
-	exp   = se.make_experiment(prms, cPrms)
-	exp.run()	 
+	if isRun:
+		exp   = se.make_experiment(prms, cPrms)
+		exp.run()	
+	else:
+		return prms, cPrms 
