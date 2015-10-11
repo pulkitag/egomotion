@@ -129,8 +129,12 @@ def make_loss_proto(prms, cPrms):
 	elif 'nrml' in prms.labelNames:
 		defFile = osp.join(baseFilePath, 'nrml_loss_layers.prototxt')
 		lbDef   = mpu.ProtoDef(defFile)
+		idx     = prms.labelNames.index('nrml')
 	elif 'ptch' in prms.labelNames:
 		defFile = osp.join(baseFilePath, 'ptch_loss_layers.prototxt')
+		lbDef   = mpu.ProtoDef(defFile)
+	elif 'pose' in prms.labelNames:
+		defFile = osp.join(baseFilePath, 'pose_loss_layers.prototxt')
 		lbDef   = mpu.ProtoDef(defFile)
 	return lbDef	
 
@@ -164,10 +168,10 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 			'false', phase=p)
 		#maxJitter
 		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'max_jitter'],
-			prms.nwPrms.maxJitter, phase=p)
+			cPrms.nwPrms.maxJitter, phase=p)
 		#Context Pad
 		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'context_pad'],
-			prms.nwPrms.contextPad, phase=p)
+			cPrms.nwPrms.contextPad, phase=p)
 
 	#Set the mean file
 	if cPrms.nwPrms.imgntMean:
