@@ -172,6 +172,9 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 		#Context Pad
 		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'context_pad'],
 			cPrms.nwPrms.contextPad, phase=p)
+		#Image Size
+		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'crop_size'],
+			cPrms.nwPrms.imSz, phase=p)
 
 	#Set the mean file
 	if cPrms.nwPrms.imgntMean:
