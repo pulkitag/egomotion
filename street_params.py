@@ -112,13 +112,14 @@ def get_paths():
 	paths.snapDir = paths.exp.snapshot.dr
 	return paths
 
-
 ##
 # Get the label dimensions
 def get_label_size(labelClass, labelType):
 	if labelClass == 'nrml':
 		if labelType == 'xyz':
-			lSz = 3
+			#The third is always 0 as it is defined by the axis of the camera
+			#that points at the target. 
+			lSz = 2
 		else:
 			raise Exception('%s,%s not recognized' % (labelClass, labelType))
 	elif labelClass == 'ptch':
