@@ -140,7 +140,7 @@ layer {
 layer {
   name: "conv4"
   type: "Convolution"
-  bottom: "conv3"
+  bottom: "pool3"
   top: "conv4"
   param {
     name: "conv4_w"
@@ -319,7 +319,7 @@ layer {
 layer {
   name: "conv4_p"
   type: "Convolution"
-  bottom: "conv3_p"
+  bottom: "pool3_p"
   top: "conv4_p"
   param {
     name: "conv4_w"
