@@ -1,6 +1,8 @@
 ## @package debug
 # Debug various aspects of the pipeline
 #
+import matplotlib as mpl
+mpl.use('Agg')
 import street_exp as se
 import os.path as osp
 import street_params as sp
@@ -24,14 +26,18 @@ def debug_generic_data():
 	dataDef.del_layer_property('window_data', 'transform_param', phase='TEST')
 	dataDef.write(outFile)
 
+	print ("Here")
 	#Load the data through the layer and save it
 	svDr = osp.join(prms.paths.code.dr, 'debug-data')
+	plt.ion()
 	plt.figure()
 	ax1  = plt.subplot(121)
 	ax2  = plt.subplot(122)
+	print ("Loading Net")
 	net = caffe.Net(outFile, caffe.TEST)
 	N     = 4
 	count = 0
+	print ("Processing Data")
 	for i in range(N):
 		allDat = net.forward(['data', 'data_p'])
 		im1Dat = allDat['data']

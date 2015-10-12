@@ -314,10 +314,14 @@ def make_window_file(prms, setNames=['test', 'train']):
 		#Get the im-label data
 		lb, prefix = get_labels(prms, s)
 		imNames1 = prefix2imname(prms, prefix)
+		#Randomly permute the data
+		N = len(imNames1)
+		randState = np.random.RandomState(19)
+		perm      = randState.permutation(N) 
 		#The output file
 		gen = mpio.GenericWindowWriter(prms['paths']['windowFile'][s],
 						len(imNames1), numImPerExample, prms['labelSz'])
-		for i in range(len(imNames1)):
+		for i in perm:
 			line = []
 			for n in range(numImPerExample):
 				line.append([imNames1[i][n], [ch, h, w], [minW, minH, maxW, maxH]])
