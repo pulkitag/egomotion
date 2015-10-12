@@ -132,7 +132,8 @@ def get_label_size(labelClass, labelType):
 		if labelType in ['quat']:
 			lSz = 4
 		elif labelType in ['euler']:
-			lSz = 3
+			#One of the angles is always 0
+			lSz = 2
 		else:
 			raise Exception('%s,%s not recognized' % (labelClass, labelType))
 	else:
@@ -141,7 +142,14 @@ def get_label_size(labelClass, labelType):
 
 ##
 class LabelNLoss(object):
-	def __init__(self, labelClass, labelType, loss, ptchPosFrac=0.5):
+	def __init__(self, labelClass, labelType, loss, ptchPosFrac=0.5, maxRot=None):
+		'''
+			ptchPosFrac: When considering patch matching data - the fraction of patches
+									 to consider as positives
+			maxRot:      When considering the pose - the maximum rotation in degrees 
+									 between the image pairs
+									 that need to be considered. 
+		'''
 		self.label_     = labelClass
 		self.labelType_ = labelType
 		self.loss_      = loss
@@ -151,8 +159,11 @@ class LabelNLoss(object):
 		if labelClass == 'ptch':
 			self.posFrac_ = ptchPosFrac
 			self.lbStr_   = self.lbStr_ + '-posFrac%.1f' % self.posFrac_ 	
+		if labelClass == 'pose'
+			if maxRot is not None:
+				self.lbStr_   = self.lbStr_ + '-mxRot%d' % maxRot
+				self.maxRot_  = maxRot 
 	
-		
 	def get_label_sz(self):
 		lbSz = get_label_size(self.label_, self.labelType_) 
 		if not(self.label_ == 'nrml') and self.loss_ in ['l2', 'l1', 'l2-tukey']:
@@ -172,7 +183,7 @@ def get_prms(isAligned=True,
 						 numTrain=1e+06, numTest=1e+04,
 						 trnSeq=[], 
 						 tePct=1.0, teGap=5,
-						 ptchPosFrac=0.5, 
+						 ptchPosFrac=0.5, maxEulerRot=None, 
 						 geoFence=None):
 	'''
 		labels    : What labels to use - make it a list for multiple
@@ -222,7 +233,8 @@ def get_prms(isAligned=True,
 	prms.labels  = []
 	prms.labelNames, prms.labelNameStr = labels, ''
 	for lb,lbT,ls in zip(labels, labelType, lossType):
-		prms.labels = prms.labels + [LabelNLoss(lb, lbT, ls, ptchPosFrac=ptchPosFrac)]
+		prms.labels = prms.labels + [LabelNLoss(lb, lbT, ls,
+										 ptchPosFrac=ptchPosFrac, maxRot=maxEulerRot)]
 		prms.labelNameStr = prms.labelNameStr + '_%s' % lb
 		prms.labelSz      = prms.labelSz + prms.labels[-1].get_label_sz()[0]
 	prms.labelNameStr = prms.labelNameStr[1:]
@@ -282,3 +294,6 @@ def get_prms_ptch(**kwargs):
 
 def get_prms_pose(**kwargs):
 	return get_prms(labels=['pose'], labelType=['quat'], lossType=['l2'], **kwargs)
+
+def get_prms_pose_euler(**kwargs):
+	return get_prms(labels=['pose'], labelType=['euler'], lossType=['l2'], **kwargs)

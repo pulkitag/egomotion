@@ -261,8 +261,17 @@ def get_labels(prms, setName='train'):
 							continue	 
 						y1, x1, z1 = rl1.data[n1].rots
 						y2, x2, z2 = rl1.data[n2].rots
+						roll, yaw, pitch = z2 - z1, y2 - y1, x2 - x1
+						if lbType.maxRot_ is not None:
+							if (np.abs(roll) > lbType.maxRot_ or\
+								  np.abs(yaw) > lbType.maxRot_ or\
+								  np.abs(pitch)>lbType.maxRot):
+									continue
 						if lbType.labelType_ == 'euler':
-							lb.append([z2 - z1, y2 - y1, x2 - x1]) 
+							if lbType.lbSz_ == 3:
+								lb.append([roll/180.0, yaw/180.0, pitch/180.0]) 
+							else:
+								lb.append([yaw/180.0, pitch/180.0]) 
 						elif lbType.labelType_ == 'quat':
 							quat = ru.euler2quat(z2-z1, y2-y1, x2-x1)
 							q1, q2, q3, q4 = quat

@@ -14,7 +14,7 @@ import numpy as np
 def debug_generic_data():
 	#Setup the data proto
 	bSz   = 5
-	prms  = sp.get_prms_pose(geoFence='dc-v1')	
+	prms  = sp.get_prms_pose_euler(geoFence='dc-v1')	
 	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
 								 concatLayer='pool4', maxJitter=0)
 	lPrms = se.get_lr_prms(batchsize=bSz)
@@ -35,13 +35,14 @@ def debug_generic_data():
 	ax2  = plt.subplot(122)
 	print ("Loading Net")
 	net = caffe.Net(outFile, caffe.TEST)
-	N     = 4
+	N     = 100
 	count = 0
 	print ("Processing Data")
 	for i in range(N):
-		allDat = net.forward(['data', 'data_p'])
+		allDat = net.forward(['data', 'data_p', 'pose_label'])
 		im1Dat = allDat['data']
 		im2Dat = allDat['data_p']
+		lb     = allDat['pose_label']
 		for b in range(bSz):
 			print(i,b)
 			im1 = im1Dat[b].transpose((1,2,0))
@@ -50,7 +51,9 @@ def debug_generic_data():
 			im2 = im2[:,:,[2,1,0]]
 			ax1.imshow(im1.astype(np.uint8))
 			ax2.imshow(im2.astype(np.uint8))
-			svFile = osp.join(svDr, '%04d.pdf' % count)
-			with PdfPages(svFile) as pdf:
-				pdf.savefig()
+			ax1.set_title('roll: %.4f, yaw: %.4f, pitch:%.4f' % tuple(lb[b].flatten()))
+			svFile = osp.join(svDr, '%04d.jpg' % count)
+			plt.savefig(svFile)
+		  #with PdfPages(svFile) as pdf:
+			#	pdf.savefig()
 			count += 1

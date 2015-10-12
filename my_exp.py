@@ -53,7 +53,6 @@ def smallnetv2_pool4_pose_randcrp(isRun=False):
 		return prms, cPrms	
 
 
-
 def run_smallnet_pool4_nrml(isRun=False):
 	prms  = sp.get_prms_nrml(geoFence='dc-v1')
 	nPrms = se.get_nw_prms(imSz=101, netName='smallnet',
