@@ -6,6 +6,7 @@ from easydict import EasyDict as edict
 import copy
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+from pycaffe_config import cfg
 
 ##
 # Parameters required to specify the n/w architecture
