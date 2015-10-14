@@ -56,7 +56,6 @@ def smallnetv2_1_pool4_pose_euler_mx45_crp192(isRun=False):
 		return prms, cPrms	
 
 
-
 ##Run the smallnet for pose but with random cropping
 def smallnetv2_pool4_pose_randcrp(isRun=False):
 	prms  = sp.get_prms_pose(geoFence='dc-v1')
@@ -69,6 +68,20 @@ def smallnetv2_pool4_pose_randcrp(isRun=False):
 		exp.run()
 	else:
 		return prms, cPrms	
+
+
+def smallnetv2_pool4_pose_crp192(isRun=False):
+	prms  = sp.get_prms_pose(geoFence='dc-v1', crpSz=192)
+	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
+							 concatLayer='pool4', lossWeight=10.0)
+	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000, clip_gradients=10.0)
+	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=[1])
+	if isRun:
+		exp   = se.make_experiment(prms, cPrms)
+		exp.run()
+	else:
+		return prms, cPrms	
+
 
 ########### NETWORK V3 ######################################
 def smallnetv3_pool4_pose(isRun=False):
@@ -100,8 +113,8 @@ def smallnetv3_pool4_pose_euler_mx45_crp192(isRun=False):
 def smallnetv3_pool4_pose_crp192(isRun=False):
 	prms  = sp.get_prms_pose(geoFence='dc-v1', crpSz=192)
 	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v3',
-							 concatLayer='pool4')
-	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000)
+							 concatLayer='pool4', lossWeight=10.0)
+	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000, clip_gradients=10.0)
 	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=[0])
 	if isRun:
 		exp   = se.make_experiment(prms, cPrms)

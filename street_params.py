@@ -44,7 +44,7 @@ def get_paths():
 	#For storing the directories
 	paths.dirs = edict()
 	#The raw data
-	paths.dataDr  = '/data0/pulkitag/data_sets/streetview'
+	paths.dataDr  = osp.join(cfg.STREETVIEW_DATA_MAIN, 'pulkitag/data_sets/streetview')
 	paths.raw     = edict()
 	paths.raw.dr  = osp.join(paths.dataDr, 'raw')
 	#Processed data
