@@ -159,7 +159,7 @@ class LabelNLoss(object):
 		if labelClass == 'ptch':
 			self.posFrac_ = ptchPosFrac
 			self.lbStr_   = self.lbStr_ + '-posFrac%.1f' % self.posFrac_ 	
-		if labelClass == 'pose'
+		if labelClass == 'pose':
 			if maxRot is not None:
 				self.lbStr_   = self.lbStr_ + '-mxRot%d' % maxRot
 				self.maxRot_  = maxRot 

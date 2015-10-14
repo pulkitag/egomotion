@@ -19,6 +19,7 @@ def get_nw_prms(**kwargs):
 	dArgs.imgntMean   = True
 	dArgs.maxJitter   = 11
 	dArgs.randCrop    = False
+	dArgs.lossWeight  = 1.0
 	dArgs = mpu.get_defaults(kwargs, dArgs)
 	expStr = 'net-%s_cnct-%s_cnctDrp%d_contPad%d_imSz%d_imgntMean%d_jit%d'\
 						%(dArgs.netName, dArgs.concatLayer, dArgs.concatDrop, 
@@ -26,6 +27,8 @@ def get_nw_prms(**kwargs):
 							dArgs.imSz, dArgs.imgntMean, dArgs.maxJitter)
 	if dArgs.randCrop:
 		expStr = '%s_randCrp%d' % (expStr, dArgs.randCrop)
+	if not(dArgs.lossWeight==1.0):
+		expStr = '%s_lw%.1f' % (expStr, dArgs.lossWeight)
 	dArgs.expStr = expStr 
 	return dArgs 
 
@@ -39,6 +42,7 @@ def get_lr_prms(**kwargs):
 	dArgs.max_iter  = 250000
 	dArgs.gamma     = 0.5
 	dArgs.weight_decay = 0.0005
+	dArgs.clip_gradients = -1
 	dArgs  = mpu.get_defaults(kwargs, dArgs)
 	#Make the solver 
 	solArgs = edict({'test_iter': 100, 'test_interval': 1000,
@@ -51,6 +55,8 @@ def get_lr_prms(**kwargs):
 	expStr = 'batchSz%d_stepSz%.0e_blr%.5f_mxItr%.1e_gamma%.2f_wdecay%.6f'\
 					 % (dArgs.batchsize, dArgs.stepsize, dArgs.base_lr,
 							dArgs.max_iter, dArgs.gamma, dArgs.weight_decay)
+	if not(dArgs.clip_gradients==-1):
+		expStr = '%s_gradClip%.1f' % (expStr, dArgs.clip_gradients)
 	dArgs.expStr = expStr
 	return dArgs 
 
@@ -141,6 +147,11 @@ def make_loss_proto(prms, cPrms):
 	elif 'pose' in prms.labelNames:
 		defFile = osp.join(baseFilePath, 'pose_loss_layers.prototxt')
 		lbDef   = mpu.ProtoDef(defFile)
+		idx     = prms.labelNames.index('pose')
+		lb      = prms.labels[idx]
+		lbDef.set_layer_property('pose_fc', ['inner_product_param', 'num_output'],
+						 '%d' % lb.lbSz_)
+		lbDef.set_layer_property('pose_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
 	return lbDef	
 
 ##
@@ -285,18 +296,21 @@ def get_experiment_accuracy(prms, cPrms):
 	lossNames = [l for l in lNames if 'loss' in l or 'acc' in l]
 	return log2loss(logFile, lossNames)
 
-def plot_experiment_accuracy(prms, cPrms, svFile=None):
+def plot_experiment_accuracy(prms, cPrms, svFile=None,
+								isTrainOnly=False, isTestOnly=False):
 	testData, trainData = get_experiment_accuracy(prms, cPrms)
 	plt.figure()
 	ax = plt.subplot(111)
-	for k in testData.keys():
-		if k == 'iters':
-			continue
-		ax.plot(testData['iters'][1:], testData[k][1:],'r',  linewidth=3.0)
-	for k in trainData.keys():
-		if k == 'iters':
-			continue
-		ax.plot(trainData['iters'][1:], trainData[k][1:],'b',  linewidth=3.0)
+	if not isTrainOnly:
+		for k in testData.keys():
+			if k == 'iters':
+				continue
+			ax.plot(testData['iters'][1:], testData[k][1:],'r',  linewidth=3.0)
+	if not isTestOnly:
+		for k in trainData.keys():
+			if k == 'iters':
+				continue
+			ax.plot(trainData['iters'][1:], trainData[k][1:],'b',  linewidth=3.0)
 	if svFile is not None:
 		with PdfPages(svFile) as pdf:
 			pdf.savefig()

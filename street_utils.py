@@ -265,7 +265,7 @@ def get_labels(prms, setName='train'):
 						if lbType.maxRot_ is not None:
 							if (np.abs(roll) > lbType.maxRot_ or\
 								  np.abs(yaw) > lbType.maxRot_ or\
-								  np.abs(pitch)>lbType.maxRot):
+								  np.abs(pitch)>lbType.maxRot_):
 									continue
 						if lbType.labelType_ == 'euler':
 							if lbType.lbSz_ == 3:

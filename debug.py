@@ -10,15 +10,17 @@ import caffe
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
+import my_exp as me
 
 def debug_generic_data():
 	#Setup the data proto
 	bSz   = 5
-	prms  = sp.get_prms_pose_euler(geoFence='dc-v1')	
-	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
-								 concatLayer='pool4', maxJitter=0)
-	lPrms = se.get_lr_prms(batchsize=bSz)
-	cPrms = se.get_caffe_prms(nPrms, lPrms) 
+	#prms  = sp.get_prms_pose_euler(geoFence='dc-v1')	
+	#nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
+	#							 concatLayer='pool4', maxJitter=0)
+	#lPrms = se.get_lr_prms(batchsize=bSz)
+	#cPrms = se.get_caffe_prms(nPrms, lPrms)
+	prms, cPrms = me.smallnetv2_1_pool4_pose_euler_mx45_crp192() 
 	#Save the data proto
 	outFile  = osp.join(prms.paths.baseNetsDr, 'data_debug.prototxt')
 	dataDef  = se.make_data_proto(prms, cPrms)
@@ -51,7 +53,7 @@ def debug_generic_data():
 			im2 = im2[:,:,[2,1,0]]
 			ax1.imshow(im1.astype(np.uint8))
 			ax2.imshow(im2.astype(np.uint8))
-			ax1.set_title('roll: %.4f, yaw: %.4f, pitch:%.4f' % tuple(lb[b].flatten()))
+			ax1.set_title('yaw: %.4f, pitch:%.4f' % tuple(lb[b].flatten()))
 			svFile = osp.join(svDr, '%04d.jpg' % count)
 			plt.savefig(svFile)
 		  #with PdfPages(svFile) as pdf:
