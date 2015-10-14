@@ -7,7 +7,7 @@ import pdb
 import subprocess
 import matplotlib.pyplot as plt
 import mydisplay as mydisp
-import h5py as h5
+#import h5py as h5
 import pickle
 import my_pycaffe_io as mpio
 import re
