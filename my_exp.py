@@ -97,6 +97,19 @@ def smallnetv3_pool4_pose_euler_mx45_crp192(isRun=False):
 		return prms, cPrms	
 
 
+def smallnetv3_pool4_pose_crp192(isRun=False):
+	prms  = sp.get_prms_pose(geoFence='dc-v1', crpSz=192)
+	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v3',
+							 concatLayer='pool4')
+	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000)
+	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=[0])
+	if isRun:
+		exp   = se.make_experiment(prms, cPrms)
+		exp.run()
+	else:
+		return prms, cPrms	
+
+
 def run_smallnet_pool4_nrml(isRun=False):
 	prms  = sp.get_prms_nrml(geoFence='dc-v1')
 	nPrms = se.get_nw_prms(imSz=101, netName='smallnet',

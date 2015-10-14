@@ -160,9 +160,9 @@ class LabelNLoss(object):
 			self.posFrac_ = ptchPosFrac
 			self.lbStr_   = self.lbStr_ + '-posFrac%.1f' % self.posFrac_ 	
 		if labelClass == 'pose':
+			self.maxRot_  = maxRot 
 			if maxRot is not None:
 				self.lbStr_   = self.lbStr_ + '-mxRot%d' % maxRot
-				self.maxRot_  = maxRot 
 	
 	def get_label_sz(self):
 		lbSz = get_label_size(self.label_, self.labelType_) 
