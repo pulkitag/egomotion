@@ -273,7 +273,7 @@ def get_labels(prms, setName='train'):
 							else:
 								lb.append([yaw/180.0, pitch/180.0]) 
 						elif lbType.labelType_ == 'quat':
-							quat = ru.euler2quat(z2-z1, y2-y1, x2-x1)
+							quat = ru.euler2quat(z2-z1, y2-y1, x2-x1, isRadian=False)
 							q1, q2, q3, q4 = quat
 							lb.append([q1, q2, q3, q4]) 
 						else:
