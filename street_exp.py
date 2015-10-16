@@ -1,6 +1,7 @@
 import os.path as osp
 import numpy as np
 import street_utils as su
+import street_params as sp
 import my_pycaffe_utils as mpu
 from easydict import EasyDict as edict
 import copy
@@ -224,6 +225,7 @@ def make_net_proto(prms, cPrms):
 # The proto definitions for the loss
 def make_loss_proto(prms, cPrms):
 	baseFilePath = prms.paths.baseNetsDr
+	lbDefs = []
 	if prms.isSiamese and 'nrml' in prms.labelNames:
 		defFile = osp.join(baseFilePath, 'nrml_loss_layers.prototxt')
 		nrmlDef1 = mpu.ProtoDef(defFile)
@@ -235,14 +237,17 @@ def make_loss_proto(prms, cPrms):
 		nrmlDef2.set_layer_property('nrml_2_fc','top', '"nrml_2_fc"')
 		#Merge the two defs			 	
 		lbDef = _merge_defs(nrmlDef1, nrmlDef2)
+		lbDefs.append(lbDef)
 	elif 'nrml' in prms.labelNames:
 		defFile = osp.join(baseFilePath, 'nrml_loss_layers.prototxt')
 		lbDef   = mpu.ProtoDef(defFile)
 		idx     = prms.labelNames.index('nrml')
-	elif 'ptch' in prms.labelNames:
+		lbDefs.append(lbDef)
+	if 'ptch' in prms.labelNames:
 		defFile = osp.join(baseFilePath, 'ptch_loss_layers.prototxt')
 		lbDef   = mpu.ProtoDef(defFile)
-	elif 'pose' in prms.labelNames:
+		lbDefs.append(lbDef)
+	if 'pose' in prms.labelNames:
 		defFile = osp.join(baseFilePath, 'pose_loss_layers.prototxt')
 		lbDef   = mpu.ProtoDef(defFile)
 		idx     = prms.labelNames.index('pose')
@@ -250,6 +255,8 @@ def make_loss_proto(prms, cPrms):
 		lbDef.set_layer_property('pose_fc', ['inner_product_param', 'num_output'],
 						 '%d' % lb.lbSz_)
 		lbDef.set_layer_property('pose_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
+		lbDefs.append(lbDef)
+	lbDef = _merge_defs(lbDefs)
 	return lbDef	
 
 ##
@@ -268,6 +275,13 @@ def setup_experiment(prms, cPrms):
 	#Experiment Object	
 	caffeExp = get_experiment_object(prms, cPrms)
 	caffeExp.init_from_external(solDef, protoDef)
+
+	#Result paths
+	caffeExp.paths = edict()
+	caffeExp.paths.testImVis = osp.join(prms.paths.res.testImVisDr,
+														 prms.expName, cPrms.expStr)
+	sp._mkdir(caffeExp.paths.testImVis)	
+	caffeExp.paths.testImVis = osp.join(caffeExp.paths.testImVis, 'im%05d.jpg')
 	return caffeExp
 
 ##

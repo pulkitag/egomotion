@@ -25,25 +25,29 @@ def vis_results_pose(prms, cPrms, modelIter):
 	print mn.shape 
 	mn        = mn[st:st+101,st:st+101,:]
 	mn        = mn[:,:,[2,1,0]]
-	#Generate results on test set		
-	data = net.forward(['data', 'data_p', 'pose_fc', 'pose_label'])
 	plt.ion()
+	count      = 0
+	numBatches = 5
 	fig  = plt.figure()
-	for b in range(int(bSz)):
-		predLbl   = data['pose_fc'][b].squeeze()
-		predEuler = ru.quat2euler(predLbl)  		
-		gtLbl    = data['pose_label'][b].squeeze()
-		gtEuler  = ru.quat2euler(gtLbl)
-		tStr = 'GT- roll: %.2f, yaw: %.2f, pitch: %.2f\n'\
-						+ 'PD- roll: %.2f, yaw: %.2f, pitch: %.2f'
-		#pdb.set_trace()
-		tStr = tStr % (gtEuler + predEuler)
-		im1  = data['data'][b].transpose(1,2,0).squeeze()
-		im2  = data['data_p'][b].transpose(1,2,0).squeeze()
-		im1  = np.maximum(0,np.minimum(255,im1[:,:,[2,1,0]] + mn))
-		im2  = np.maximum(0,np.minimum(255,im2[:,:,[2,1,0]] + mn))
-		#pdb.set_trace()
-		vu.plot_pairs(im1, im2, fig, figTitle=tStr)
-		imName = prms.paths.res.testImVis % b
-		plt.savefig(imName)
-		
+	for nb in range(numBatches):
+		#Generate results on test set		
+		data = net.forward(['data', 'data_p', 'pose_fc', 'pose_label'])
+		for b in range(int(bSz)):
+			predLbl   = data['pose_fc'][b].squeeze()
+			predEuler = ru.quat2euler(predLbl)  		
+			gtLbl    = data['pose_label'][b].squeeze()
+			gtEuler  = ru.quat2euler(gtLbl)
+			tStr = 'GT- roll: %.2f, yaw: %.2f, pitch: %.2f\n'\
+							+ 'PD- roll: %.2f, yaw: %.2f, pitch: %.2f'
+			#pdb.set_trace()
+			tStr = tStr % (gtEuler + predEuler)
+			im1  = data['data'][b].transpose(1,2,0).squeeze()
+			im2  = data['data_p'][b].transpose(1,2,0).squeeze()
+			im1  = np.maximum(0,np.minimum(255,im1[:,:,[2,1,0]] + mn))
+			im2  = np.maximum(0,np.minimum(255,im2[:,:,[2,1,0]] + mn))
+			#pdb.set_trace()
+			vu.plot_pairs(im1, im2, fig, figTitle=tStr)
+			count += 1
+			imName = exp.paths.testImVis % count
+			plt.savefig(imName)
+			

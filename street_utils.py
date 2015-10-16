@@ -193,13 +193,16 @@ def get_raw_labels(prms, folderId, setName='train'):
 	lbData = lbData['groups']
 	lb     = []
 	im     = []
+	gCount = 0
 	for g in gids:
 		try:
 			isInside = is_group_in_geo(prms, lbData[g])
 			if isInside:
 				lb.append(lbData[g])
+				gCount = gCount + 1
 		except:
 			pdb.set_trace()
+	print ('Folder: %s, numPrefix: %d, Geo-Filtered: %d' % (folderId, len(gids), gCount))
 	return lb
 
 ##

@@ -95,11 +95,25 @@ def save_foldernames(prms):
 ##
 # Save the keys of only the folders for which alignment data is available. 
 def save_aligned_keys(prms):
-	keys, names = get_folder_keys_all(prms)
+	keys, names = su.get_folder_keys_all(prms)
 	with open(prms.paths.proc.folders.aKey,'w') as f:
 		for k,n in zip(keys,names):	
 			if 'Aligned' in n:
 				f.write('%s\n' % k)
+
+##
+#Save the non_aligned keys
+def save_non_aligned_keys(prms):
+	keys, names = su.get_folder_keys_all(prms)
+	with open(prms.paths.proc.folders.naKey,'w') as f:
+		for (k,n) in zip(keys, names):
+			_,suffix  = osp.split(n)
+			isAligned = False
+			for n2 in names:
+				if 'Aligned' in n2 and suffix in n2:
+					isAligned=True
+			if not isAligned:
+				print n
 
 ##
 # Read names of all files in the folder

@@ -68,7 +68,9 @@ def get_paths():
 	paths.proc.folders.key  = osp.join(paths.proc.folders.dr, 'key.txt') 
 	paths.proc.folders.pre  = osp.join(paths.proc.folders.dr, '%s.txt') 
 	#The keys for the algined folders
-	paths.proc.folders.aKey = osp.join(paths.proc.folders.dr, 'key-aligned.txt') 
+	paths.proc.folders.aKey  = osp.join(paths.proc.folders.dr, 'key-aligned.txt') 
+	#Keys for non-algined folders
+	paths.proc.folders.naKey = osp.join(paths.proc.folders.dr, 'key-non_aligned.txt') 
 
 	#Count info
 	paths.proc.countFile = osp.join(paths.proc.folders.dr, 'counts.h5')	
@@ -113,7 +115,7 @@ def get_paths():
 	_mkdir(paths.res.dr)
 	paths.res.testImVisDr = osp.join(paths.res.dr, 'test-imvis')
 	_mkdir(paths.res.testImVisDr)
-	paths.res.testImVis   = osp.join(paths.res.testImVisDr, 'im%05d.jpg')   
+	#paths.res.testImVis   = osp.join(paths.res.testImVisDr, 'im%05d.jpg')   
 
 	#For legacy reasons
 	paths.expDir  = osp.join(paths.exp.dr, 'caffe-files')
@@ -151,7 +153,8 @@ def get_label_size(labelClass, labelType):
 ##
 class LabelNLoss(object):
 	def __init__(self, labelClass, labelType, loss, 
-							ptchPosFrac=0.5, maxRot=None, numBins=20):
+							ptchPosFrac=0.5, maxRot=None, numBins=20, 
+							isMultiLabel=False):
 		'''
 			ptchPosFrac: When considering patch matching data - the fraction of patches
 									 to consider as positives
@@ -180,8 +183,10 @@ class LabelNLoss(object):
 	def get_label_sz(self):
 		lbSz = get_label_size(self.label_, self.labelType_) 
 		if not(self.label_ == 'nrml') and self.loss_ in ['l2', 'l1', 'l2-tukey']:
-			#augLbSz = lbSz + 1
-			augLbSz  = lbSz
+			if isMultiLabel:
+				augLbSz = lbSz + 1
+			else:
+				augLbSz  = lbSz
 		else:
 			augLbSz = lbSz
 		return augLbSz, lbSz
@@ -245,9 +250,12 @@ def get_prms(isAligned=True,
 	prms.labelSz = 0
 	prms.labels  = []
 	prms.labelNames, prms.labelNameStr = labels, ''
+	if len(labels) > 1:
+		isMultiLabel = True
 	for lb,lbT,ls in zip(labels, labelType, lossType):
 		prms.labels = prms.labels + [LabelNLoss(lb, lbT, ls,
-										 ptchPosFrac=ptchPosFrac, maxRot=maxEulerRot)]
+										 ptchPosFrac=ptchPosFrac, maxRot=maxEulerRot,
+										 isMultiLabel=isMultiLabel)]
 		prms.labelNameStr = prms.labelNameStr + '_%s' % lb
 		prms.labelSz      = prms.labelSz + prms.labels[-1].get_label_sz()[0]
 	prms.labelNameStr = prms.labelNameStr[1:]

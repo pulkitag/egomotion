@@ -124,6 +124,24 @@ def smallnetv2_pool4_pose_crp192_randcrp_drop(isRun=False):
 		return prms, cPrms	
 
 
+#Pose and patch networks
+def smallnetv2_pool4_pose_ptch_crp192(isRun=False):
+	prms  = sp.get_prms(geoFence='dc-v1', crpSz=192,
+						labels=['pose', 'ptch'],
+						labelType=['quat', 'wngtv'],
+						lossType=['l2', 'classify'],
+						ptchPosFrac=0.5)
+	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
+							 concatLayer='pool4', lossWeight=10.0)
+	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000, clip_gradients=10.0)
+	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=[1])
+	if isRun:
+		exp   = se.make_experiment(prms, cPrms)
+		exp.run()
+	else:
+		return prms, cPrms	
+
+
 
 ########### NETWORK V3 ######################################
 def smallnetv3_pool4_pose(isRun=False):
