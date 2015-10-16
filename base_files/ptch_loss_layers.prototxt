@@ -31,3 +31,10 @@ layer {
   top: "ptch_loss"
 	loss_weight: 1.0
 }
+layer {
+  name: "accuracy"
+  type: "Accuracy"
+  bottom: "ptch_fc"
+  bottom: "ptch_label"
+  top: "accuracy"
+}

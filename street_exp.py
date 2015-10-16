@@ -123,37 +123,6 @@ def _merge_defs(defs):
 				allDef.add_layer(t, trLayer, phase=s)
 	return allDef
 
-##
-# The proto definitions for the loss
-def make_loss_proto(prms, cPrms):
-	baseFilePath = prms.paths.baseNetsDr
-	if prms.isSiamese and 'nrml' in prms.labelNames:
-		defFile = osp.join(baseFilePath, 'nrml_loss_layers.prototxt')
-		nrmlDef1 = mpu.ProtoDef(defFile)
-		nrmlDef2 = mpu.ProtoDef(defFile)
-		#Structure the two defs
-		nrmlDef1.set_layer_property('nrml_fc', 'name', '"nrml_1_fc"')
-		nrmlDef1.set_layer_property('nrml_1_fc','top', '"nrml_1_fc"')
-		nrmlDef2.set_layer_property('nrml_fc', 'name', '"nrml_2_fc"')
-		nrmlDef2.set_layer_property('nrml_2_fc','top', '"nrml_2_fc"')
-		#Merge the two defs			 	
-		lbDef = _merge_defs(nrmlDef1, nrmlDef2)
-	elif 'nrml' in prms.labelNames:
-		defFile = osp.join(baseFilePath, 'nrml_loss_layers.prototxt')
-		lbDef   = mpu.ProtoDef(defFile)
-		idx     = prms.labelNames.index('nrml')
-	elif 'ptch' in prms.labelNames:
-		defFile = osp.join(baseFilePath, 'ptch_loss_layers.prototxt')
-		lbDef   = mpu.ProtoDef(defFile)
-	elif 'pose' in prms.labelNames:
-		defFile = osp.join(baseFilePath, 'pose_loss_layers.prototxt')
-		lbDef   = mpu.ProtoDef(defFile)
-		idx     = prms.labelNames.index('pose')
-		lb      = prms.labels[idx]
-		lbDef.set_layer_property('pose_fc', ['inner_product_param', 'num_output'],
-						 '%d' % lb.lbSz_)
-		lbDef.set_layer_property('pose_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
-	return lbDef	
 
 ##
 #Adapt the ProtoDef for the data layers
@@ -205,7 +174,6 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 			protoDef.set_layer_property('window_data', ['transform_param', 'mean_file'],
 				'"%s"' % fName, phase=p)
 	
-
 ##
 #The proto definitions for the data
 def make_data_proto(prms, cPrms):
@@ -235,10 +203,9 @@ def make_data_proto(prms, cPrms):
 	return dataDef
 
 ##
-#Setup the experiment
-def setup_experiment(prms, cPrms):
+#Make the proto for the computations
+def make_net_proto(prms, cPrms):
 	baseFilePath = prms.paths.baseNetsDr
-	#Get the protodef for the n/w architecture
 	if prms.isSiamese:
 		netFileStr = '%s_window_siamese_%s.prototxt'
 	else:
@@ -247,6 +214,49 @@ def setup_experiment(prms, cPrms):
 												 cPrms.nwPrms.concatLayer) 
 	netFile = osp.join(baseFilePath, netFile)
 	netDef  = mpu.ProtoDef(netFile)
+	if cPrms.nwPrms.concatDrop:
+		dropLayer = mpu.get_layerdef_for_proto('Dropout', 'drop-%s' % 'common_fc', 'common_fc',
+                            **{'top': 'common_fc', 'dropout_ratio': 0.5})
+		netDef.add_layer('drop-%s' % eName, dropLayer, 'TRAIN')
+	return netDef
+
+##
+# The proto definitions for the loss
+def make_loss_proto(prms, cPrms):
+	baseFilePath = prms.paths.baseNetsDr
+	if prms.isSiamese and 'nrml' in prms.labelNames:
+		defFile = osp.join(baseFilePath, 'nrml_loss_layers.prototxt')
+		nrmlDef1 = mpu.ProtoDef(defFile)
+		nrmlDef2 = mpu.ProtoDef(defFile)
+		#Structure the two defs
+		nrmlDef1.set_layer_property('nrml_fc', 'name', '"nrml_1_fc"')
+		nrmlDef1.set_layer_property('nrml_1_fc','top', '"nrml_1_fc"')
+		nrmlDef2.set_layer_property('nrml_fc', 'name', '"nrml_2_fc"')
+		nrmlDef2.set_layer_property('nrml_2_fc','top', '"nrml_2_fc"')
+		#Merge the two defs			 	
+		lbDef = _merge_defs(nrmlDef1, nrmlDef2)
+	elif 'nrml' in prms.labelNames:
+		defFile = osp.join(baseFilePath, 'nrml_loss_layers.prototxt')
+		lbDef   = mpu.ProtoDef(defFile)
+		idx     = prms.labelNames.index('nrml')
+	elif 'ptch' in prms.labelNames:
+		defFile = osp.join(baseFilePath, 'ptch_loss_layers.prototxt')
+		lbDef   = mpu.ProtoDef(defFile)
+	elif 'pose' in prms.labelNames:
+		defFile = osp.join(baseFilePath, 'pose_loss_layers.prototxt')
+		lbDef   = mpu.ProtoDef(defFile)
+		idx     = prms.labelNames.index('pose')
+		lb      = prms.labels[idx]
+		lbDef.set_layer_property('pose_fc', ['inner_product_param', 'num_output'],
+						 '%d' % lb.lbSz_)
+		lbDef.set_layer_property('pose_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
+	return lbDef	
+
+##
+#Setup the experiment
+def setup_experiment(prms, cPrms):
+	#Get the protodef for the n/w architecture
+	netDef   = make_net_proto(prms, cPrms)
 	#Data protodef
 	dataDef  = make_data_proto(prms, cPrms)
 	#Loss protodef
@@ -260,6 +270,8 @@ def setup_experiment(prms, cPrms):
 	caffeExp.init_from_external(solDef, protoDef)
 	return caffeExp
 
+##
+#Write the files for running the experiment. 
 def make_experiment(prms, cPrms, isFine=False, resumeIter=None, 
 										srcModelFile=None, srcDefFile=None):
 	'''
@@ -289,7 +301,7 @@ def make_experiment(prms, cPrms, isFine=False, resumeIter=None,
 	return caffeExp	
 
 
-def get_experiment_accuracy(prms, cPrms):
+def get_experiment_accuracy(prms, cPrms, lossName=None):
 	#This will contain the log file name
 	exp     = setup_experiment(prms, cPrms)
 	logFile = exp.expFile_.logTrain_	
@@ -297,20 +309,30 @@ def get_experiment_accuracy(prms, cPrms):
 	lossDef  = make_loss_proto(prms, cPrms)
 	lNames    = lossDef.get_all_layernames()
 	lossNames = [l for l in lNames if 'loss' in l or 'acc' in l]
+	if lossName is not None:
+		assert lossName in lossNames
+		lossNames = [lossName]
+	#print (lossNames)
 	return log2loss(logFile, lossNames)
 
 def plot_experiment_accuracy(prms, cPrms, svFile=None,
-								isTrainOnly=False, isTestOnly=False):
+								isTrainOnly=False, isTestOnly=False, ax=None,
+								lossName=None):
 	testData, trainData = get_experiment_accuracy(prms, cPrms)
-	plt.figure()
-	ax = plt.subplot(111)
+	if ax is None:
+		plt.figure()
+		ax = plt.subplot(111)
 	if not isTrainOnly:
 		for k in testData.keys():
+			if lossName is not None and not (k in lossName):
+				continue
 			if k == 'iters':
 				continue
 			ax.plot(testData['iters'][1:], testData[k][1:],'r',  linewidth=3.0)
 	if not isTestOnly:
 		for k in trainData.keys():
+			if lossName is not None and not (k in lossName):
+				continue
 			if k == 'iters':
 				continue
 			ax.plot(trainData['iters'][1:], trainData[k][1:],'b',  linewidth=3.0)
@@ -326,19 +348,25 @@ def read_log(fileName):
 	trainLines, trainIter = [], []
 	testLines, testIter   = [], []
 	iterNum   = None
+	iterStart = False
 	#Read the test lines in the log
 	while True:
 		l = fid.readline()
 		if not l:
 			break
 		if 'Iteration' in l:
-			iterNum  = int(l.split()[5][0:-1]) 
+			iterNum  = int(l.split()[5][0:-1])
+			iterStart = True
 		if 'Test' in l and ('loss' in l or 'acc' in l):
 			testLines.append(l)
-			testIter.append(iterNum)
+			if iterStart:
+				testIter.append(iterNum)
+				iterStart = False
 		if 'Train' in l and ('loss' in l or 'acc' in l):
 			trainLines.append(l)
-			trainIter.append(iterNum)
+			if iterStart:
+				trainIter.append(iterNum)
+				iterStart = False
 	fid.close()
 	return testLines, testIter, trainLines, trainIter
 
@@ -347,6 +375,7 @@ def read_log(fileName):
 def log2loss(fName, lossNames):
 	testLines, testIter, trainLines, trainIter = read_log(fName)
 	N = len(lossNames)
+	#print N, len(testLines), testIter
 	assert(len(testLines)==N*len(testIter))
 	assert(len(trainLines)==N*len(trainIter))
 		
@@ -359,16 +388,18 @@ def log2loss(fName, lossNames):
 				data = l.split()
 				#print data
 				assert data[8] == t
-				testData[t].append(float(data[-6]))
+				idx = data.index('=')
+				testData[t].append(float(data[idx+1]))
 		#Parse the train data
 		for l in trainLines:
 			if t in l:
 				data = l.split()
 				assert data[8] == t
-				trainData[t].append(float(data[-6]))
-		for t in lossNames:
-			testData[t]  = np.array(testData[t])
-			trainData[t] = np.array(trainData[t])
+				idx = data.index('=')
+				trainData[t].append(float(data[idx+1]))
+	for t in lossNames:
+		testData[t]  = np.array(testData[t])
+		trainData[t] = np.array(trainData[t])
 	testData['iters']  = np.array(testIter)
 	trainData['iters'] = np.array(trainIter)
 	return testData, trainData

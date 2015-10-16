@@ -16,6 +16,18 @@ def smallnet_pool4_pose(isRun=False):
 
 
 ########### NETWORK V2 ######################################
+def smallnetv2_pool4_ptch(isRun=False):
+	prms  = sp.get_prms_ptch(geoFence='dc-v1')
+	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
+							 concatLayer='pool4')
+	lPrms = se.get_lr_prms(batchsize=256)
+	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=[0])
+	if isRun:
+		exp   = se.make_experiment(prms, cPrms)
+		exp.run()
+	else:
+		return prms, cPrms	
+
 
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%% POSE %%%%%%%%%%%%%%%%%%%%%%%%%%% #
