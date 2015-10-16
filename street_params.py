@@ -252,6 +252,8 @@ def get_prms(isAligned=True,
 	prms.labelNames, prms.labelNameStr = labels, ''
 	if len(labels) > 1:
 		isMultiLabel = True
+	else:
+		isMultiLabel = False
 	for lb,lbT,ls in zip(labels, labelType, lossType):
 		prms.labels = prms.labels + [LabelNLoss(lb, lbT, ls,
 										 ptchPosFrac=ptchPosFrac, maxRot=maxEulerRot,
