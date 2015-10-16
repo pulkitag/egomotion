@@ -217,7 +217,7 @@ def make_net_proto(prms, cPrms):
 	if cPrms.nwPrms.concatDrop:
 		dropLayer = mpu.get_layerdef_for_proto('Dropout', 'drop-%s' % 'common_fc', 'common_fc',
                             **{'top': 'common_fc', 'dropout_ratio': 0.5})
-		netDef.add_layer('drop-%s' % eName, dropLayer, 'TRAIN')
+		netDef.add_layer('drop-%s' % 'common_fc', dropLayer, 'TRAIN')
 	return netDef
 
 ##
