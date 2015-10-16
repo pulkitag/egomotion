@@ -238,21 +238,25 @@ def get_labels(prms, setName='train'):
 					lb.append(rl.data[i].nrml[0:2])
 					prefix.append((rl.folderId, rl.prefix[i].strip(), None, None))
 			elif lbType.label_ == 'ptch':
-				prob = randState.rand()
-				rl1  = rawLb[p1]
-				rl2  = rawLb[p2]
-				localPerm1 = randState.permutation(rl1.num)
-				localPerm2 = randState.permutation(rl2.num)
-				if prob > lbType.posFrac_:
-					#Sample positive
-					lb.append([1])	
-					prefix.append((rl1.folderId, rl1.prefix[localPerm1[0]].strip(),
-												 rl1.folderId, rl1.prefix[localPerm1[1]].strip()))
-				else:
-					#Sample negative			
-					lb.append([0])
-					prefix.append((rl1.folderId, rl1.prefix[localPerm1[0]].strip(),
-												 rl2.folderId, rl2.prefix[localPerm2[0]].strip()))
+				#Based on the idea that there are typically 5 samples per group
+				numRep = int(5.0 / lbType.posFrac_)
+				for rep in range(numRep):
+					prob   = randState.rand()
+					p1, p2 = randState.random_integers(N-1), randState.random_integers(N-1)
+					rl1  = rawLb[p1]
+					rl2  = rawLb[p2]
+					localPerm1 = randState.permutation(rl1.num)
+					localPerm2 = randState.permutation(rl2.num)
+					if prob > lbType.posFrac_:
+						#Sample positive
+						lb.append([1])	
+						prefix.append((rl1.folderId, rl1.prefix[localPerm1[0]].strip(),
+													 rl1.folderId, rl1.prefix[localPerm1[1]].strip()))
+					else:
+						#Sample negative			
+						lb.append([0])
+						prefix.append((rl1.folderId, rl1.prefix[localPerm1[0]].strip(),
+													 rl2.folderId, rl2.prefix[localPerm2[0]].strip()))
 			elif lbType.label_ == 'pose':
 				rl1        = rawLb[p1]
 				for n1 in range(rl1.num):
@@ -273,7 +277,7 @@ def get_labels(prms, setName='train'):
 							else:
 								lb.append([yaw/180.0, pitch/180.0]) 
 						elif lbType.labelType_ == 'quat':
-							quat = ru.euler2quat(z2-z1, y2-y1, x2-x1)
+							quat = ru.euler2quat(z2-z1, y2-y1, x2-x1, isRadian=False)
 							q1, q2, q3, q4 = quat
 							lb.append([q1, q2, q3, q4]) 
 						else:

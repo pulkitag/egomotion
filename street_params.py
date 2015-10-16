@@ -107,6 +107,14 @@ def get_paths():
 	#Paths for geofence data
 	paths.geoFile = osp.join(paths.code.dr, 'geofence', '%s.txt')
 
+	#Storing the results.
+	paths.res    = edict()
+	paths.res.dr = osp.join(paths.dataDr, 'res')
+	_mkdir(paths.res.dr)
+	paths.res.testImVisDr = osp.join(paths.res.dr, 'test-imvis')
+	_mkdir(paths.res.testImVisDr)
+	paths.res.testImVis   = osp.join(paths.res.testImVisDr, 'im%05d.jpg')   
+
 	#For legacy reasons
 	paths.expDir  = osp.join(paths.exp.dr, 'caffe-files')
 	paths.snapDir = paths.exp.snapshot.dr
@@ -142,7 +150,8 @@ def get_label_size(labelClass, labelType):
 
 ##
 class LabelNLoss(object):
-	def __init__(self, labelClass, labelType, loss, ptchPosFrac=0.5, maxRot=None):
+	def __init__(self, labelClass, labelType, loss, 
+							ptchPosFrac=0.5, maxRot=None, numBins=20):
 		'''
 			ptchPosFrac: When considering patch matching data - the fraction of patches
 									 to consider as positives
@@ -163,6 +172,10 @@ class LabelNLoss(object):
 			self.maxRot_  = maxRot 
 			if maxRot is not None:
 				self.lbStr_   = self.lbStr_ + '-mxRot%d' % maxRot
+			if self.loss_ in ['classify']:
+				self.lbStr_   = self.lbStr_ + 'classify-bn%d' % numBins
+				self.numBins_ = numBins 
+					
 	
 	def get_label_sz(self):
 		lbSz = get_label_size(self.label_, self.labelType_) 
