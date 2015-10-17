@@ -179,31 +179,44 @@ def is_group_in_geo(prms, grp):
 	return isInside
 
 ##
+#Read Geo groups
+def read_geo_groups_all(prms):
+	geoGrps = edict()
+	keys    = get_folder_keys(prms)
+	for k in keys:
+		geoGrps[k] = read_geo_group(prms, k)
+	return geoGrps
+
+##
+#Read geo group from a particular folder
+def read_geo_groups(prms, folderId):
+	fName      = prms.paths.grp.geoFile % folderId
+	data       = pickle.load(open(fName,'r'))
+	return data['groups']
+
+##
 #Get the raw labels
 def get_raw_labels(prms, folderId, setName='train'):
 	'''
 		Labels for a particular split
 	'''
 	#Find the groups belogning to the split
-	splits = get_train_test_splits(prms, folderId)
-	gids   = splits[setName]
-	#Read labels from the folder 
-	lbFile = prms.paths.label.grps % folderId
-	lbData = pickle.load(open(lbFile,'r'))
-	lbData = lbData['groups']
-	lb     = []
-	im     = []
-	gCount = 0
-	for g in gids:
-		try:
-			isInside = is_group_in_geo(prms, lbData[g])
-			if isInside:
-				lb.append(lbData[g])
-				gCount = gCount + 1
-		except:
-			pdb.set_trace()
-	print ('Folder: %s, numPrefix: %d, Geo-Filtered: %d' % (folderId, len(gids), gCount))
-	return lb
+	splits    = get_train_test_splits(prms, folderId)
+	gSplitIds = splits[setName]
+	grpList   = []
+	if prms.geoFence is not None:
+		groups = read_geo_groups(prms, folderId)
+		gKeys  = groups.keys()
+	else:
+		#Read labels from the folder 
+		grpFile = prms.paths.label.grps % folderId
+		grpData = pickle.load(open(grpFile,'r'))
+		groups  = grpData['groups']
+		gKeys   = groups.keys()
+	for g in gSplitIds:
+		if g in gKeys:
+			grpList.append(groups[g])
+	return grpList
 
 ##
 #Get all the raw labels
@@ -213,6 +226,8 @@ def get_raw_labels_all(prms, setName='train'):
 	for k in keys:
 		lb = lb + get_raw_labels(prms, k, setName=setName)
 	return lb
+
+##
 	
 ##
 #Process the labels according to prms

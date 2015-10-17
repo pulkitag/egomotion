@@ -193,23 +193,19 @@ class LabelNLoss(object):
 				self.lbStr_   = self.lbStr_ + 'classify-bn%d' % numBins
 				self.numBins_ = numBins 
 					
-	
 	def get_label_sz(self):
 		lbSz = get_label_size(self.label_, self.labelType_) 
-		if not(self.label_ == 'nrml') and self.loss_ in ['l2', 'l1', 'l2-tukey']:
-			if self.isMultiLabel:
-				augLbSz = lbSz + 1
-			else:
-				augLbSz  = lbSz
+		if self.isMultiLabel:
+			augLbSz = lbSz + 1
 		else:
-			augLbSz = lbSz
+			augLbSz  = lbSz
 		return augLbSz, lbSz
 
 ##
 #get prms
 def get_prms(isAligned=True, 
 						 labels=['nrml'], labelType=['xyz'], 
-						 lossType=['l2'],
+						 lossType=['l2'], labelFrac=[None],
 						 labelNrmlz=None, 
 						 crpSz=101,
 						 numTrain=1e+06, numTest=1e+04,
@@ -251,6 +247,9 @@ def get_prms(isAligned=True,
 	assert type(lossType) == list, 'lossType should be list'
 	assert len(lossType) == len(labels)
 	assert len(labels)   == len(labelType)
+	assert len(labels)  == len(labelFrac)
+	if len(labels)>1:
+		assert sum(labelFrac)==1, 'Set labelFrac appropriately'
 	#Assert that labels are sorted
 	sortLabels = sorted(labels)
 	for i,l in enumerate(labels):
@@ -262,25 +261,35 @@ def get_prms(isAligned=True,
 	prms.imSz      = imSz
 	
 	#Label infoo
-	prms.labelSz = 0
-	prms.labels  = []
+	prms.labelSz   = 0
+	prms.labels    = []
 	prms.labelNames, prms.labelNameStr = labels, ''
+	prms.labelFrac = labelFrac
 	if len(labels) > 1:
 		isMultiLabel = True
 	else:
 		isMultiLabel = False
-	for lb,lbT,ls in zip(labels, labelType, lossType):
+	prms.isMultiLabel = isMultiLabel
+	prms.geoFence     = geoFence
+	#Form the label types
+	prms.labelSzList = [0]
+	for lb,lbT,ls,lbF in zip(labels, labelType, lossType, labelFrac):
 		prms.labels = prms.labels + [LabelNLoss(lb, lbT, ls,
 										 ptchPosFrac=ptchPosFrac, maxRot=maxEulerRot,
 										 isMultiLabel=isMultiLabel)]
-		prms.labelNameStr = prms.labelNameStr + '_%s' % lb
-		prms.labelSz      = prms.labelSz + prms.labels[-1].get_label_sz()[0]
+		if prms.isMultiLabel:
+			prms.labelNameStr = prms.labelNameStr + '_%s-frac%.2f' % (lb, lbF)
+		else:
+			prms.labelNameStr = prms.labelNameStr + '_%s' % lb
+		lbSz              = prms.labels[-1].get_label_sz()[0]
+		prms.labelSzList.append(prms.labelSzList[-1] + lbSz)
+		prms.labelSz      = prms.labelSz + lbSz
 	prms.labelNameStr = prms.labelNameStr[1:]
+
 	if 'ptch' in labels or 'pose' in labels:
 		prms.isSiamese = True
 	else:
 		prms.isSiamese = False
-
 	prms['lbNrmlz'] = labelNrmlz
 	prms['crpSz']   = crpSz
 	prms['trnSeq']  = trnSeq
