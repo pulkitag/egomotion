@@ -76,8 +76,8 @@ def get_paths():
 	paths.proc.im    =  edict()
 	paths.proc.im.dr =  osp.join(paths.proc.dr, 'resize-im')
 	_mkdir(paths.proc.im.dr)
-	paths.proc.im.keyFile = osp.join(paths.proc.dr, 'im%d-keys.pkl') 
-	paths.proc.im.dr      = osp.join(paths.proc.dr, 'im%d')		
+	paths.proc.im.keyFile = osp.join(paths.proc.im.dr, 'im%d-keys.pkl') 
+	paths.proc.im.dr      = osp.join(paths.proc.im.dr, 'im%d')		
 
 	#Count info
 	paths.proc.countFile = osp.join(paths.proc.folders.dr, 'counts.h5')	

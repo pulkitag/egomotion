@@ -10,6 +10,8 @@ import mydisplay as mydisp
 import h5py as h5
 import pickle
 import street_utils as su
+import street_params as sp
+import scipy.misc as scm
 
 def get_tar_files(prms):
 	with open(prms.paths.tar.fileList,'r') as f:
@@ -222,19 +224,39 @@ def get_prefixes_geo(prms, folderId):
 	data = pickle.load(open(prms.paths.grp.geoFile % folderId))
 	grps = data['groups']
 	pref = []
-	for g in grps:
-		for n in g.num:
+	for _,g in grps.iteritems():
+		for n in range(g.num):
 			pref.append(g.prefix[n].strip())
 	return pref
 
 ##
 #Get all the geo prefixes
 def get_prefixes_geo_all(prms):
-	keys = get_folder_keys(prms)
+	keys = su.get_folder_keys(prms)
 	pref = edict()
 	for k in keys:
+		if not(k=='0052'):
+			continue
 		pref[k] = get_prefixes_geo(prms, k)
 	return pref
+
+##
+#Helper for save_resize_images_geo
+def _write_im(prms, readList, outNames):
+	if prms.isAligned:
+		rootDir = osp.join(cfg.STREETVIEW_DATA_MAIN, 
+							'pulkitag/data_sets/streetview/raw/ssd105/Amir/WashingtonAligned/')
+	else:
+		raise Exception('rootDir is not defined')
+	rdNames = su.prefix2imname(prms, readList)
+	for r in range(len(rdNames)):
+		#print (rdNames[r][0], outNames[r])
+		im       = scm.imread(osp.join(rootDir, rdNames[r][0]))
+		#Resize
+		im = scm.imresize(im, [prms.imSz, prms.imSz])
+		#Save the image
+		scm.imsave(outNames[r], im)
+
 
 ##
 #Save resized images
@@ -245,27 +267,32 @@ def save_resize_images_geo(prms):
 	l1Count, l2Count = 0,0
 	l1Max = 1e+6
 	l2Max = 1e+3
+	readList  = []
+	outNames  = []
 	for k in pref.keys():
 		imKeys[k]= edict()
 		print (k, imCount)
-		for i in range(pref[k]):
+		for i in range(len(pref[k])):
 			imNum  = imCount % 1000
-			imName = 'l1%d/l2%d/im%04d.jpg' % (l1Count, l2Count, imNum)
-			imName = osp.join(prms.paths.proc.im.dr)
-			imDir,_ = osp.splits(imName)
+			imName = 'l1-%d/l2-%d/im%04d.jpg' % (l1Count, l2Count, imNum)
+			imName = osp.join(prms.paths.proc.im.dr, imName)
+			imDir,_ = osp.split(imName)
 			sp._mkdir(imDir)
 			imKeys[k][pref[k][i]] = imName
-			#Read the original image
-			inName,_ = su.prefix2imname(prms, (k, pref[k][i], None, None))
-			im       = scm.imread(inName)
-			#Resize
-			im = scm.imresize(im, [prms.imSz, prms.imSz])
-			#Save the image
-			scm.imsave(imName, im)
+			readList.append((k, pref[k][i], None, None))
+			outNames.append(imName)
+			
 			#Increment the counters
 			imCount = imCount + 1
 			l1Count = int(np.floor(imCount/l1Max))
 			l2Count = int(np.floor((imCount % l1Max)/l2Max))
+			
+			#Write the images if needed
+			if (imCount >= l2Max and (imCount % l2Max)==0):
+				_write_im(prms, readList, outNames)	
+				readList, outNames = [], []
+	_write_im(prms, readList, outNames)
+	pickle.dump({'imKeys':imKeys}, open(prms.paths.proc.im.keyFile,'w'))	
 
 ##
 #Save the splits data

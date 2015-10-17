@@ -299,7 +299,7 @@ def prefix2imname(prms, prefixes):
 	for ff in fList.keys():
 		drName    = fList[ff].split('/')[-1]
 		fList[ff] = drName
-	print fList
+	#print fList
 	imNames = []
 	for pf in prefixes:
 		f1, p1, f2, p2 = pf
