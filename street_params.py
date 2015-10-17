@@ -212,7 +212,7 @@ def get_prms(isAligned=True,
 						 trnSeq=[], 
 						 tePct=1.0, teGap=5,
 						 ptchPosFrac=0.5, maxEulerRot=None, 
-						 geoFence=None, imSz=640):
+						 geoFence=None, rawImSz=640):
 	'''
 		labels    : What labels to use - make it a list for multiple
 								kind of labels
@@ -257,7 +257,7 @@ def get_prms(isAligned=True,
 	paths = get_paths()
 	prms  = edict()
 	prms.isAligned = isAligned
-	prms.imSz      = imSz
+	prms.rawImSz      = rawImSz
 	
 	#Label infoo
 	prms.labelSz   = 0
@@ -276,10 +276,7 @@ def get_prms(isAligned=True,
 		prms.labels = prms.labels + [LabelNLoss(lb, lbT, ls,
 										 ptchPosFrac=ptchPosFrac, maxRot=maxEulerRot,
 										 isMultiLabel=isMultiLabel)]
-		if prms.isMultiLabel:
-			prms.labelNameStr = prms.labelNameStr + '_%s-frac%.2f' % (lb, lbF)
-		else:
-			prms.labelNameStr = prms.labelNameStr + '_%s' % lb
+		prms.labelNameStr = prms.labelNameStr + '_%s' % lb
 		lbSz              = prms.labels[-1].get_label_sz()[0]
 		prms.labelSzList.append(prms.labelSzList[-1] + lbSz)
 		prms.labelSz      = prms.labelSz + lbSz
@@ -307,14 +304,18 @@ def get_prms(isAligned=True,
 	splitDr, _ = osp.split(paths.proc.splitsFile)
 	_mkdir(splitDr)
 
-	expStr    = ''.join(['%s_' % lb.lbStr_ for lb in prms.labels])
+	if prms.isMultiLabel:
+		expStr    = ''.join(['%s-frac%.2f_' % (lb.lbStr_, lbf)\
+										 for lb,lbf in zip(prms.labels, labelFrac)])
+	else:
+		expStr    = ''.join(['%s_' % lb.lbStr_ for lb in prms.labels])
 	expStr    = expStr[0:-1]
 	if geoFence is not None:
 		expStr     = '%s_geo-%s' % (expStr, geoFence)
 		paths.geoFile = paths.geoFile % geoFence
 		prms.geoPoly  = read_geo_coordinates(paths.geoFile)
-	if not(imSz==640):
-		imStr = '_imSz%d' % imSz
+	if not(rawImSz==640):
+		imStr = '_rawImSz%d' % rawImSz
 	else:
 		imStr = ''
 	expName   = '%s_crpSz%d_nTr-%.2e%s' % (expStr, crpSz, numTrain, imStr)
@@ -335,8 +336,8 @@ def get_prms(isAligned=True,
 		_mkdir(geoDirName)
 
 	#Files for storing the resized images
-	paths.proc.im.dr       = paths.proc.im.dr % imSz
-	paths.proc.im.keyFile  = paths.proc.im.keyFile % imSz
+	paths.proc.im.dr       = paths.proc.im.dr % rawImSz
+	paths.proc.im.keyFile  = paths.proc.im.keyFile % rawImSz
 
 	prms['paths'] = paths
 	#Get the pose stats
