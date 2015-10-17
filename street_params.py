@@ -178,10 +178,10 @@ class LabelNLoss(object):
 		self.label_     = labelClass
 		self.labelType_ = labelType
 		self.loss_      = loss
+		self.isMultiLabel = isMultiLabel
 		#augLbSz_ - augmented labelSz to include the ignore label option
 		self.augLbSz_, self.lbSz_  = self.get_label_sz()
 		self.lbStr_       = '%s-%s' % (self.label_, self.labelType_)
-		self.isMultiLabel = isMultiLabel
 		if labelClass == 'ptch':
 			self.posFrac_ = ptchPosFrac
 			self.lbStr_   = self.lbStr_ + '-posFrac%.1f' % self.posFrac_ 	
@@ -194,7 +194,7 @@ class LabelNLoss(object):
 				self.numBins_ = numBins 
 					
 	def get_label_sz(self):
-		lbSz = get_label_size(self.label_, self.labelType_) 
+		lbSz = get_label_size(self.label_, self.labelType_)
 		if self.isMultiLabel:
 			augLbSz = lbSz + 1
 		else:

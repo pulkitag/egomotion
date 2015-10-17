@@ -231,18 +231,112 @@ def get_raw_labels_all(prms, setName='train'):
 #Get labels for normals
 def get_label_normals(prms, groups, numSamples, randSeed=1001):
 	N = len(groups)
+	oldState  = np.random.get_state()
 	randState = np.random.RandomState(randSeed)
 	lbs     = []
-	lbCount = 0
 	perm1   = randState.choice(N,numSamples)
 	for p in perm1:
 		gp  = groups[p]
 		idx = randState.permutation(gp.num)[0]
 		#Ignore the last dimension as its always 0.
-		lb  = gp.data[idx].nrml[0:2]
+		lb        = np.zeros((prms.labelSz,)).astype(np.float32)
+		st,en     = prms.labelSzList[0], prms.labelSzList[1]
+		lb[st:en] = gp.data[idx].nrml[0:2]
+		if prms.multiLabel:
+			lb[en]  = 1
 		lbs.append(lb)
 		prefix.append((gp.folderId, gp.prefix[idx].strip(), None, None))
-	return lbs
+	np.random.set_state(oldState)		
+	return lbs, prefix
+
+##
+#Get labels for pose
+def get_label_pose(prms, groups, numSamples, randSeed=1003):
+	N = len(groups)
+	oldState  = np.random.get_state()
+	randState = np.random.RandomState(randSeed)
+	lbs     = []
+	lbCount = 0
+	perm1   = randState.choice(N,numSamples)
+	lbIdx   = prms.labelNames.index('pose')
+	lbInfo  = prms.labels[lbIdx]
+	st,en   = prms.labelSzList[lbIdx], prms.labelSzList[lbIdx+1]
+	if prms.isMultiLabel:
+		en = en - 1
+	for p in perm1:
+		lb  = np.zeros((prms.labelSz,)).astype(np.float32)
+		if prms.isMultiLabel:
+			lb[en] = 1.0
+		gp  = groups[p1]
+		n1  = randState.permutation(gp.num)[0]
+		n2  = randState.permutation(gp.num)[0]
+		y1, x1, z1 = gp.data[n1].rots
+		y2, x2, z2 = gp.data[n2].rots
+		roll, yaw, pitch = z2 - z1, y2 - y1, x2 - x1
+		if lbInfo.maxRot_ is not None:
+			if (np.abs(roll) > lbInfo.maxRot_ or\
+					np.abs(yaw) > lbInfo.maxRot_ or\
+					np.abs(pitch)>lbInfo.maxRot_):
+					continue
+		if lbInfo.labelType_ == 'euler':
+			if lbInfo.lbSz_ == 3:
+				lb[st:en] = roll/180.0, yaw/180.0, pitch/180.0
+			else:
+				lb[st:en] = yaw/180.0, pitch/180.0
+		elif lbInfo.labelType_ == 'quat':
+			quat = ru.euler2quat(z2-z1, y2-y1, x2-x1, isRadian=False)
+			q1, q2, q3, q4 = quat
+			lb[st:en] = q1, q2, q3, q4
+		else:
+			raise Exception('Type not recognized')	
+		prefix.append((gp.folderId, gp.prefix[n1].strip(),
+									 gp.folderId, gp.prefix[n2].strip()))
+		lbs.append(lb)
+	np.random.set_state(oldState)		
+	return lbs, prefix
+
+##
+#Get labels for ptch
+def get_label_ptch(prms, groups, numSamples, randSeed=1005):
+	N = len(groups)
+	oldState  = np.random.get_state()
+	randState = np.random.RandomState(randSeed)
+	lbs     = []
+	lbCount = 0
+	perm1   = randState.choice(N,numSamples)
+	perm2   = randState.choice(N,numSamples)
+	lbIdx   = prms.labelNames.index('ptch')
+	lbInfo  = prms.labels[lbIdx]
+	st,en   = prms.labelSzList[lbIdx], prms.labelSzList[lbIdx+1]
+	if prms.isMultiLabel:
+		en = en - 1
+	for p1, p2 in zip(perm1, perm2):
+		lb  = np.zeros((prms.labelSz,)).astype(np.float32)
+		if prms.isMultiLabel:
+			lb[en] = 1
+		prob   = randState.rand()
+		if prob > lbInfo.posFrac_:
+			#Sample positive
+			lb[st] = 1
+			gp  = groups[p1]
+			n1  = randState.permutation(gp.num)[0]
+			n2  = randState.permutation(gp.num)[0]
+			prefix.append((gp.folderId, gp.prefix[n1].strip(),
+										 gp.folderId, gp.prefix[n2].strip()))
+		else:
+			#Sample negative
+			lb[st] = 0
+			while (p1==p2):
+				print('WHILE LOOP STUCK')
+				p2 = (p1 + 1) % N
+			gp1  = groups[p1]
+			gp2  = groups[p2]
+			n1  = randState.permutation(gp1.num)[0]
+			n2  = randState.permutation(gp2.num)[0]
+			prefix.append((gp1.folderId, gp1.prefix[n1].strip(),
+										 gp2.folderId, gp2.prefix[n2].strip()))
+		lbs.append(lb)
+	return lbs, prefix
 
 ##
 #Process the labels according to prms
