@@ -252,10 +252,10 @@ def _write_im(prms, readList, outNames):
 		im       = scm.imread(osp.join(rootDir, rdNames[r][0]))
 		#Resize
 		h, w, ch = im.shape
-		hSt = max(0,int(h/2 - prms.imSz/2))
-		wSt = max(0,int(w/2 - prms.imSz/2))
-		hEn = min(h, int(hSt + prms.imSz))
-		wEn = min(w, int(wSt + prms.imSz))
+		hSt = max(0,int(h/2 - prms.rawImSz/2))
+		wSt = max(0,int(w/2 - prms.rawImSz/2))
+		hEn = min(h, int(hSt + prms.rawImSz))
+		wEn = min(w, int(wSt + prms.rawImSz))
 		im =  im[hSt:hEn, wSt:wEn, :] 
 		#Save the image
 		scm.imsave(outNames[r], im)
@@ -277,10 +277,10 @@ def save_cropped_images_geo(prms):
 		for i in range(len(pref[k])):
 			imNum  = imCount % 1000
 			imName = 'l1-%d/l2-%d/im%04d.jpg' % (l1Count, l2Count, imNum)
+			imKeys[k][pref[k][i]] = imName
 			imName = osp.join(prms.paths.proc.im.dr, imName)
 			imDir,_ = osp.split(imName)
 			sp._mkdir(imDir)
-			imKeys[k][pref[k][i]] = imName
 			readList.append((k, pref[k][i], None, None))
 			outNames.append(imName)
 			
