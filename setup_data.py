@@ -169,7 +169,7 @@ def save_counts(prms):
 ##
 # Save the groups
 def save_groups(prms, isAlignedOnly=True):
-	grpKeyStr = '%07d'
+	grpKeyStr = prms.paths.grpKeyStr
 	if isAlignedOnly:
 		keys   = su.get_folder_keys_aligned(prms)	
 	else:
@@ -195,6 +195,77 @@ def save_groups(prms, isAlignedOnly=True):
 				grpLabels[grpKey].prefix.append(prefixes[i])
 		pickle.dump({'groups': grpLabels}, 
 							open(prms.paths.label.grps % k, 'w'))	
+
+##
+#Save geo localized groups
+def save_geo_groups(prms):
+	keys = su.get_folder_keys(prms)
+	for k in keys:
+		print (k)
+		grpFile  = prms.paths.label.grps % k
+		grpDat   = pickle.load(open(grpFile, 'r'))
+		grpDat   = grpDat['groups']
+		geoGrp   = edict()
+		geoKeys  = []
+		for gKey, gDat in grpDat.iteritems(): 
+			isInside = su.is_group_in_geo(prms, gDat)
+			if isInside:
+				geoGrp[gKey] = gDat
+				geoKeys.append(gKey)
+		outName = prms.paths.grp.geoFile % k
+		print ('Saving to %s' % outName) 
+		pickle.dump({'groups': geoGrp, 'groupIds': geoKeys}, open(outName,'w'))
+
+##
+#Get the prefixes for a particular geo group
+def get_prefixes_geo(prms, folderId):
+	data = pickle.load(open(prms.paths.grp.geoFile % folderId))
+	grps = data['groups']
+	pref = []
+	for g in grps:
+		for n in g.num:
+			pref.append(g.prefix[n].strip())
+	return pref
+
+##
+#Get all the geo prefixes
+def get_prefixes_geo_all(prms):
+	keys = get_folder_keys(prms)
+	pref = edict()
+	for k in keys:
+		pref[k] = get_prefixes_geo(prms, k)
+	return pref
+
+##
+#Save resized images
+def save_resize_images_geo(prms):
+	pref    = get_prefixes_geo_all(prms)
+	imKeys  = edict()
+	imCount = 0 		
+	l1Count, l2Count = 0,0
+	l1Max = 1e+6
+	l2Max = 1e+3
+	for k in pref.keys():
+		imKeys[k]= edict()
+		print (k, imCount)
+		for i in range(pref[k]):
+			imNum  = imCount % 1000
+			imName = 'l1%d/l2%d/im%04d.jpg' % (l1Count, l2Count, imNum)
+			imName = osp.join(prms.paths.proc.im.dr)
+			imDir,_ = osp.splits(imName)
+			sp._mkdir(imDir)
+			imKeys[k][pref[k][i]] = imName
+			#Read the original image
+			inName,_ = su.prefix2imname(prms, (k, pref[k][i], None, None))
+			im       = scm.imread(inName)
+			#Resize
+			im = scm.imresize(im, [prms.imSz, prms.imSz])
+			#Save the image
+			scm.imsave(imName, im)
+			#Increment the counters
+			imCount = imCount + 1
+			l1Count = int(np.floor(imCount/l1Max))
+			l2Count = int(np.floor((imCount % l1Max)/l2Max))
 
 ##
 #Save the splits data

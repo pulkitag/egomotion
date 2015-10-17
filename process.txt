@@ -19,5 +19,21 @@ save_folder_prefixes(prms, forceWrite)
 #Seperate the keys for the folders that contain Aligned Data
 save_aligned_keys(prms)
 
+#Save the groups data
+save_groups(prms)
+
+#Save the dat a for geolocalization
+save_geo_groups(prms)
+
+#Save resized images
+Create a hash table for each folder. 
+The hash table stores the prefix name and the hashed name of the file.
+The directory struture
+imSz256/
+Each folder in the first level holds a million images
+l1-%d/
+Each folder in the second level holds a thousand images
+l2-%d/
+
 #Save the normals data
 su.save_normals(prms)

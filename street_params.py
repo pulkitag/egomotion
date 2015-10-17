@@ -72,6 +72,13 @@ def get_paths():
 	#Keys for non-algined folders
 	paths.proc.folders.naKey = osp.join(paths.proc.folders.dr, 'key-non_aligned.txt') 
 
+	#Storing resized images
+	paths.proc.im    =  edict()
+	paths.proc.im.dr =  osp.join(paths.proc.dr, 'resize-im')
+	_mkdir(paths.proc.im.dr)
+	paths.proc.im.keyFile = osp.join(paths.proc.dr, 'im%d-keys.pkl') 
+	paths.proc.im.dr      = osp.join(paths.proc.dr, 'im%d')		
+
 	#Count info
 	paths.proc.countFile = osp.join(paths.proc.folders.dr, 'counts.h5')	
 
@@ -116,6 +123,12 @@ def get_paths():
 	paths.res.testImVisDr = osp.join(paths.res.dr, 'test-imvis')
 	_mkdir(paths.res.testImVisDr)
 	#paths.res.testImVis   = osp.join(paths.res.testImVisDr, 'im%05d.jpg')   
+
+	paths.grp = edict()
+	paths.grp.keyStr    = '%07d'
+	paths.grp.geoDr     = osp.join(paths.res.dr, 'geo-grp') 
+	_mkdir(paths.grp.geoDr)
+	paths.grp.geoFile   = osp.join(paths.grp.geoDr, '%s', '%s.pkl')
 
 	#For legacy reasons
 	paths.expDir  = osp.join(paths.exp.dr, 'caffe-files')
@@ -167,7 +180,8 @@ class LabelNLoss(object):
 		self.loss_      = loss
 		#augLbSz_ - augmented labelSz to include the ignore label option
 		self.augLbSz_, self.lbSz_  = self.get_label_sz()
-		self.lbStr_     = '%s-%s' % (self.label_, self.labelType_)
+		self.lbStr_       = '%s-%s' % (self.label_, self.labelType_)
+		self.isMultiLabel = isMultiLabel
 		if labelClass == 'ptch':
 			self.posFrac_ = ptchPosFrac
 			self.lbStr_   = self.lbStr_ + '-posFrac%.1f' % self.posFrac_ 	
@@ -183,7 +197,7 @@ class LabelNLoss(object):
 	def get_label_sz(self):
 		lbSz = get_label_size(self.label_, self.labelType_) 
 		if not(self.label_ == 'nrml') and self.loss_ in ['l2', 'l1', 'l2-tukey']:
-			if isMultiLabel:
+			if self.isMultiLabel:
 				augLbSz = lbSz + 1
 			else:
 				augLbSz  = lbSz
@@ -202,7 +216,7 @@ def get_prms(isAligned=True,
 						 trnSeq=[], 
 						 tePct=1.0, teGap=5,
 						 ptchPosFrac=0.5, maxEulerRot=None, 
-						 geoFence=None):
+						 geoFence=None, imSz=640):
 	'''
 		labels    : What labels to use - make it a list for multiple
 								kind of labels
@@ -245,6 +259,7 @@ def get_prms(isAligned=True,
 	paths = get_paths()
 	prms  = edict()
 	prms.isAligned = isAligned
+	prms.imSz      = imSz
 	
 	#Label infoo
 	prms.labelSz = 0
@@ -294,11 +309,22 @@ def get_prms(isAligned=True,
 	teExpName = '%s_crpSz%d_nTe-%.2e' % (expStr, crpSz, numTest)
 	prms['expName'] = expName
 
+	#Form the window files
 	paths['windowFile'] = {}
 	windowDir = paths.exp.window.dr
 	paths['windowFile']['train'] = osp.join(windowDir, 'train_%s.txt' % expName)
 	paths['windowFile']['test']  = osp.join(windowDir, 'test_%s.txt'  % teExpName)
 	#paths['resFile']       = osp.join(paths['resDir'], expName, '%s.h5')
+
+	#Files for saving the geolocalized groups
+	if prms.geoPoly is not None:
+		paths.grp.geoFile = paths.grp.geoFile % (geoFence, '%s')
+		geoDirName, _ = osp.split(paths.grp.geoFile)
+		_mkdir(geoDirName)
+
+	#Files for storing the resized images
+	paths.proc.im.dr       = paths.proc.im.dr % imSz
+	paths.proc.im.keyFile  = paths.proc.im.keyFile % imSz
 
 	prms['paths'] = paths
 	#Get the pose stats
