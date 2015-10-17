@@ -205,7 +205,7 @@ class LabelNLoss(object):
 #get prms
 def get_prms(isAligned=True, 
 						 labels=['nrml'], labelType=['xyz'], 
-						 lossType=['l2'], labelFrac=[None],
+						 lossType=['l2'], labelFrac=[1],
 						 labelNrmlz=None, 
 						 crpSz=101,
 						 numTrain=1e+06, numTest=1e+04,
@@ -248,8 +248,7 @@ def get_prms(isAligned=True,
 	assert len(lossType) == len(labels)
 	assert len(labels)   == len(labelType)
 	assert len(labels)  == len(labelFrac)
-	if len(labels)>1:
-		assert sum(labelFrac)==1, 'Set labelFrac appropriately'
+	assert sum(labelFrac)==1, 'Set labelFrac appropriately'
 	#Assert that labels are sorted
 	sortLabels = sorted(labels)
 	for i,l in enumerate(labels):
@@ -313,9 +312,13 @@ def get_prms(isAligned=True,
 	if geoFence is not None:
 		expStr     = '%s_geo-%s' % (expStr, geoFence)
 		paths.geoFile = paths.geoFile % geoFence
-		prms.geoPoly  = read_geo_coordinates(paths.geoFile) 
-	expName   = '%s_crpSz%d_nTr-%.2e' % (expStr, crpSz, numTrain)
-	teExpName = '%s_crpSz%d_nTe-%.2e' % (expStr, crpSz, numTest)
+		prms.geoPoly  = read_geo_coordinates(paths.geoFile)
+	if not(imSz==640):
+		imStr = '_imSz%d' % imSz
+	else:
+		imStr = ''
+	expName   = '%s_crpSz%d_nTr-%.2e%s' % (expStr, crpSz, numTrain, imStr)
+	teExpName = '%s_crpSz%d_nTe-%.2e%s' % (expStr, crpSz, numTest, imStr)
 	prms['expName'] = expName
 
 	#Form the window files
