@@ -260,7 +260,6 @@ def _write_im(prms, readList, outNames):
 		#Save the image
 		scm.imsave(outNames[r], im)
 
-
 ##
 #Save cropped images
 def save_cropped_images_geo(prms):

@@ -401,6 +401,20 @@ def prefix2imname(prms, prefixes):
 	return imNames
 
 ##
+#Convert prefixes to image name
+def prefix2imname_geo(prms, prefixes):
+	keyData = pickle.load(open(prms.paths.proc.im.keyFile, 'r'))
+	imKeys  = keyData['imKeys']
+	imNames = []
+	for pf in prefixes:
+		f1, p1, f2, p2 = pf
+		if f2 is not None:
+			imNames.append([imKeys[f1][p1], imKeys[f2][p2]])
+		else:
+			imNames.append([imKeys[f1][p1], None])
+	return imNames
+			
+##
 #Make the window files
 def make_window_file(prms, setNames=['test', 'train']):
 	if len(prms.labelNames)==1 and prms.labelNames[0] == 'nrml':
@@ -409,7 +423,7 @@ def make_window_file(prms, setNames=['test', 'train']):
 		numImPerExample = 2	
 
 	#Assuming the size of images
-	h, w, ch = prms.imSz, prms.imSz, 3
+	h, w, ch = prms.rawImSz, prms.rawImSz, 3
 	hCenter, wCenter = int(h/2), int(w/2)
 	cr = int(prms.crpSz/2)
 	minH = max(0, hCenter - cr)
@@ -420,7 +434,10 @@ def make_window_file(prms, setNames=['test', 'train']):
 	for s in setNames:
 		#Get the im-label data
 		lb, prefix = get_labels(prms, s)
-		imNames1 = prefix2imname(prms, prefix)
+		if prms.geoFence is None:	
+			imNames1 = prefix2imname(prms, prefix)
+		else:
+			imNames1 = prefix2imname_geo(prms, prefix) 
 		#Randomly permute the data
 		N = len(imNames1)
 		randState = np.random.RandomState(19)
@@ -434,8 +451,6 @@ def make_window_file(prms, setNames=['test', 'train']):
 				line.append([imNames1[i][n], [ch, h, w], [minW, minH, maxW, maxH]])
 			gen.write(lb[i], *line)
 		gen.close()
-
-
 
 
 #Polygon should be of type mplPath	
