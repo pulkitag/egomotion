@@ -235,8 +235,6 @@ def get_prefixes_geo_all(prms):
 	keys = su.get_folder_keys(prms)
 	pref = edict()
 	for k in keys:
-		if not(k=='0052'):
-			continue
 		pref[k] = get_prefixes_geo(prms, k)
 	return pref
 
@@ -289,6 +287,7 @@ def save_resize_images_geo(prms):
 			
 			#Write the images if needed
 			if (imCount >= l2Max and (imCount % l2Max)==0):
+				print (imCount)
 				_write_im(prms, readList, outNames)	
 				readList, outNames = [], []
 	_write_im(prms, readList, outNames)
