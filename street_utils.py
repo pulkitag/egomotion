@@ -228,7 +228,22 @@ def get_raw_labels_all(prms, setName='train'):
 	return lb
 
 ##
-	
+#Get labels for normals
+def get_label_normals(prms, groups, numSamples, randSeed=1001):
+	N = len(groups)
+	randState = np.random.RandomState(randSeed)
+	lbs     = []
+	lbCount = 0
+	perm1   = randState.choice(N,numSamples)
+	for p in perm1:
+		gp  = groups[p]
+		idx = randState.permutation(gp.num)[0]
+		#Ignore the last dimension as its always 0.
+		lb  = gp.data[idx].nrml[0:2]
+		lbs.append(lb)
+		prefix.append((gp.folderId, gp.prefix[idx].strip(), None, None))
+	return lbs
+
 ##
 #Process the labels according to prms
 def get_labels(prms, setName='train'):
