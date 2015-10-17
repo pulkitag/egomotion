@@ -79,7 +79,7 @@ def vis_window_file(prms, setName='test', isSave=False):
 	wFile   = prms.paths.windowFile[setName]
 	wDat    = mpio.GenericWindowReader(wFile)
 	runFlag = True
-	lbStr   = 'q1: %.2f, q2: %.2f, q3: %.2f, q4: %.2f, isRot: %d'\
+	lbStr   = 'roll: %.2f, yaw: %.2f, pitch: %.2f, isRot: %d'\
 						+ '\n isPos: %.2f, isPatch: %d'
 	plt.ion()
 	fig = plt.figure()
@@ -89,7 +89,14 @@ def vis_window_file(prms, setName='test', isSave=False):
 		imNames, lbs = wDat.read_next()
 		imNames  = [osp.join(rootDir, n.split()[0]) for n in imNames]
 		#pdb.set_trace()
-		figTitle = lbStr % tuple([ll for ll in lbs[0]])
+		q1, q2, q3, q4 = lbs[0][0:4]
+		isRot          = lbs[0][4]
+		pMatch, isPatch = lbs[0][5:7]
+		roll, yaw, pitch = ru.quat2euler([q1, q2, q3, q4])
+		roll  = 180 * (roll/np.pi)
+		yaw   = 180 * (yaw/np.pi)
+		pitch = 180 * (pitch/np.pi)
+		figTitle = lbStr % (roll, yaw, pitch, isRot, pMatch, isPatch)
 		print (figTitle)
 		im1      = plt.imread(imNames[0])
 		im2      = plt.imread(imNames[1])

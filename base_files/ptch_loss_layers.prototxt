@@ -30,6 +30,9 @@ layer {
   bottom: "ptch_label"
   top: "ptch_loss"
 	loss_weight: 1.0
+	loss_param {	
+		ignore_label: 2
+	}
 }
 layer {
   name: "accuracy"
@@ -37,4 +40,7 @@ layer {
   bottom: "ptch_fc"
   bottom: "ptch_label"
   top: "accuracy"
+	accuracy_param {	
+		ignore_label: 2
+	}
 }

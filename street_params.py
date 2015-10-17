@@ -179,6 +179,7 @@ class LabelNLoss(object):
 		self.labelType_ = labelType
 		self.loss_      = loss
 		self.isMultiLabel = isMultiLabel
+		assert self.loss_ in ['l2', 'classify'], self.loss_
 		#augLbSz_ - augmented labelSz to include the ignore label option
 		self.augLbSz_, self.lbSz_  = self.get_label_sz()
 		self.lbStr_       = '%s-%s' % (self.label_, self.labelType_)
@@ -195,7 +196,7 @@ class LabelNLoss(object):
 					
 	def get_label_sz(self):
 		lbSz = get_label_size(self.label_, self.labelType_)
-		if self.isMultiLabel:
+		if self.isMultiLabel and not(self.loss_ == 'classify'):
 			augLbSz = lbSz + 1
 		else:
 			augLbSz  = lbSz

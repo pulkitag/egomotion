@@ -131,7 +131,7 @@ def get_windowfile_rootdir(prms):
 	if prms.isAligned:
 		if prms.geoFence is not None and not(prms.rawImSz == 640):
 			rootDir = osp.join(mainDataDr,
-									 'pulkitag/data_sets/streetview/proc/resize-im/im%d' % prms.rawImSz)
+									 'pulkitag/data_sets/streetview/proc/resize-im/im%d/' % prms.rawImSz)
 		else:
 			rootDir = osp.join(mainDataDr, 
 									'pulkitag/data_sets/streetview/raw/ssd105/Amir/WashingtonAligned/')
@@ -208,7 +208,9 @@ def make_data_proto(prms, cPrms):
 		#Add slicing of labels	
 		sliceFile = '%s_layers.prototxt' % prms.labelNameStr
 		sliceDef  = mpu.ProtoDef(osp.join(baseFilePath, sliceFile))
-		dataDef   = _merge_defs([dataDef, sliceDef])	
+		dataDef   = _merge_defs([dataDef, sliceDef])
+
+	
 	#Set to the new window files
 	_adapt_data_proto(dataDef, prms, cPrms)
 	return dataDef
@@ -267,6 +269,11 @@ def make_loss_proto(prms, cPrms):
 		lbDef.set_layer_property('pose_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
 		lbDefs.append(lbDef)
 	lbDef = _merge_defs(lbDefs)
+	if prms.isMultiLabel:
+		#Replace the EuclideanLoss with EuclideanLossWithIgnore 
+		l2Layers = lbDef.get_layernames_from_type('EuclideanLoss')
+		for ll in l2Layers:
+			lbDef.set_layer_property(ll, 'type', '"EuclideanLossWithIgnore"')
 	return lbDef	
 
 ##

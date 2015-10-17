@@ -236,6 +236,11 @@ def get_label_nrml(prms, groups, numSamples, randSeed=1001):
 	randState = np.random.RandomState(randSeed)
 	lbs, prefix     = [], []
 	perm1   = randState.choice(N,numSamples)
+	ptchFlag = False
+	if 'ptch' in prms.labelNames:
+		ptchFlag = True
+		ptchIdx  = prms.labelNames.index('ptch')
+		ptchLoc  = prms.labelSzList[ptchIdx]
 	for p in perm1:
 		gp  = groups[p]
 		idx = randState.permutation(gp.num)[0]
@@ -245,6 +250,8 @@ def get_label_nrml(prms, groups, numSamples, randSeed=1001):
 		lb[st:en] = gp.data[idx].nrml[0:2]
 		if prms.isMultiLabel:
 			lb[en]  = 1
+		if ptchFlag:
+			lb[ptchLoc] = 2
 		lbs.append(lb)
 		prefix.append((gp.folderId, gp.prefix[idx].strip(), None, None))
 	np.random.set_state(oldState)		
@@ -264,6 +271,12 @@ def get_label_pose(prms, groups, numSamples, randSeed=1003):
 	st,en   = prms.labelSzList[lbIdx], prms.labelSzList[lbIdx+1]
 	if prms.isMultiLabel:
 		en = en - 1
+	#Find if ptch matching is there and use the ignore label loss
+	ptchFlag = False
+	if 'ptch' in prms.labelNames:
+		ptchFlag = True
+		ptchIdx  = prms.labelNames.index('ptch')
+		ptchLoc  = prms.labelSzList[ptchIdx]
 	for p in perm1:
 		lb  = np.zeros((prms.labelSz,)).astype(np.float32)
 		if prms.isMultiLabel:
@@ -292,6 +305,8 @@ def get_label_pose(prms, groups, numSamples, randSeed=1003):
 			raise Exception('Type not recognized')	
 		prefix.append((gp.folderId, gp.prefix[n1].strip(),
 									 gp.folderId, gp.prefix[n2].strip()))
+		if ptchFlag:
+			lb[ptchLoc] = 2
 		lbs.append(lb)
 	np.random.set_state(oldState)		
 	return lbs, prefix
@@ -309,12 +324,8 @@ def get_label_ptch(prms, groups, numSamples, randSeed=1005):
 	lbIdx   = prms.labelNames.index('ptch')
 	lbInfo  = prms.labels[lbIdx]
 	st,en   = prms.labelSzList[lbIdx], prms.labelSzList[lbIdx+1]
-	if prms.isMultiLabel:
-		en = en - 1
 	for p1, p2 in zip(perm1, perm2):
 		lb  = np.zeros((prms.labelSz,)).astype(np.float32)
-		if prms.isMultiLabel:
-			lb[en] = 1
 		prob   = randState.rand()
 		if prob > lbInfo.posFrac_:
 			#Sample positive
