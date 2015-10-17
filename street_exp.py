@@ -124,16 +124,26 @@ def _merge_defs(defs):
 				allDef.add_layer(t, trLayer, phase=s)
 	return allDef
 
+##
+#
+def get_windowfile_rootdir(prms):
+	mainDataDr = cfg.STREETVIEW_DATA_MAIN
+	if prms.isAligned:
+		if prms.geoFence is not None and not(prms.rawImSz == 640):
+			rootDir = osp.join(mainDataDr,
+									 'pulkitag/data_sets/streetview/proc/resize-im/im%d' % prms.rawImSz)
+		else:
+			rootDir = osp.join(mainDataDr, 
+									'pulkitag/data_sets/streetview/raw/ssd105/Amir/WashingtonAligned/')
+	else:
+		raise Exception('rootDir is not defined')
+	return rootDir
 
 ##
 #Adapt the ProtoDef for the data layers
 #Helper function for setup_experiment
 def _adapt_data_proto(protoDef, prms, cPrms):
-	mainDataDr = cfg.STREETVIEW_DATA_MAIN
-	if prms.isAligned:
-		rootDir = osp.join(mainDataDr, 'pulkitag/data_sets/streetview/raw/ssd105/Amir/WashingtonAligned/')
-	else:
-		raise Exception('rootDir is not defined')
+	rootDir = get_windowfile_rootdir(prms) 
 	#Get the source file for the train and test layers
 	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'source'],
 			'"%s"' % prms['paths']['windowFile']['train'], phase='TRAIN')

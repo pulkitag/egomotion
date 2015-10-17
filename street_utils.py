@@ -243,7 +243,7 @@ def get_label_nrml(prms, groups, numSamples, randSeed=1001):
 		lb        = np.zeros((prms.labelSz,)).astype(np.float32)
 		st,en     = prms.labelSzList[0], prms.labelSzList[1]
 		lb[st:en] = gp.data[idx].nrml[0:2]
-		if prms.multiLabel:
+		if prms.isMultiLabel:
 			lb[en]  = 1
 		lbs.append(lb)
 		prefix.append((gp.folderId, gp.prefix[idx].strip(), None, None))

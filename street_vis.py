@@ -14,6 +14,8 @@ import re
 import matplotlib.path as mplPath
 import rot_utils as ru
 import vis_utils as vu
+import setup_data as sd
+import street_exp as se
 
 #Polygon should be of type mplPath	
 def show_images(prms, folderId):
@@ -72,5 +74,33 @@ def show_image_groups(prms, folderId):
 		for c in range(pltCount):
 			axl[c].cla()
 
-def vis_window_file(setName='test'):
-	
+def vis_window_file(prms, setName='test', isSave=False):
+	rootDir = se.get_windowfile_rootdir(prms)
+	wFile   = prms.paths.windowFile[setName]
+	wDat    = mpio.GenericWindowReader(wFile)
+	runFlag = True
+	lbStr   = 'q1: %.2f, q2: %.2f, q3: %.2f, q4: %.2f, isRot: %d'\
+						+ '\n isPos: %.2f, isPatch: %d'
+	plt.ion()
+	fig = plt.figure()
+	count = 0
+	maxCount = 100				
+	while runFlag:
+		imNames, lbs = wDat.read_next()
+		imNames  = [osp.join(rootDir, n.split()[0]) for n in imNames]
+		#pdb.set_trace()
+		figTitle = lbStr % tuple([ll for ll in lbs[0]])
+		print (figTitle)
+		im1      = plt.imread(imNames[0])
+		im2      = plt.imread(imNames[1])
+		vu.plot_pairs(im1, im2, fig=fig, figTitle=figTitle)	
+		if isSave:
+			outName = osp.join('debug-data', '%05d.jpg' % count)
+			plt.savefig(outName)
+		else:	
+			inp = raw_input('Press a key to continue')
+			if inp=='q':
+				return
+		count = count + 1
+		if count >= maxCount:
+			runFlag = False
