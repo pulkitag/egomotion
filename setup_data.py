@@ -251,14 +251,19 @@ def _write_im(prms, readList, outNames):
 		#print (rdNames[r][0], outNames[r])
 		im       = scm.imread(osp.join(rootDir, rdNames[r][0]))
 		#Resize
-		im = scm.imresize(im, [prms.imSz, prms.imSz])
+		h, w, ch = im.shape
+		hSt = max(0,int(h/2 - prms.imSz/2))
+		wSt = max(0,int(w/2 - prms.imSz/2))
+		hEn = min(h, int(hSt + prms.imSz))
+		wEn = min(w, int(wSt + prms.imSz))
+		im =  im[hSt:hEn, wSt:wEn, :] 
 		#Save the image
 		scm.imsave(outNames[r], im)
 
 
 ##
-#Save resized images
-def save_resize_images_geo(prms):
+#Save cropped images
+def save_cropped_images_geo(prms):
 	pref    = get_prefixes_geo_all(prms)
 	imKeys  = edict()
 	imCount = 0 		
