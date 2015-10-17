@@ -221,7 +221,8 @@ def get_raw_labels(prms, folderId, setName='train'):
 ##
 #Get all the raw labels
 def get_raw_labels_all(prms, setName='train'):
-	keys = get_folder_keys(prms)
+	#keys = get_folder_keys(prms)
+	keys  = ['0052']
 	lb   = []
 	for k in keys:
 		lb = lb + get_raw_labels(prms, k, setName=setName)
@@ -233,7 +234,7 @@ def get_label_nrml(prms, groups, numSamples, randSeed=1001):
 	N = len(groups)
 	oldState  = np.random.get_state()
 	randState = np.random.RandomState(randSeed)
-	lbs     = []
+	lbs, prefix     = [], []
 	perm1   = randState.choice(N,numSamples)
 	for p in perm1:
 		gp  = groups[p]
@@ -255,7 +256,7 @@ def get_label_pose(prms, groups, numSamples, randSeed=1003):
 	N = len(groups)
 	oldState  = np.random.get_state()
 	randState = np.random.RandomState(randSeed)
-	lbs     = []
+	lbs, prefix = [], []
 	lbCount = 0
 	perm1   = randState.choice(N,numSamples)
 	lbIdx   = prms.labelNames.index('pose')
@@ -267,7 +268,7 @@ def get_label_pose(prms, groups, numSamples, randSeed=1003):
 		lb  = np.zeros((prms.labelSz,)).astype(np.float32)
 		if prms.isMultiLabel:
 			lb[en] = 1.0
-		gp  = groups[p1]
+		gp  = groups[p]
 		n1  = randState.permutation(gp.num)[0]
 		n2  = randState.permutation(gp.num)[0]
 		y1, x1, z1 = gp.data[n1].rots
@@ -301,7 +302,7 @@ def get_label_ptch(prms, groups, numSamples, randSeed=1005):
 	N = len(groups)
 	oldState  = np.random.get_state()
 	randState = np.random.RandomState(randSeed)
-	lbs     = []
+	lbs, prefix = [],[]
 	lbCount = 0
 	perm1   = randState.choice(N,numSamples)
 	perm2   = randState.choice(N,numSamples)
@@ -348,26 +349,29 @@ def get_labels(prms, setName='train'):
 		elif l == 'pose':
 			lbNums.append(25 * len(grps))
 		elif l == 'ptch':
-			num = int(25.0 / lbType.posFrac_)
+			lbInfo = prms.labels[i]
+			num = int(25.0 / lbInfo.posFrac_)
 			lbNums.append(num * len(grps))			
 
 	if prms.isMultiLabel:
 		mxCount = max(lbNums)
-		mxIdx   = lbNum.index(mxCount)
+		mxIdx   = lbNums.index(mxCount)
 		allLb, allPrefix = [], []
 		allSamples = 0
 		for (i,l)	in enumerate(prms.labelNames):
 			numSample = (prms.labelFrac[i]/prms.labelFrac[mxIdx])*float(mxCount)
-			if lbName == 'nrml':
+			print (i, l, numSample)
+			if l== 'nrml':
 				lbs, prefix = get_label_nrml(prms, grps, numSample)
-			elif lbName == 'pose':
+			elif l == 'pose':
 				lbs, prefix = get_label_pose(prms, grps, numSample)
-			elif lbName == 'ptch':
+			elif l == 'ptch':
 				lbs, prefix = get_label_ptch(prms, grps, numSample)
 			assert len(lbs)==numSample, '%d, %d' % (len(lbs), numSample)
-			allSamples = allSamples + numSample	
+			allSamples = int(allSamples + numSample)
 			allLb     = allLb + lbs
-			allPrefix = allPrefix + prefix 	
+			allPrefix = allPrefix + prefix 
+		print ("Set: %s, total Number of Samples is %d" % (setName,allSamples))	
 		perm = np.random.permutation(allSamples)
 		lbs    = [allLb[p] for p in perm]
 		prefix = [allPrefix[p] for p in perm] 	
