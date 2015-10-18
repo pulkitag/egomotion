@@ -214,7 +214,7 @@ def get_prms(isAligned=True,
 						 tePct=1.0, teGap=5,
 						 ptchPosFrac=0.5, maxEulerRot=None, 
 						 geoFence=None, rawImSz=640, 
-						 splitDist=100):
+						 splitDist=None):
 	'''
 		labels    : What labels to use - make it a list for multiple
 								kind of labels

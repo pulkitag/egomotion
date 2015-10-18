@@ -255,8 +255,8 @@ def get_groups(prms, folderId, setName='train'):
 ##
 #Get all the raw labels
 def get_groups_all(prms, setName='train'):
-	#keys = get_folder_keys(prms)
-	keys  = ['0052']
+	keys = get_folder_keys(prms)
+	#keys  = ['0052']
 	grps   = []
 	for k in keys:
 		grps = grps + get_groups(prms, k, setName=setName)

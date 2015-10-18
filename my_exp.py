@@ -124,7 +124,6 @@ def smallnetv2_pool4_pose_crp192_rawImSz256(isRun=False):
 		return prms, cPrms	
 
 
-
 #Same as above but with random cropping
 def smallnetv2_pool4_pose_crp192_randcrp(isRun=False):
 	prms  = sp.get_prms_pose(geoFence='dc-v1', crpSz=192)
