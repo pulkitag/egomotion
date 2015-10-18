@@ -408,7 +408,7 @@ def save_train_test_splits(prms, isForceWrite=False):
 		splits.train = trKeys	
 		splits.test  = teKeys
 		#Save the data		
-		fName = prms.paths.proc.splitsFile % trf
+		fName = prms.paths.proc.splitsFile % k
 		pickle.dump({'splits': splits}, open(fName, 'w'))
 
 ##
