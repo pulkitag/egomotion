@@ -221,8 +221,8 @@ def get_raw_labels(prms, folderId, setName='train'):
 ##
 #Get all the raw labels
 def get_raw_labels_all(prms, setName='train'):
-	#keys = get_folder_keys(prms)
-	keys  = ['0052']
+	keys = get_folder_keys(prms)
+	#keys  = ['0052']
 	lb   = []
 	for k in keys:
 		lb = lb + get_raw_labels(prms, k, setName=setName)
