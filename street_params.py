@@ -297,13 +297,13 @@ def get_prms(isAligned=True,
 	prms.geoPoly    = None 	
 
 	prms.splits = edict()
-	if splitsDist is not None:
+	if splitDist is not None:
 		teGap = None
 	prms.splits.numTrain = numTrain
 	prms.splits.numTest  = numTest
 	prms.splits.tePct    = tePct
 	prms.splits.teGap    = teGap
-	prms.splits.dist     = splitsDist
+	prms.splits.dist     = splitDist
 	prms.splits.randSeed = 3
 
 	#Form the splits file

@@ -298,6 +298,26 @@ def save_cropped_images_geo(prms):
 	pickle.dump({'imKeys':imKeys}, open(prms.paths.proc.im.keyFile,'w'))	
 
 ##
+#Filter groups by distance
+def filter_groups_by_dist(groups, seedGroups, minDist):
+	'''
+		groups     is a dict
+		seedGroups is a list
+	'''
+	grpKeys = []
+	for k in groups.keys():
+		g      = groups[k]
+		#Find min distance from all the seed groups
+		sgDist = np.inf
+		for sg in seedGroups:
+			dist = su.get_distance_groups(g, sg)
+			if dist < sgDist:
+				sgDist = dist
+		if sgDist > minDist:
+			grpKeys.append(k)
+	return grpKeys
+			
+##
 #Save the splits data
 def save_train_test_splits(prms, isForceWrite=False):
 	if prms.splits.dist is None:
@@ -321,28 +341,31 @@ def save_train_test_splits(prms, isForceWrite=False):
 		randState = np.random.RandomState(randSeed) 
 	
 		#Read the groups	
-
-		#Read the groups of the fodler
-		grps = ['%07d' % ig for (ig,g) in enumerate(su.get_target_groups(prms, k)[0:-1])]
-		N    = len(grps)
+		grps    = su.get_groups(prms, k, setName=None)
+		grpKeys = grps.keys()
+		N    = len(grpKeys)
 		print('Folder: %s, num groups: %d' % (k,N))
-		teN  = int((prms.splits.tePct/100.0) * N)	
-		perm = randState.permutation(N)
-		tePerm = perm[0:teN]
-		#Form an extended testing set to exclude the neighbors
-		valPerm = []
-		print ('Extending test set for buffering against closeness to train set')
-		for t in tePerm:
-			st = max(0, t - prms.splits.teGap)
-			en = min(len(grps), t + prms.splits.teGap+1)
-			valPerm = valPerm + [v for v in range(st, en)]
-		print ('Form the train set')
-		#Form the training set
-		trPerm = [t for t in perm if t not in valPerm]
+		if N == 0:
+			trKeys, valKeys, teKeys = [], [], []
+		else:
+			#Chose the test groups
+			teN  = int((prms.splits.tePct/100.0) * N)	
+			perm = randState.permutation(N)
+			tePerm = perm[0:teN]
+		
+			teKeys = [grpKeys[t]for t in tePerm]
+			teGrps = [grps[k] for k in teKeys]
+			trKeys = filter_groups_by_dist(grps, teGrps, prms.splits.dist)	 
+			for tk in teKeys:
+				assert tk not in trKeys, 'THERE IS SOMETHING WRONG'
+			print ('Num Test: %d, Num Train: %d' % (len(teKeys), len(trKeys)))
+			valKeys = [k for k in grpKeys if (k not in teKeys) and (k not in trKeys)]
+
+		#Save the splits
 		splits = edict()
-		splits.train = [grps[g] for g in trPerm]		
-		splits.test  = [grps[g] for g in tePerm]
-		splits.val   = [grps[g] for g in valPerm if g not in tePerm]
+		splits.train = trKeys	
+		splits.test  = teKeys
+		splits.val   = valKeys
 		#Save the data		
 		pickle.dump({'splits': splits}, open(fName, 'w'))
 

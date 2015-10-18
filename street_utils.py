@@ -14,6 +14,7 @@ import re
 import matplotlib.path as mplPath
 import rot_utils as ru
 from geopy.distance import vincenty as geodist
+import copy
 
 ##
 #Get the prefixes for a specific folderId
@@ -229,9 +230,6 @@ def get_groups(prms, folderId, setName='train'):
 	'''
 		Labels for a particular split
 	'''
-	#Find the groups belogning to the split
-	splits    = get_train_test_splits(prms, folderId)
-	gSplitIds = splits[setName]
 	grpList   = []
 	if prms.geoFence is not None:
 		groups = read_geo_groups(prms, folderId)
@@ -242,10 +240,17 @@ def get_groups(prms, folderId, setName='train'):
 		grpData = pickle.load(open(grpFile,'r'))
 		groups  = grpData['groups']
 		gKeys   = groups.keys()
-	for g in gSplitIds:
-		if g in gKeys:
-			grpList.append(groups[g])
-	return grpList
+
+	if setName is not None:
+		#Find the groups belogning to the split
+		splits    = get_train_test_splits(prms, folderId)
+		gSplitIds = splits[setName]
+		for g in gSplitIds:
+			if g in gKeys:
+				grpList.append(groups[g])
+		return grpList
+	else:
+		return copy.deepcopy(groups)
 
 ##
 #Get all the raw labels
