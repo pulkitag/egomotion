@@ -270,6 +270,9 @@ def get_label_nrml(prms, groups, numSamples, randSeed=1001):
 	randState = np.random.RandomState(randSeed)
 	lbs, prefix     = [], []
 	perm1   = randState.choice(N,numSamples)
+	#For label configuration 
+	st,en   = prms.labelSzList[lbIdx], prms.labelSzList[lbIdx+1]
+	en = en - 1
 	ptchFlag = False
 	if 'ptch' in prms.labelNames:
 		ptchFlag = True
@@ -282,8 +285,7 @@ def get_label_nrml(prms, groups, numSamples, randSeed=1001):
 		lb        = np.zeros((prms.labelSz,)).astype(np.float32)
 		st,en     = prms.labelSzList[0], prms.labelSzList[1]
 		lb[st:en] = gp.data[idx].nrml[0:2]
-		if prms.isMultiLabel:
-			lb[en]  = 1
+		lb[en]  = 1
 		if ptchFlag:
 			lb[ptchLoc] = 2
 		lbs.append(lb)
@@ -303,8 +305,7 @@ def get_label_pose(prms, groups, numSamples, randSeed=1003):
 	lbIdx   = prms.labelNames.index('pose')
 	lbInfo  = prms.labels[lbIdx]
 	st,en   = prms.labelSzList[lbIdx], prms.labelSzList[lbIdx+1]
-	if prms.isMultiLabel:
-		en = en - 1
+	en = en - 1
 	#Find if ptch matching is there and use the ignore label loss
 	ptchFlag = False
 	if 'ptch' in prms.labelNames:
@@ -313,8 +314,7 @@ def get_label_pose(prms, groups, numSamples, randSeed=1003):
 		ptchLoc  = prms.labelSzList[ptchIdx]
 	for p in perm1:
 		lb  = np.zeros((prms.labelSz,)).astype(np.float32)
-		if prms.isMultiLabel:
-			lb[en] = 1.0
+		lb[en] = 1.0
 		gp  = groups[p]
 		lPerm  = randState.permutation(gp.num)
 		n1, n2 = lPerm[0], lPerm[1]

@@ -14,6 +14,7 @@ import street_params as sp
 import scipy.misc as scm
 from multiprocessing import Pool, Manager, Queue, Process
 import time
+import copy
 
 def get_tar_files(prms):
 	with open(prms.paths.tar.fileList,'r') as f:
@@ -322,18 +323,21 @@ def filter_groups_by_dist(groups, seedGroups, minDist):
 				sgDist = dist
 		if sgDist > minDist:
 			grpKeys.append(k)
-	return [sgDist]
-	#return grpKeys
+	#return [sgDist]
+	return grpKeys
 		
 def _filter_groups_by_dist(args):
 	return filter_groups_by_dist(*args)
 
 ##
 #Filter groups by dist parallel
-def p_filter_groups_by_dist(prms):
+def p_filter_groups_by_dist(prms, grps=None, seedGrps=None):
 	pool = Pool(processes=32)
-	seedGrps = su.get_groups(prms, '0052', setName=None)
-	grps     = su.get_groups(prms, '0048', setName=None)
+	if seedGrps is None:
+		seedGrps = su.get_groups(prms, '0052', setName=None)
+	if grps is None:
+		grps     = su.get_groups(prms, '0048', setName=None)
+
 	print (len(seedGrps), len(grps))
 	t1 = time.time()
 	inArgs = []
@@ -355,63 +359,57 @@ def save_train_test_splits(prms, isForceWrite=False):
 		save_train_test_splits_old(prms, isForceWrite=isForceWrite)
 		return None
 
-	keys = su.get_folder_keys(prms)
-	keys = ['0052']
-	pool = Pool(processes=32)
-	for k in keys:
-		fName = prms.paths.proc.splitsFile % k
-		if os.path.exists(fName) and isForceWrite:
-			print('%s already exists' % fName)
-			#inp = raw_input('Are you sure you want to overwrite')
-			#if not (inp == 'y'):
-			#	return
-		if osp.exists(fName) and not isForceWrite:
-			print ('%s exists, skipping' % fName)	
-			continue
+	trFolderKeys, teFolderKeys = sp.get_train_test_defs(prms.geoFence, prms.splits.ver)
+	allFolderKeys              = su.get_folder_keys(prms)
 
-		#Form the random seed
-		randSeed  = prms.splits.randSeed + 2 * int(k)	
-		randState = np.random.RandomState(randSeed) 
-	
-		#Read the groups	
-		grps    = su.get_groups(prms, k, setName=None)
-		grpKeys = grps.keys()
-		N    = len(grpKeys)
-		print('Folder: %s, num groups: %d' % (k,N))
-		if N == 0:
-			trKeys, valKeys, teKeys = [], [], []
-		else:
-			#Chose the test groups
-			teN  = int((prms.splits.tePct/100.0) * N)	
-			perm = randState.permutation(N)
-			tePerm = perm[0:teN]
-		
-			teKeys = [grpKeys[t]for t in tePerm]
-			teGrps = [grps[k] for k in teKeys]
-			pList  = []
-			t1 = time.time()
-			inArgs = []
-			for gk in grpKeys:
-				inArgs.append(({'%s'%gk:grps[gk]}, teGrps, prms.splits.dist))
-			res    = pool.map_async(_filter_groups_by_dist, inArgs) 
-			trKeys = res.get()
-			t2     = time.time()
-			print ("Time: %f" % (t2-t1))
-			trKeys = [tk[0] for tk in trKeys if not(tk==[])]  
-			return trKeys
-			for tk in teKeys:
-				assert tk not in trKeys, 'THERE IS SOMETHING WRONG'
-			print ('Num Test: %d, Num Train: %d' % (len(teKeys), len(trKeys)))
-			valKeys = [k for k in grpKeys if (k not in teKeys) and (k not in trKeys)]
-
+	#Load the test groups
+	teGrps = edict()
+	for tef in teFolderKeys:
+		teGrps[tef] = su.get_groups(prms, tef, setName=None)
+		trKeys      = []
+		teKeys      = teGrps[tef].keys()
 		#Save the splits
 		splits = edict()
 		splits.train = trKeys	
 		splits.test  = teKeys
-		splits.val   = valKeys
 		#Save the data		
+		fName = prms.paths.proc.splitsFile % tef
 		pickle.dump({'splits': splits}, open(fName, 'w'))
 
+	#Ensure that train and test groups are far away
+	for trf in trFolderKeys:
+		trGrps    = su.get_groups(prms, trf, setName=None)
+		grps      = copy.deepcopy(trGrps)
+		trKeys    = trGrps.keys()
+		teKeys    = []
+		'''
+		for tef in teFolderKeys:
+			trKeys = p_filter_groups_by_dist(prms, grps, teGrps[tef])
+			grps   = edict()
+			#Filter the groups
+			for t in trKeys:
+				grps[t] = trGrps[t]				 
+		'''
+		#Save the splits
+		splits = edict()
+		splits.train = trKeys	
+		splits.test  = teKeys
+		#Save the data		
+		fName = prms.paths.proc.splitsFile % trf
+		pickle.dump({'splits': splits}, open(fName, 'w'))
+
+	#The remainder of folders have no train/test examples
+	trteKeys  = list(set(trFolderKeys) | set(teFolderKeys))
+	otherKeys = [k for k in allFolderKeys if k not in trteKeys]
+	for k in otherKeys:
+		trKeys, teKeys = [], []	 
+		#Save the splits
+		splits = edict()
+		splits.train = trKeys	
+		splits.test  = teKeys
+		#Save the data		
+		fName = prms.paths.proc.splitsFile % trf
+		pickle.dump({'splits': splits}, open(fName, 'w'))
 
 ##
 #The old hacky way of generating train-test splits

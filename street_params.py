@@ -207,7 +207,7 @@ def get_train_test_defs(geoFence, ver='v1'):
 	if geoFence == 'dc-v1':
 		if ver=='v1':
 			trainFolderKeys = ['0048']
-			testFolderKeys  = ['0051'] 
+			testFolderKeys  = ['0052'] 
 		else:
 			raise Exception('%s not recognized' % v1)
 	else:
@@ -225,8 +225,8 @@ def get_prms(isAligned=True,
 						 trnSeq=[], 
 						 tePct=1.0, teGap=5,
 						 ptchPosFrac=0.5, maxEulerRot=None, 
-						 geoFence=None, rawImSz=640, 
-						 splitDist=100, splitVer='v1'):
+						 geoFence='dc-v1', rawImSz=640, 
+						 splitDist=None, splitVer='v1'):
 	'''
 		labels    : What labels to use - make it a list for multiple
 								kind of labels
@@ -317,15 +317,15 @@ def get_prms(isAligned=True,
 	prms.splits.teGap    = teGap
 	prms.splits.dist     = splitDist
 	prms.splits.randSeed = 3
-	prms.splits.ver      = ver
+	prms.splits.ver      = splitVer
 
 	#Form the splits file
 	if prms.splits.dist is not None:
 		if prms.geoFence is None:
-			splitsStr = 'tePct%.1f_dist%d_sVer-%s'%(tePct, prms.splits.dist, prms.splits.ver) 
+			splitsStr = 'spDist%d_spVer-%s'%(prms.splits.dist, prms.splits.ver) 
 		else:	
-			splitsStr = 'tePct%.1f_dist%d_sVer-%s_geo%s'\
-									 %(tePct, prms.splits.dist, prms.splits.ver, prms.geoFence) 
+			splitsStr = 'spDist%d_spVer-%s_geo%s'\
+									 %(prms.splits.dist, prms.splits.ver, prms.geoFence) 
 	else:
 		splitsStr = 'tePct%.1f_teGap%d_teSeed%d' % (tePct, teGap, prms.splits.randSeed) 
 	paths.proc.splitsFile = paths.proc.splitsFile % (splitsStr + '/%s') 	
