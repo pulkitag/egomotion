@@ -12,6 +12,8 @@ import pickle
 import street_utils as su
 import street_params as sp
 import scipy.misc as scm
+from multiprocessing import Pool, Manager, Queue, Process
+import time
 
 def get_tar_files(prms):
 	with open(prms.paths.tar.fileList,'r') as f:
@@ -302,21 +304,50 @@ def save_cropped_images_geo(prms):
 def filter_groups_by_dist(groups, seedGroups, minDist):
 	'''
 		groups     is a dict
-		seedGroups is a list
+		seedGroups is a dict/list
 	'''
 	grpKeys = []
-	for k in groups.keys():
+	if type(seedGroups) is list:
+		itr = enumerate(seedGroups)
+	else:
+		itr = seedGroups.iteritems()
+	for (i,k) in enumerate(groups.keys()):
+		#print (i)
 		g      = groups[k]
 		#Find min distance from all the seed groups
 		sgDist = np.inf
-		for sg in seedGroups:
+		for _,sg in itr:
 			dist = su.get_distance_groups(g, sg)
 			if dist < sgDist:
 				sgDist = dist
 		if sgDist > minDist:
 			grpKeys.append(k)
-	return grpKeys
-			
+	return [sgDist]
+	#return grpKeys
+		
+def _filter_groups_by_dist(args):
+	return filter_groups_by_dist(*args)
+
+##
+#Filter groups by dist parallel
+def p_filter_groups_by_dist(prms):
+	pool = Pool(processes=32)
+	seedGrps = su.get_groups(prms, '0052', setName=None)
+	grps     = su.get_groups(prms, '0052', setName=None)
+	print (len(seedGrps), len(grps))
+	t1 = time.time()
+	inArgs = []
+	for gk in grps.keys():
+		inArgs.append(({'%s'%gk:grps[gk]}, seedGrps, prms.splits.dist))
+	res    = pool.map_async(_filter_groups_by_dist, inArgs) 
+	trKeys = res.get()
+	t2     = time.time()
+	print ("Time: %f" % (t2-t1))
+	trKeys = [tk[0] for tk in trKeys if not(tk==[])]  
+	del pool
+	return trKeys
+
+
 ##
 #Save the splits data
 def save_train_test_splits(prms, isForceWrite=False):
@@ -325,6 +356,8 @@ def save_train_test_splits(prms, isForceWrite=False):
 		return None
 
 	keys = su.get_folder_keys(prms)
+	keys = ['0052']
+	pool = Pool(processes=32)
 	for k in keys:
 		fName = prms.paths.proc.splitsFile % k
 		if os.path.exists(fName) and isForceWrite:
@@ -355,7 +388,17 @@ def save_train_test_splits(prms, isForceWrite=False):
 		
 			teKeys = [grpKeys[t]for t in tePerm]
 			teGrps = [grps[k] for k in teKeys]
-			trKeys = filter_groups_by_dist(grps, teGrps, prms.splits.dist)	 
+			pList  = []
+			t1 = time.time()
+			inArgs = []
+			for gk in grpKeys:
+				inArgs.append(({'%s'%gk:grps[gk]}, teGrps, prms.splits.dist))
+			res    = pool.map_async(_filter_groups_by_dist, inArgs) 
+			trKeys = res.get()
+			t2     = time.time()
+			print ("Time: %f" % (t2-t1))
+			trKeys = [tk[0] for tk in trKeys if not(tk==[])]  
+			return trKeys
 			for tk in teKeys:
 				assert tk not in trKeys, 'THERE IS SOMETHING WRONG'
 			print ('Num Test: %d, Num Train: %d' % (len(teKeys), len(trKeys)))

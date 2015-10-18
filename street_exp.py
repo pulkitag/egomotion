@@ -254,10 +254,12 @@ def make_loss_proto(prms, cPrms):
 		defFile = osp.join(baseFilePath, 'nrml_loss_layers.prototxt')
 		lbDef   = mpu.ProtoDef(defFile)
 		idx     = prms.labelNames.index('nrml')
+		lbDef.set_layer_property('nrml_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
 		lbDefs.append(lbDef)
 	if 'ptch' in prms.labelNames:
 		defFile = osp.join(baseFilePath, 'ptch_loss_layers.prototxt')
 		lbDef   = mpu.ProtoDef(defFile)
+		lbDef.set_layer_property('ptch_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
 		lbDefs.append(lbDef)
 	if 'pose' in prms.labelNames:
 		defFile = osp.join(baseFilePath, 'pose_loss_layers.prototxt')
