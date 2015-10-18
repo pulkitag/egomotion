@@ -202,6 +202,18 @@ class LabelNLoss(object):
 			augLbSz  = lbSz + 1
 		return augLbSz, lbSz
 
+
+def get_train_test_defs(geoFence, ver='v1'):
+	if geoFence == 'dc-v1':
+		if ver=='v1':
+			trainFolderKeys = ['0048']
+			testFolderKeys  = ['0051'] 
+		else:
+			raise Exception('%s not recognized' % v1)
+	else:
+		raise Exception('%s not recognized' % geoFence)
+	return trainFolderKeys, testFolderKeys
+
 ##
 #get prms
 def get_prms(isAligned=True, 
@@ -214,7 +226,7 @@ def get_prms(isAligned=True,
 						 tePct=1.0, teGap=5,
 						 ptchPosFrac=0.5, maxEulerRot=None, 
 						 geoFence=None, rawImSz=640, 
-						 splitDist=100):
+						 splitDist=100, splitVer='v1'):
 	'''
 		labels    : What labels to use - make it a list for multiple
 								kind of labels
@@ -305,14 +317,15 @@ def get_prms(isAligned=True,
 	prms.splits.teGap    = teGap
 	prms.splits.dist     = splitDist
 	prms.splits.randSeed = 3
+	prms.splits.ver      = ver
 
 	#Form the splits file
 	if prms.splits.dist is not None:
 		if prms.geoFence is None:
-			splitsStr = 'tePct%.1f_dist%d_teSeed%d'%(tePct, prms.splits.dist, prms.splits.randSeed) 
+			splitsStr = 'tePct%.1f_dist%d_sVer-%s'%(tePct, prms.splits.dist, prms.splits.ver) 
 		else:	
-			splitsStr = 'tePct%.1f_dist%d_teSeed%d_geo%s'\
-									 %(tePct, prms.splits.dist, prms.splits.randSeed, prms.geoFence) 
+			splitsStr = 'tePct%.1f_dist%d_sVer-%s_geo%s'\
+									 %(tePct, prms.splits.dist, prms.splits.ver, prms.geoFence) 
 	else:
 		splitsStr = 'tePct%.1f_teGap%d_teSeed%d' % (tePct, teGap, prms.splits.randSeed) 
 	paths.proc.splitsFile = paths.proc.splitsFile % (splitsStr + '/%s') 	
@@ -325,6 +338,9 @@ def get_prms(isAligned=True,
 	else:
 		expStr    = ''.join(['%s_' % lb.lbStr_ for lb in prms.labels])
 	expStr    = expStr[0:-1]
+	if prms.splits.dist is not None:
+		expStr = '%s_%s' % (expStr,splitsStr)
+
 	if geoFence is not None:
 		expStr     = '%s_geo-%s' % (expStr, geoFence)
 		paths.geoFile = paths.geoFile % geoFence

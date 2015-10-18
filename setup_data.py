@@ -333,7 +333,7 @@ def _filter_groups_by_dist(args):
 def p_filter_groups_by_dist(prms):
 	pool = Pool(processes=32)
 	seedGrps = su.get_groups(prms, '0052', setName=None)
-	grps     = su.get_groups(prms, '0052', setName=None)
+	grps     = su.get_groups(prms, '0048', setName=None)
 	print (len(seedGrps), len(grps))
 	t1 = time.time()
 	inArgs = []
