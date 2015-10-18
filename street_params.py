@@ -199,7 +199,7 @@ class LabelNLoss(object):
 		if self.isMultiLabel and not(self.loss_ == 'classify'):
 			augLbSz = lbSz + 1
 		else:
-			augLbSz  = lbSz
+			augLbSz  = lbSz + 1
 		return augLbSz, lbSz
 
 ##
