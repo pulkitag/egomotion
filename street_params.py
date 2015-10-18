@@ -213,15 +213,16 @@ def get_prms(isAligned=True,
 						 trnSeq=[], 
 						 tePct=1.0, teGap=5,
 						 ptchPosFrac=0.5, maxEulerRot=None, 
-						 geoFence=None, rawImSz=640):
+						 geoFence=None, rawImSz=640, 
+						 splitDist=100):
 	'''
 		labels    : What labels to use - make it a list for multiple
 								kind of labels
 								 nrml - surface normals
 									 xyz - as nx, ny, nz
-								 ptch - patch matching
-									 wngtv - weak negatives 
-									 hngtv = hard negatices
+								 ptch: patch matching
+									 wngtv: weak negatives 
+									 hngtv: hard negatices
 								 pose - relative pose	
 									 euler - as euler angles
 									 quat  - as quaternions
@@ -236,6 +237,9 @@ def get_prms(isAligned=True,
 		tePct       : % of groups to be labelled as test
 		teGap       : The number of groups that should be skipped before and after test
 									to ensure there are very low chances of overlap
+		splitDist   : The minimum distance between the groups in train and test splits
+									in meters 
+									if splitDist is specified teGap is overriden
 		ptchPosFrac : The fraction of the positive patches in the matching
 
 		NOTES
@@ -293,14 +297,24 @@ def get_prms(isAligned=True,
 	prms.geoPoly    = None 	
 
 	prms.splits = edict()
+	if splitsDist is not None:
+		teGap = None
 	prms.splits.numTrain = numTrain
 	prms.splits.numTest  = numTest
 	prms.splits.tePct    = tePct
 	prms.splits.teGap    = teGap
+	prms.splits.dist     = splitsDist
 	prms.splits.randSeed = 3
 
 	#Form the splits file
-	splitsStr = 'tePct%.1f_teGap%d_teSeed%d' % (tePct, teGap, prms.splits.randSeed) 
+	if prms.splits.dist is not None:
+		if prms.geoFence is None:
+			splitsStr = 'tePct%.1f_dist%d_teSeed%d'%(tePct, prms.splits.dist, prms.splits.randSeed) 
+		else:	
+			splitsStr = 'tePct%.1f_dist%d_teSeed%d_geo%s'\
+									 %(tePct, prms.splits.dist, prms.splits.randSeed, prms.geoFence) 
+	else:
+		splitsStr = 'tePct%.1f_teGap%d_teSeed%d' % (tePct, teGap, prms.splits.randSeed) 
 	paths.proc.splitsFile = paths.proc.splitsFile % (splitsStr + '/%s') 	
 	splitDr, _ = osp.split(paths.proc.splitsFile)
 	_mkdir(splitDr)

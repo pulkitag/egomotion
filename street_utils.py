@@ -13,6 +13,7 @@ import my_pycaffe_io as mpio
 import re
 import matplotlib.path as mplPath
 import rot_utils as ru
+from geopy.distance import vincenty as geodist
 
 ##
 #Get the prefixes for a specific folderId
@@ -36,7 +37,35 @@ def get_target_groups(prms, folderId):
 			prev = grp
 		count += 1
 	return S
-			
+
+##
+#Get the distance between groups
+def get_distance_groups(grp1, grp2):
+	minDist = np.inf
+	for n1 in range(grp1.num):
+		cpt1 = grp1.data[n1].pts.camera[0:2]
+		tpt1 = grp1.data[n1].pts.target[0:2]
+		for n2 in range(grp2.num):	
+			cpt2 = grp2.data[n2].pts.camera[0:2]
+			tpt2 = grp2.data[n2].pts.target[0:2]
+			cDist = geodist(cpt1, cpt2).meters
+			tDist = geodist(tpt1, tpt2).meters
+			dist  = min(cDist, tDist)
+			if dist < minDist:
+				minDist = dist
+	return minDist
+
+##
+#Get the distance between lists of groups
+def get_distance_grouplists(grpList1, grpList2):
+	minDist = np.inf
+	for g1 in grpList1:
+		for g2 in grpList2:
+			dist = get_distance_groups(g1, g2)
+			if dist < minDist:
+					minDist = dist
+	return minDist	
+	
 ##
 # Get key for all the folders
 def get_folder_keys_all(prms):
@@ -195,8 +224,8 @@ def read_geo_groups(prms, folderId):
 	return data['groups']
 
 ##
-#Get the raw labels
-def get_raw_labels(prms, folderId, setName='train'):
+#Get the groups
+def get_groups(prms, folderId, setName='train'):
 	'''
 		Labels for a particular split
 	'''
@@ -220,13 +249,13 @@ def get_raw_labels(prms, folderId, setName='train'):
 
 ##
 #Get all the raw labels
-def get_raw_labels_all(prms, setName='train'):
+def get_groups_all(prms, setName='train'):
 	#keys = get_folder_keys(prms)
 	keys  = ['0052']
-	lb   = []
+	grps   = []
 	for k in keys:
-		lb = lb + get_raw_labels(prms, k, setName=setName)
-	return lb
+		grps = grps + get_groups(prms, k, setName=setName)
+	return grps
 
 ##
 #Get labels for normals
@@ -282,8 +311,8 @@ def get_label_pose(prms, groups, numSamples, randSeed=1003):
 		if prms.isMultiLabel:
 			lb[en] = 1.0
 		gp  = groups[p]
-		n1  = randState.permutation(gp.num)[0]
-		n2  = randState.permutation(gp.num)[0]
+		lPerm  = randState.permutation(gp.num)
+		n1, n2 = lPerm[0], lPerm[1]
 		y1, x1, z1 = gp.data[n1].rots
 		y2, x2, z2 = gp.data[n2].rots
 		roll, yaw, pitch = z2 - z1, y2 - y1, x2 - x1
@@ -352,7 +381,7 @@ def get_label_ptch(prms, groups, numSamples, randSeed=1005):
 
 
 def get_labels(prms, setName='train'):
-	grps   = get_raw_labels_all(prms, setName=setName)
+	grps   = get_groups_all(prms, setName=setName)
 	lbNums = []
 	for (i,l) in enumerate(prms.labelNames):
 		if l == 'nrml':
@@ -473,7 +502,7 @@ def make_window_file(prms, setNames=['test', 'train']):
 def get_labels_old(prms, setName='train'):
 	#The main quantity that requires randomization is patch matching
 	#So we will base this code around that. 
-	rawLb = get_raw_labels_all(prms, setName=setName)
+	rawLb = get_groups_all(prms, setName=setName)
 	N  = len(rawLb)
 	oldState  = np.random.get_state()
 	randSeed  = 1001

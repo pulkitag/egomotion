@@ -110,8 +110,9 @@ def smallnetv2_pool4_pose_crp192(isRun=False):
 	else:
 		return prms, cPrms	
 
-def smallnetv2_pool4_pose_crp192_rawImSz(isRun=False):
-	prms  = sp.get_prms_pose(geoFence='dc-v1', crpSz=192)
+def smallnetv2_pool4_pose_crp192_rawImSz256(isRun=False):
+	prms  = sp.get_prms_pose(geoFence='dc-v1', crpSz=192,
+													 rawImSz=256)
 	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
 							 concatLayer='pool4', lossWeight=10.0)
 	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000, clip_gradients=10.0)

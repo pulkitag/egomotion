@@ -300,6 +300,56 @@ def save_cropped_images_geo(prms):
 ##
 #Save the splits data
 def save_train_test_splits(prms, isForceWrite=False):
+	if prms.splits.dist is None:
+		save_train_test_splits_old(prms, isForceWrite=isForceWrite)
+		return None
+
+	keys = su.get_folder_keys(prms)
+	for k in keys:
+		fName = prms.paths.proc.splitsFile % k
+		if os.path.exists(fName) and isForceWrite:
+			print('%s already exists' % fName)
+			#inp = raw_input('Are you sure you want to overwrite')
+			#if not (inp == 'y'):
+			#	return
+		if osp.exists(fName) and not isForceWrite:
+			print ('%s exists, skipping' % fName)	
+			continue
+
+		#Form the random seed
+		randSeed  = prms.splits.randSeed + 2 * int(k)	
+		randState = np.random.RandomState(randSeed) 
+	
+		#Read the groups	
+
+		#Read the groups of the fodler
+		grps = ['%07d' % ig for (ig,g) in enumerate(su.get_target_groups(prms, k)[0:-1])]
+		N    = len(grps)
+		print('Folder: %s, num groups: %d' % (k,N))
+		teN  = int((prms.splits.tePct/100.0) * N)	
+		perm = randState.permutation(N)
+		tePerm = perm[0:teN]
+		#Form an extended testing set to exclude the neighbors
+		valPerm = []
+		print ('Extending test set for buffering against closeness to train set')
+		for t in tePerm:
+			st = max(0, t - prms.splits.teGap)
+			en = min(len(grps), t + prms.splits.teGap+1)
+			valPerm = valPerm + [v for v in range(st, en)]
+		print ('Form the train set')
+		#Form the training set
+		trPerm = [t for t in perm if t not in valPerm]
+		splits = edict()
+		splits.train = [grps[g] for g in trPerm]		
+		splits.test  = [grps[g] for g in tePerm]
+		splits.val   = [grps[g] for g in valPerm if g not in tePerm]
+		#Save the data		
+		pickle.dump({'splits': splits}, open(fName, 'w'))
+
+
+##
+#The old hacky way of generating train-test splits
+def save_train_test_splits_old(prms, isForceWrite=False):
 	keys = su.get_folder_keys(prms)
 	for k in keys:
 		fName = prms.paths.proc.splitsFile % k
@@ -338,6 +388,7 @@ def save_train_test_splits(prms, isForceWrite=False):
 		splits.val   = [grps[g] for g in valPerm if g not in tePerm]
 		#Save the data		
 		pickle.dump({'splits': splits}, open(fName, 'w'))
+
 	
 ##
 #Save the normal data
