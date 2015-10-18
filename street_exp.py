@@ -271,11 +271,10 @@ def make_loss_proto(prms, cPrms):
 		lbDef.set_layer_property('pose_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
 		lbDefs.append(lbDef)
 	lbDef = _merge_defs(lbDefs)
-	if prms.isMultiLabel:
-		#Replace the EuclideanLoss with EuclideanLossWithIgnore 
-		l2Layers = lbDef.get_layernames_from_type('EuclideanLoss')
-		for ll in l2Layers:
-			lbDef.set_layer_property(ll, 'type', '"EuclideanLossWithIgnore"')
+	#Replace the EuclideanLoss with EuclideanLossWithIgnore 
+	l2Layers = lbDef.get_layernames_from_type('EuclideanLoss')
+	for ll in l2Layers:
+		lbDef.set_layer_property(ll, 'type', '"EuclideanLossWithIgnore"')
 	return lbDef	
 
 ##
