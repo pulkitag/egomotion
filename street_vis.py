@@ -82,9 +82,14 @@ def vis_window_file(prms, setName='test', isSave=False,
 	runFlag = True
 	if labelType == 'pose_ptch':
 		lbStr   = 'roll: %.2f, yaw: %.2f, pitch: %.2f, isRot: %d'\
-							+ '\n isPos: %.2f, isPatch: %d'
-	else:
+							+ '\n patchMatch: %.2f'
+	elif labelType == 'pose':
 		lbStr   = 'roll: %.2f, yaw: %.2f, pitch: %.2f, isRot: %d'
+	elif labelType == 'ptch':
+		lbStr   = 'IsMatch: %d'
+	else:
+		raise Exception('%s not recognized' % labelType)	
+	
 		
 	plt.ion()
 	fig = plt.figure()
@@ -94,18 +99,22 @@ def vis_window_file(prms, setName='test', isSave=False,
 		imNames, lbs = wDat.read_next()
 		imNames  = [osp.join(rootDir, n.split()[0]) for n in imNames]
 		#pdb.set_trace()
-		q1, q2, q3, q4 = lbs[0][0:4]
-		roll, yaw, pitch = ru.quat2euler([q1, q2, q3, q4])
-		roll  = 180 * (roll/np.pi)
-		yaw   = 180 * (yaw/np.pi)
-		pitch = 180 * (pitch/np.pi)
-		isRot          = lbs[0][4]
+		if 'pose' in labelType:
+			q1, q2, q3, q4 = lbs[0][0:4]
+			roll, yaw, pitch = ru.quat2euler([q1, q2, q3, q4])
+			roll  = 180 * (roll/np.pi)
+			yaw   = 180 * (yaw/np.pi)
+			pitch = 180 * (pitch/np.pi)
+			isRot          = lbs[0][4]
+
 		if labelType == 'pose_ptch':
-			pMatch, isPatch = lbs[0][5:7]
-			figTitle = lbStr % (roll, yaw, pitch, isRot, pMatch, isPatch)
-		else:
+			pMatch = lbs[0][5]
+			figTitle = lbStr % (roll, yaw, pitch, isRot, pMatch)
+		elif labelType == 'pose':
 			figTitle = lbStr % (roll, yaw, pitch, isRot)
-			
+		elif labelType == 'ptch':			
+			figTitle = lbStr % lbs[0][0]
+
 		print (figTitle, count)
 		im1      = plt.imread(imNames[0])
 		im2      = plt.imread(imNames[1])

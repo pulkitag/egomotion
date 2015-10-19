@@ -196,8 +196,8 @@ class LabelNLoss(object):
 					
 	def get_label_sz(self):
 		lbSz = get_label_size(self.label_, self.labelType_)
-		if self.isMultiLabel and not(self.loss_ == 'classify'):
-			augLbSz = lbSz + 1
+		if self.loss_ == 'classify':
+			augLbSz = lbSz
 		else:
 			augLbSz  = lbSz + 1
 		return augLbSz, lbSz
