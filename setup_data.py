@@ -35,8 +35,9 @@ def download_tar(prms):
 
 ##
 #Untar the files and then delete them. 
-def untar_and_del(prms):
-	fNames = get_tar_files(prms)	
+def untar_and_del(prms, isDel=False, fNames=None):
+	if fNames is None:
+		fNames = get_tar_files(prms)	
 	suffix = []
 	for f in fNames:
 		suffix.append(osp.split(f)[1])
@@ -44,8 +45,9 @@ def untar_and_del(prms):
 	for f in fNames:
 		if not osp.exists(f):
 			continue
-		subprocess.check_call(['tar -xf %s -C %s' % (f, prms.paths.raw.dr)],shell=True) 
-		subprocess.check_call(['rm %s' % f],shell=True) 
+		subprocess.check_call(['tar -xf %s -C %s' % (f, prms.paths.raw.dr)],shell=True)
+		if isDel: 
+			subprocess.check_call(['rm %s' % f],shell=True) 
 	return fNames	
 
 ##
@@ -138,23 +140,37 @@ def read_prefixes_from_folder(dirName):
 	return prefixStr
 
 ##
+#Save the folder prefixes by the id
+def save_folder_prefixes_by_id(prms, key, name, forceWrite=False):
+	print (key, name)
+	fName   = prms.paths.proc.folders.pre % key
+	if osp.exists(fName) and (not forceWrite):
+		continue
+	preStrs = read_prefixes_from_folder(name) 
+	with open(fName, 'w') as f:
+		for p in preStrs:
+			f.write('%s \n' % p)
+	return None
+
+def _save_folder_prefixes_by_id(args):
+	return save_folder_prefixes_by_id(*args)
+
+##
 # Save prefixes for each folder
 def save_folder_prefixes(prms, forceWrite=False):
 	fid   = open(prms.paths.proc.folders.key, 'r')
 	lines = [l.strip() for l in fid.readlines()]
 	fid.close()
 	keys, names = [], []
+	p = Pool(processes=32)
+	inArgs = []
 	for l in lines:
 		key, name = l.split()
-		print (key, name)
-		fName   = prms.paths.proc.folders.pre % key
-		if osp.exists(fName) and (not forceWrite):
-			continue
-		preStrs = read_prefixes_from_folder(name) 
-		with open(fName, 'w') as f:
-			for p in preStrs:
-				f.write('%s \n' % p)
-		
+		inArgs.append((prms, key, name, forceWrite))
+	res = pool.map_async(_save_folder_prefixes_by_id, inArgs)
+	_   = res.get()
+	del pool
+	
 ##
 # Store for each folder the number of prefixes
 # and number of groups. 	
@@ -172,35 +188,48 @@ def save_counts(prms):
 						 open(prms.paths.proc.countFile, 'w'))
 
 ##
+#Save groups by ids
+def save_group_by_id(prms, k, isForceCompute=False):
+	'''
+		k: folderId
+	'''
+	opName = prms.paths.label.grps % k
+	if (not forceCompute) and osp.exists(opName):
+		print ('File %s exists, skipping computation' % opName)
+		return
+
+	print(k)
+	imNames, lbNames, prefixes = su.folderid_to_im_label_files(prms, k, opPrefix=True)
+	#Determine groups
+	grps = su.get_target_groups(prms, k)
+	#Read the labels of each group and save them
+	grpLabels = edict()
+	for ig, g in enumerate(grps[0:-1]):
+		st = g
+		en = grps[ig+1]
+		grpKey = grpKeyStr % ig	
+		grpLabels[grpKey]      = edict()
+		grpLabels[grpKey].num  = en - st
+		grpLabels[grpKey].prefix   = []
+		grpLabels[grpKey].data     = []
+		grpLabels[grpKey].folderId = k
+		for i in range(st,en):
+			grpLabels[grpKey].data.append(su.parse_label_file(lbNames[i]))
+			grpLabels[grpKey].prefix.append(prefixes[i])
+	pickle.dump({'groups': grpLabels}, 
+						open(opName, 'w'))	
+
+##
 # Save the groups
-def save_groups(prms, isAlignedOnly=True):
+def save_groups(prms, isAlignedOnly=True, isForceCompute=False):
 	grpKeyStr = prms.paths.grpKeyStr
 	if isAlignedOnly:
 		keys   = su.get_folder_keys_aligned(prms)	
 	else:
 		keys,_ = su.get_folder_keys_all(prms)	
 	for k in keys:
-		imNames, lbNames, prefixes = su.folderid_to_im_label_files(prms, k, opPrefix=True)
-		print(k)
-		#Determine groups
-		grps = su.get_target_groups(prms, k)
-		#Read the labels of each group and save them
-		grpLabels = edict()
-		for ig, g in enumerate(grps[0:-1]):
-			st = g
-			en = grps[ig+1]
-			grpKey = grpKeyStr % ig	
-			grpLabels[grpKey]      = edict()
-			grpLabels[grpKey].num  = en - st
-			grpLabels[grpKey].prefix   = []
-			grpLabels[grpKey].data     = []
-			grpLabels[grpKey].folderId = k
-			for i in range(st,en):
-				grpLabels[grpKey].data.append(su.parse_label_file(lbNames[i]))
-				grpLabels[grpKey].prefix.append(prefixes[i])
-		pickle.dump({'groups': grpLabels}, 
-							open(prms.paths.label.grps % k, 'w'))	
-
+		save_group_by_id(prms, k, isForceCompute=isForceCompute)	
+	
 ##
 #Save geo localized groups
 def save_geo_groups(prms):

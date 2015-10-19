@@ -4,10 +4,12 @@ layer {
   bottom: "common_fc"
   top: "ptch_fc"
   param {
+		name: "ptch_fc_w"
     lr_mult: 1
     decay_mult: 1
   }
   param {
+		name: "ptch_fc_b"
     lr_mult: 2
     decay_mult: 0
   }
