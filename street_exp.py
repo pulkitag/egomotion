@@ -22,6 +22,9 @@ def get_nw_prms(**kwargs):
 	dArgs.maxJitter   = 11
 	dArgs.randCrop    = False
 	dArgs.lossWeight  = 1.0
+	dArgs.multiLossProto   = None
+	dArgs.ptchStreamNum    = 256
+	dArgs.poseStreamNum    = 256
 	dArgs = mpu.get_defaults(kwargs, dArgs)
 	expStr = 'net-%s_cnct-%s_cnctDrp%d_contPad%d_imSz%d_imgntMean%d_jit%d'\
 						%(dArgs.netName, dArgs.concatLayer, dArgs.concatDrop, 
@@ -31,6 +34,9 @@ def get_nw_prms(**kwargs):
 		expStr = '%s_randCrp%d' % (expStr, dArgs.randCrop)
 	if not(dArgs.lossWeight==1.0):
 		expStr = '%s_lw%.1f' % (expStr, dArgs.lossWeight)
+	if dArgs.multiLossProto is not None:
+		expStr = '%s_mlpr%s-posn%d-ptsn%d' % (expStr,
+							dArgs.multiLossProto, dArgs.poseStreamNum, dArgs.ptchStreamNum)
 	dArgs.expStr = expStr 
 	return dArgs 
 
@@ -238,6 +244,26 @@ def make_net_proto(prms, cPrms):
 def make_loss_proto(prms, cPrms):
 	baseFilePath = prms.paths.baseNetsDr
 	lbDefs = []
+	if cPrms.nwPrms.multiLossProto is not None:
+		assert(prms.isMultiLabel)
+		fName = '%s_%s_loss_layers.prototxt' % (prms.labelNameStr, 
+							cPrms.nwPrms.multiLossProto)	
+		fName = osp.join(baseFilePath,fName)
+		lbDef  = mpu.ProtoDef(defFile)
+		#Modify pose parameters
+		poseLb = prms.labels[prms.labelNames.index('pose')]
+		lbDef.set_layer_property('pose_fc', ['inner_product_param', 'num_output'],
+						 '%d' % poseLb.lbSz_)
+		lbDef.set_layer_property('pose_stream_fc', ['inner_product_param', 'num_output'],
+						 '%d' % cPrms.nwPrms.poseStreamNum)
+		#Modify ptch parameters
+		ptchLb = prms.labels[prms.labelNames.index('ptch')]
+		lbDef.set_layer_property('ptch_fc', ['inner_product_param', 'num_output'],
+						 '%d' % ptchLb.lbSz_)
+		lbDef.set_layer_property('ptch_stream_fc', ['inner_product_param', 'num_output'],
+						 '%d' % cPrms.nwPrms.ptchStreamNum)
+		return lbDef
+
 	if prms.isSiamese and 'nrml' in prms.labelNames:
 		defFile = osp.join(baseFilePath, 'nrml_loss_layers.prototxt')
 		nrmlDef1 = mpu.ProtoDef(defFile)
@@ -371,6 +397,7 @@ def plot_experiment_accuracy(prms, cPrms, svFile=None,
 	if svFile is not None:
 		with PdfPages(svFile) as pdf:
 			pdf.savefig()
+	return ax
 
 
 def read_log(fileName):

@@ -296,6 +296,33 @@ def get_label_nrml(prms, groups, numSamples, randSeed=1001):
 	return lbs, prefix
 
 ##
+#Get the rotation labels
+def get_rots_label(lbInfo, rot1, rot2):
+	y1, x1, z1 = rot1
+	y2, x2, z2 = rot2
+	roll, yaw, pitch = z2 - z1, y2 - y1, x2 - x1
+	lb = None
+	#Figure out if the rotation is within or outside the limits
+	if lbInfo.maxRot_ is not None:
+		if (np.abs(roll) > lbInfo.maxRot_ or\
+				np.abs(yaw) > lbInfo.maxRot_ or\
+				np.abs(pitch)>lbInfo.maxRot_):
+				return lb
+	#Calculate the rotation
+	if lbInfo.labelType_ == 'euler':
+		if lbInfo.lbSz_ == 3:
+			lb = (roll/180.0, yaw/180.0, pitch/180.0)
+		else:
+			lb = (yaw/180.0, pitch/180.0)
+	elif lbInfo.labelType_ == 'quat':
+		quat = ru.euler2quat(z2-z1, y2-y1, x2-x1, isRadian=False)
+		q1, q2, q3, q4 = quat
+		lb = (q1, q2, q3, q4)
+	else:
+		raise Exception('Type not recognized')	
+	return lb
+
+##
 #Get labels for pose
 def get_label_pose(prms, groups, numSamples, randSeed=1003):
 	N = len(groups)
@@ -320,27 +347,10 @@ def get_label_pose(prms, groups, numSamples, randSeed=1003):
 		gp  = groups[p]
 		lPerm  = randState.permutation(gp.num)
 		n1, n2 = lPerm[0], lPerm[1]
-		y1, x1, z1 = gp.data[n1].rots
-		y2, x2, z2 = gp.data[n2].rots
-		roll, yaw, pitch = z2 - z1, y2 - y1, x2 - x1
-		if lbInfo.maxRot_ is not None:
-			if (np.abs(roll) > lbInfo.maxRot_ or\
-					np.abs(yaw) > lbInfo.maxRot_ or\
-					np.abs(pitch)>lbInfo.maxRot_):
-					continue
-		if lbInfo.labelType_ == 'euler':
-			if lbInfo.lbSz_ == 3:
-				lb[st:en] = roll/180.0, yaw/180.0, pitch/180.0
-			else:
-				lb[st:en] = yaw/180.0, pitch/180.0
-		elif lbInfo.labelType_ == 'quat':
-			quat = ru.euler2quat(z2-z1, y2-y1, x2-x1, isRadian=False)
-			q1, q2, q3, q4 = quat
-			lb[st:en] = q1, q2, q3, q4
-		else:
-			raise Exception('Type not recognized')	
+		lb[st:en]  = get_rots_label(lbInfo, gp.data[n1].rots, 
+												gp.data[n2].rots)
 		prefix.append((gp.folderId, gp.prefix[n1].strip(),
-									 gp.folderId, gp.prefix[n2].strip()))
+							 gp.folderId, gp.prefix[n2].strip()))
 		if ptchFlag:
 			lb[ptchLoc] = 2
 		lbs.append(lb)
@@ -386,6 +396,53 @@ def get_label_ptch(prms, groups, numSamples, randSeed=1005):
 		lbs.append(lb)
 	return lbs, prefix
 
+##
+#Get labels for ptch
+def get_label_pose_ptch(prms, groups, numSamples, randSeed=1005):
+	N = len(groups)
+	oldState  = np.random.get_state()
+	randState = np.random.RandomState(randSeed)
+	lbs, prefix = [],[]
+	lbCount = 0
+	perm1   = randState.choice(N,numSamples)
+	perm2   = randState.choice(N,numSamples)
+	ptchIdx = prms.labelNames.index('ptch')
+	poseIdx = prms.labelNames.index('pose')
+	ptchLb  = prms.labels[ptchIdx]
+	poseLb  = prms.labels[poseIdx]
+	ptchSt,ptchEn   = prms.labelSzList[ptchIdx], prms.labelSzList[ptchIdx+1]
+	poseSt,poseEn   = prms.labelSzList[ptchIdx], prms.labelSzList[ptchIdx+1]
+	poseEn = poseEn - 1
+	for p1, p2 in zip(perm1, perm2):
+		lb  = np.zeros((prms.labelSz,)).astype(np.float32)
+		prob   = randState.rand()
+		if prob > ptchLb.posFrac_:
+			#Sample positive
+			lb[ptchSt] = 1
+			gp  = groups[p1]
+			lPerm = randState.permutation(gp.num)
+			n1, n2 = lPerm[0], lPerm[1]
+			prefix.append((gp.folderId, gp.prefix[n1].strip(),
+										 gp.folderId, gp.prefix[n2].strip()))
+			#Sample the pose as well
+			lb[poseSt:poseEn]  = get_rots_label(lbInfo, gp.data[n1].rots, 
+													 gp.data[n2].rots)
+			lb[poseEn] = 1.0
+		else:
+			#Sample negative
+			lb[ptchSt] = 0
+			while (p1==p2):
+				print('WHILE LOOP STUCK')
+				p2 = (p1 + 1) % N
+			gp1  = groups[p1]
+			gp2  = groups[p2]
+			n1  = randState.permutation(gp1.num)[0]
+			n2  = randState.permutation(gp2.num)[0]
+			prefix.append((gp1.folderId, gp1.prefix[n1].strip(),
+										 gp2.folderId, gp2.prefix[n2].strip()))
+		lbs.append(lb)
+	return lbs, prefix
+
 
 def get_labels(prms, setName='train'):
 	grps   = get_groups_all(prms, setName=setName)
@@ -403,6 +460,13 @@ def get_labels(prms, setName='train'):
 	if prms.isMultiLabel:
 		mxCount = max(lbNums)
 		mxIdx   = lbNums.index(mxCount)
+		if prms.labelNameStr == 'pose_ptch':
+			lbs, prefix = get_label_pose_ptch(prms, grps, numSample)
+		else:
+			raise Exception('%s multilabel not found' % prms.labelNameStr)
+
+		'''
+		##### OLD CODE ######
 		allLb, allPrefix = [], []
 		allSamples = 0
 		for (i,l)	in enumerate(prms.labelNames):
@@ -422,6 +486,7 @@ def get_labels(prms, setName='train'):
 		perm = np.random.permutation(allSamples)
 		lbs    = [allLb[p] for p in perm]
 		prefix = [allPrefix[p] for p in perm] 	
+		'''
 	else:
 		assert(len(prms.labelNames)==1)
 		lbName    = prms.labelNames[0]
