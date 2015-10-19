@@ -100,6 +100,35 @@ def save_foldernames(prms):
 	subprocess.check_call(['chmod a-w %s' % prms.paths.proc.folders.key], shell=True) 
 
 ##
+#Reads the foldernames again and appends to the key store
+#any new files that are found
+def append_foldernames(prms):
+	keyFile = prms.paths.proc.folders.key
+	#Read the Key and folders from the key file
+	keys, folders = [], []
+	with open(keyFile,'r') as f:
+		lines = f.readlines()
+		for l in lines:
+			key, folder = l.strip().split()
+			keys.append(key)
+			folders.append(folder)	
+	N = len(keys)
+
+	newFolders = sorted(get_foldernames(prms))
+	for nf in newFolders:
+		if nf not in folders:
+			N = N + 1
+			keyStr = '%04d' % N
+			keys.append(keyStr)
+			folders.append(nf)			
+	subprocess.check_call(['chmod a+w %s' % keyFile], shell=True) 
+	with open(keyFile, 'w') as fid:
+		for k, f in enumerate(keys, folders):
+			fid.write('s \t %s\n' % (k,f))
+	subprocess.check_call(['chmod a-w %s' % keyFile], shell=True) 
+	return newFolders, keys, folder	
+
+##
 # Save the keys of only the folders for which alignment data is available. 
 def save_aligned_keys(prms):
 	keys, names = su.get_folder_keys_all(prms)
@@ -145,7 +174,7 @@ def save_folder_prefixes_by_id(prms, key, name, forceWrite=False):
 	print (key, name)
 	fName   = prms.paths.proc.folders.pre % key
 	if osp.exists(fName) and (not forceWrite):
-		continue
+		return
 	preStrs = read_prefixes_from_folder(name) 
 	with open(fName, 'w') as f:
 		for p in preStrs:
