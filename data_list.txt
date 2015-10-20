@@ -67,4 +67,3 @@ gs://amirs/wbm_patches/may27/0074.tar
 gs://amirs/wbm_patches/may27/0075.tar
 gs://amirs/wbm_patches/may27/0076.tar
 gs://amirs/wbm_patches/may27/0077.tar
-gs://amirs/wbm_patches/may27/0078.tar

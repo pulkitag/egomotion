@@ -10,6 +10,9 @@ download_tar(prms)
 #Create a list of folders -- this generates a key for each folder. 
 save_foldernames(prms)
 
+#To add a new list of folders
+append_foldernames(prms)
+
 #Store the prefixes
 #Folders contain <prefix>.jpg, <prefix>.txt as image, label pairs
 #Extract such prefixes and store them in one file per folder

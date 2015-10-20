@@ -56,6 +56,7 @@ def _find_im_labels(folder):
 	fNames = os.listdir(folder)
 	fNames = [osp.join(folder, f.strip()) for f in fNames]
 	#If one is directory then all should be dirs
+	print fNames[0]
 	if osp.isdir(fNames[0]):
 		dirNames = []
 		for f in fNames:
@@ -79,9 +80,12 @@ def get_foldernames(prms):
 	'''
 	fNames = [f.strip() for f in os.listdir(prms.paths.raw.dr)]
 	fNames = [osp.join(prms.paths.raw.dr, f) for f in fNames]
-	print (fNames)
-	fNames = [_find_im_labels(f) for f in fNames if osp.isdir(f)]
-	return fNames
+	allNames = []
+	for f in fNames:
+		if osp.isdir(f):
+			print ('Finding for %s' % f)
+			allNames.append(_find_im_labels(f))
+	return allNames
 
 ##
 # Save the foldernames along with the folder ids
@@ -114,7 +118,13 @@ def append_foldernames(prms):
 			folders.append(folder)	
 	N = len(keys)
 
-	newFolders = sorted(get_foldernames(prms))
+	newFolders = []
+	fNames = sorted(get_foldernames(prms))
+	for f in fNames:
+		for ff in f:
+			newFolders  = newFolders + [ff]
+	newFolders = sorted(newFolders)	
+
 	for nf in newFolders:
 		if nf not in folders:
 			N = N + 1
@@ -123,8 +133,8 @@ def append_foldernames(prms):
 			folders.append(nf)			
 	subprocess.check_call(['chmod a+w %s' % keyFile], shell=True) 
 	with open(keyFile, 'w') as fid:
-		for k, f in enumerate(keys, folders):
-			fid.write('s \t %s\n' % (k,f))
+		for k, f in zip(keys, folders):
+			fid.write('%s \t %s\n' % (k,f))
 	subprocess.check_call(['chmod a-w %s' % keyFile], shell=True) 
 	return newFolders, keys, folder	
 
@@ -256,6 +266,8 @@ def save_groups(prms, isAlignedOnly=True, isForceCompute=False):
 		keys   = su.get_folder_keys_aligned(prms)	
 	else:
 		keys,_ = su.get_folder_keys_all(prms)	
+
+	inArgs = []
 	for k in keys:
 		save_group_by_id(prms, k, isForceCompute=isForceCompute)	
 	
