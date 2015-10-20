@@ -40,7 +40,9 @@ def get_target_groups(prms, folderId):
 	return S
 
 ##
-#Get the distance between groups
+#Get the distance between groups, 
+#Finds the minimum distance between as 
+# min(dist_camera_points, dist_target_point)
 def get_distance_groups(grp1, grp2):
 	minDist = np.inf
 	for n1 in range(grp1.num):
@@ -55,6 +57,14 @@ def get_distance_groups(grp1, grp2):
 			if dist < minDist:
 				minDist = dist
 	return minDist
+
+##
+#Seperate points based on the target distance.
+def get_distance_targetpts_groups(grp1, grp2):
+	tPt1 = grp1.data[0].pts.target
+	tPt2 = grp2.data[0].pts.target
+	tDist = geodist(tPt1, tPt2).meters
+	return tDist
 
 ##
 #Get the distance between lists of groups

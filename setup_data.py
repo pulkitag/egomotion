@@ -405,7 +405,8 @@ def filter_groups_by_dist(groups, seedGroups, minDist):
 		#Find min distance from all the seed groups
 		sgDist = np.inf
 		for _,sg in itr:
-			dist = su.get_distance_groups(g, sg)
+			#dist = su.get_distance_groups(g, sg)
+			dist = su.get_distance_targetpts_groups(g, sg)
 			if dist < sgDist:
 				sgDist = dist
 		if sgDist > minDist:
