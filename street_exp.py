@@ -249,19 +249,21 @@ def make_loss_proto(prms, cPrms):
 		fName = '%s_%s_loss_layers.prototxt' % (prms.labelNameStr, 
 							cPrms.nwPrms.multiLossProto)	
 		fName = osp.join(baseFilePath,fName)
-		lbDef  = mpu.ProtoDef(defFile)
+		lbDef  = mpu.ProtoDef(fName)
 		#Modify pose parameters
 		poseLb = prms.labels[prms.labelNames.index('pose')]
 		lbDef.set_layer_property('pose_fc', ['inner_product_param', 'num_output'],
 						 '%d' % poseLb.lbSz_)
 		lbDef.set_layer_property('pose_stream_fc', ['inner_product_param', 'num_output'],
 						 '%d' % cPrms.nwPrms.poseStreamNum)
+		lbDef.set_layer_property('pose_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
 		#Modify ptch parameters
 		ptchLb = prms.labels[prms.labelNames.index('ptch')]
 		lbDef.set_layer_property('ptch_fc', ['inner_product_param', 'num_output'],
 						 '%d' % ptchLb.lbSz_)
 		lbDef.set_layer_property('ptch_stream_fc', ['inner_product_param', 'num_output'],
 						 '%d' % cPrms.nwPrms.ptchStreamNum)
+		lbDef.set_layer_property('ptch_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
 		return lbDef
 
 	if prms.isSiamese and 'nrml' in prms.labelNames:

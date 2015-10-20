@@ -411,7 +411,7 @@ def get_label_pose_ptch(prms, groups, numSamples, randSeed=1005):
 	ptchLb  = prms.labels[ptchIdx]
 	poseLb  = prms.labels[poseIdx]
 	ptchSt,ptchEn   = prms.labelSzList[ptchIdx], prms.labelSzList[ptchIdx+1]
-	poseSt,poseEn   = prms.labelSzList[ptchIdx], prms.labelSzList[ptchIdx+1]
+	poseSt,poseEn   = prms.labelSzList[poseIdx], prms.labelSzList[poseIdx+1]
 	poseEn = poseEn - 1
 	for p1, p2 in zip(perm1, perm2):
 		lb  = np.zeros((prms.labelSz,)).astype(np.float32)
@@ -425,7 +425,7 @@ def get_label_pose_ptch(prms, groups, numSamples, randSeed=1005):
 			prefix.append((gp.folderId, gp.prefix[n1].strip(),
 										 gp.folderId, gp.prefix[n2].strip()))
 			#Sample the pose as well
-			lb[poseSt:poseEn]  = get_rots_label(lbInfo, gp.data[n1].rots, 
+			lb[poseSt:poseEn] = get_rots_label(poseLb, gp.data[n1].rots, 
 													 gp.data[n2].rots)
 			lb[poseEn] = 1.0
 		else:
@@ -461,7 +461,7 @@ def get_labels(prms, setName='train'):
 		mxCount = max(lbNums)
 		mxIdx   = lbNums.index(mxCount)
 		if prms.labelNameStr == 'pose_ptch':
-			lbs, prefix = get_label_pose_ptch(prms, grps, numSample)
+			lbs, prefix = get_label_pose_ptch(prms, grps, mxCount)
 		else:
 			raise Exception('%s multilabel not found' % prms.labelNameStr)
 
