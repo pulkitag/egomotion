@@ -16,8 +16,11 @@ append_foldernames(prms)
 #Store the prefixes
 #Folders contain <prefix>.jpg, <prefix>.txt as image, label pairs
 #Extract such prefixes and store them in one file per folder
-save_folder_prefixes(prms, forceWrite)
 #Set force write to true if replacing the files
+save_folder_prefixes(prms, forceWrite)
+
+#Save the counts of prefixes
+save_counts(prms)
 
 #Seperate the keys for the folders that contain Aligned Data
 save_aligned_keys(prms)

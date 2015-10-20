@@ -201,7 +201,7 @@ def save_folder_prefixes(prms, forceWrite=False):
 	lines = [l.strip() for l in fid.readlines()]
 	fid.close()
 	keys, names = [], []
-	p = Pool(processes=32)
+	pool = Pool(processes=32)
 	inArgs = []
 	for l in lines:
 		key, name = l.split()
@@ -227,13 +227,20 @@ def save_counts(prms):
 						 open(prms.paths.proc.countFile, 'w'))
 
 ##
+#Get the prefix count
+def get_prefix_count(prms):
+	data =	pickle.load(open(prms.paths.proc.countFile, 'r'))
+	pCount, gCount = data['prefixCount'], data['groupCount']
+	return pCount, gCount	
+
+##
 #Save groups by ids
 def save_group_by_id(prms, k, isForceCompute=False):
 	'''
 		k: folderId
 	'''
 	opName = prms.paths.label.grps % k
-	if (not forceCompute) and osp.exists(opName):
+	if (not isForceCompute) and osp.exists(opName):
 		print ('File %s exists, skipping computation' % opName)
 		return
 
@@ -243,6 +250,7 @@ def save_group_by_id(prms, k, isForceCompute=False):
 	grps = su.get_target_groups(prms, k)
 	#Read the labels of each group and save them
 	grpLabels = edict()
+	grpKeyStr = prms.paths.grp.keyStr
 	for ig, g in enumerate(grps[0:-1]):
 		st = g
 		en = grps[ig+1]
@@ -259,17 +267,26 @@ def save_group_by_id(prms, k, isForceCompute=False):
 						open(opName, 'w'))	
 
 ##
+#Save group by id
+def _save_group_by_id(args):
+	save_group_by_id(*args)	
+	return True
+
+##
 # Save the groups
 def save_groups(prms, isAlignedOnly=True, isForceCompute=False):
-	grpKeyStr = prms.paths.grpKeyStr
 	if isAlignedOnly:
 		keys   = su.get_folder_keys_aligned(prms)	
 	else:
 		keys,_ = su.get_folder_keys_all(prms)	
-
 	inArgs = []
+	pool = Pool(processes=32)
 	for k in keys:
-		save_group_by_id(prms, k, isForceCompute=isForceCompute)	
+		inArgs.append((prms, k, isForceCompute))
+		#save_group_by_id(prms, k, isForceCompute=isForceCompute)
+	jobs = pool.map_async(_save_group_by_id, inArgs)	
+	res  = jobs.get()
+	del pool
 	
 ##
 #Save geo localized groups
