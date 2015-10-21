@@ -1,3 +1,5 @@
+## @package street_utils
+
 import numpy as np
 from easydict import EasyDict as edict
 import os.path as osp
@@ -153,6 +155,8 @@ def parse_label_file(fName):
 	label = edict()
 	with open(fName, 'r') as f:
 		data = f.readlines()
+		if len(data)==0:
+			return None
 		dl   = data[0].strip().split()
 		assert dl[0] == 'd'
 		label.ids    = edict()

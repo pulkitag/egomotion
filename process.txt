@@ -43,3 +43,12 @@ l2-%d/
 
 #Save the normals data
 su.save_normals(prms)
+
+##For scalibility I am going to construct the following pipeline
+Given a folder:
+(1) Find all the prefixes (i.e. filter all files for which image-label pair donot exist)
+(2) Find all the groups (i.e. the set of images with the same target point)
+(3) Save the label information for each group
+(4) Resize and store the images in a suitable indexed order 
+(5) Make the window file for each folder. 
+

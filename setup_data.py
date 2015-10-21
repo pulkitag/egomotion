@@ -1,3 +1,6 @@
+## @package setup_data
+#Functions for setting up the data
+
 import numpy as np
 from easydict import EasyDict as edict
 import os.path as osp
@@ -261,8 +264,10 @@ def save_group_by_id(prms, k, isForceCompute=False):
 		grpLabels[grpKey].data     = []
 		grpLabels[grpKey].folderId = k
 		for i in range(st,en):
-			grpLabels[grpKey].data.append(su.parse_label_file(lbNames[i]))
-			grpLabels[grpKey].prefix.append(prefixes[i])
+			tmpGrp = su.parse_label_file(lbNames[i])
+			if tmpGrp is not None:
+				grpLabels[grpKey].data.append(tmpGrp)
+				grpLabels[grpKey].prefix.append(prefixes[i])
 	pickle.dump({'groups': grpLabels}, 
 						open(opName, 'w'))	
 
@@ -329,7 +334,7 @@ def get_prefixes_geo_all(prms):
 	return pref
 
 ##
-#Helper for save_resize_images_geo
+#Helper for save_cropped_images_geo
 def _write_im(prms, readList, outNames):
 	if prms.isAligned:
 		rootDir = osp.join(cfg.STREETVIEW_DATA_MAIN, 
@@ -350,9 +355,9 @@ def _write_im(prms, readList, outNames):
 		#Save the image
 		scm.imsave(outNames[r], im)
 
-##
-#Save cropped images
-def save_cropped_images_geo(prms):
+#For dc-v1 geofencing follow this procedure
+#for storing the images
+def save_croppped_images_dc_v1(prms):
 	pref    = get_prefixes_geo_all(prms)
 	imKeys  = edict()
 	imCount = 0 		
@@ -387,6 +392,28 @@ def save_cropped_images_geo(prms):
 	_write_im(prms, readList, outNames)
 	pickle.dump({'imKeys':imKeys}, open(prms.paths.proc.im.keyFile,'w'))	
 
+
+##
+#Save the images by folderid
+def save_cropped_images_by_folderid(prms, folderId):
+	grps = su.get_groups(prms, folderId, setName=None)
+	
+
+##
+#Save cropped images
+def save_cropped_images(prms):
+	if prms.geoFence == 'dc-v1':
+		save_cropped_images_dc_v1(prms)
+		return
+	elif prms.geoFence is None:
+		print ('Image Cropping is only defined for cropped parts')
+		return
+
+	#Get all the keys
+	folderKeys = su.get_folder_keys()
+	for k in folderKeys:
+		save_cropped_images_by_folder()		
+	
 ##
 #Filter groups by distance
 def filter_groups_by_dist(groups, seedGroups, minDist):

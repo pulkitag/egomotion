@@ -77,7 +77,11 @@ def get_paths():
 	paths.proc.im.dr =  osp.join(paths.proc.dr, 'resize-im')
 	_mkdir(paths.proc.im.dr)
 	paths.proc.im.keyFile = osp.join(paths.proc.im.dr, 'im%d-keys.pkl') 
-	paths.proc.im.dr      = osp.join(paths.proc.im.dr, 'im%d')		
+	paths.proc.im.dr      = osp.join(paths.proc.im.dr, 'im%d')
+	#Count the number of keys already stored - useful for appending the files.
+	#Note that this count maynot be accurate but will be larger than the total number
+	#of images saved 	
+	paths.proc.im.keyCountFile = osp.join(paths.proc.im.dr, 'im%d-key-count.pkl') 
 
 	#Count info
 	paths.proc.countFile = osp.join(paths.proc.folders.dr, 'counts.h5')	
