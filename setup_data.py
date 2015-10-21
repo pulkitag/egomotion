@@ -1,5 +1,5 @@
 ## @package setup_data
-#Functions for setting up the data
+#	Functions for setting up the data
 
 import numpy as np
 from easydict import EasyDict as edict
@@ -19,12 +19,14 @@ from multiprocessing import Pool, Manager, Queue, Process
 import time
 import copy
 
+##
 def get_tar_files(prms):
 	with open(prms.paths.tar.fileList,'r') as f:
 		fNames = f.readlines()
 	fNames = [f.strip() for f in fNames]
 	return fNames
 
+##
 def download_tar(prms):
 	fNames = get_tar_files(prms)
 	for f in fNames:

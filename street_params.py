@@ -1,3 +1,6 @@
+## @package street_params
+#	Parameter settings
+
 import numpy as np
 from easydict import EasyDict as edict
 import os.path as osp
