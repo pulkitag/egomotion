@@ -279,11 +279,8 @@ def _save_group_by_id(args):
 
 ##
 # Save the groups
-def save_groups(prms, isAlignedOnly=True, isForceCompute=False):
-	if isAlignedOnly:
-		keys   = su.get_folder_keys_aligned(prms)	
-	else:
-		keys,_ = su.get_folder_keys_all(prms)	
+def save_groups(prms, isForceCompute=False):
+	keys,_ = su.get_folder_keys_all(prms)	
 	inArgs = []
 	pool = Pool(processes=32)
 	for k in keys:
@@ -292,7 +289,54 @@ def save_groups(prms, isAlignedOnly=True, isForceCompute=False):
 	jobs = pool.map_async(_save_group_by_id, inArgs)	
 	res  = jobs.get()
 	del pool
-	
+
+##
+#Save the group data that only consists of aligned images
+def save_group_aligned_by_id(prms, k, isForceCompute=False):
+	'''
+		k: folderId
+	'''
+	opName = prms.paths.label.grpsAlgn % k
+	if (not isForceCompute) and osp.exists(opName):
+		print ('File %s exists, skipping computation' % opName)
+		return
+	print(k)
+
+	srcName = prms.paths.label.grps % k
+	data    = pickle.load(open(srcName,'r'))
+	inGrps  = data['groups']
+
+	grpData = edict()
+	for gk, g in inGrps.iteritems():
+		idx = [i for i,l in enumerate(g.data) if l.align is not None]
+		if len(idx)==0:
+			continue
+		grpData[gk]         = edict()
+		grpData[gk].num     = len(idx)
+		grpData[gk].prefix  = [g.prefix[i] for i in idx]  
+		grpData[gk].data    = [g.data[i] for i in idx]
+		grpData[gk].folderId = k
+	pickle.dump({'groups': grpData}, 
+						open(opName, 'w'))	
+
+##
+#Save group by id
+def _save_group_aligned_by_id(args):
+	save_group_aligned_by_id(*args)	
+	return True
+
+##
+#Only save the groups that have alignment data
+def save_groups_aligned(prms, isForceCompute=False):
+	keys,_ = su.get_folder_keys_all(prms)	
+	inArgs = []
+	pool = Pool(processes=32)
+	for k in keys:
+		inArgs.append((prms, k, isForceCompute))
+	jobs = pool.map_async(_save_group_aligned_by_id, inArgs)	
+	res  = jobs.get()
+	del pool
+
 ##
 #Save geo localized groups
 def save_geo_groups(prms):
@@ -412,7 +456,7 @@ def save_cropped_images(prms):
 	#Get all the keys
 	folderKeys = su.get_folder_keys()
 	for k in folderKeys:
-		save_cropped_images_by_folder()		
+		save_cropped_images_by_folder(prms,k)		
 	
 ##
 #Filter groups by distance

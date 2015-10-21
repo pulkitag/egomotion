@@ -102,6 +102,11 @@ def get_paths():
 	grpsDir          = osp.join(paths.label.dr, 'groups')
 	_mkdir(grpsDir)
 	paths.label.grps = osp.join(grpsDir, '%s.pkl')
+	#Save the groups containing alignment data only
+	grpsAlgnDir      = osp.join(paths.label.dr, 'groups-aligned')
+	_mkdir(grpsAlgnDir)
+	paths.label.grpsAlgn = osp.join(grpsAlgnDir, '%s.pkl')
+		
 
 	paths.exp    = edict()
 	paths.exp.dr = osp.join(paths.dataDr, 'exp')
