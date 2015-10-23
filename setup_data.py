@@ -480,9 +480,12 @@ def _write_im_v2(prms, inNames, outNames, crpList, isForceWrite=False):
 
 ##
 #Save the images by folderid
-def save_crop_images_by_folderid(prms, folderId):
+def save_crop_images_by_folderid(prms, folderId, isForceWrite=False):
 	#Get the groups
 	grps = su.get_groups(prms, folderId, setName=None)
+	if grps == []:
+		print ('%s is excluded for some reason' % folderId)
+		return
 	#Get the root folder
 	rootFolder = su.id2name_folder(prms, folderId)
 	svFolder   = prms.paths.proc.im.folder.dr % folderId
@@ -512,17 +515,22 @@ def save_crop_images_by_folderid(prms, folderId):
 			if (imCount > lMax and (imCount % lMax)==0):
 				#Save the image
 				print (folderId, imCount)
-				_write_im_v2(prms, inList, outList, crpList)	
+				_write_im_v2(prms, inList, outList, crpList, isForceWrite)	
 				inList, outList, crpList = [], [], []
 
 	#Writethe images out finally	
-	_write_im_v2(prms, inList, outList, crpList)	
+	_write_im_v2(prms, inList, outList, crpList, isForceWrite)	
 	keyFile = prms.paths.proc.im.folder.keyFile % folderId
 	pickle.dump({'imKeys':imKeys}, open(keyFile,'w'))	
 
+#Wrapper for save_crop_images_by_folderid
+def _save_crop_images_by_folderid(args):
+	save_crop_images_by_folderid(*args)
+	return True
+
 ##
 #Save cropped images
-def save_cropped_images(prms):
+def save_cropped_images(prms, isForceWrite=False):
 	if prms.geoFence == 'dc-v1':
 		save_cropped_images_dc_v1(prms)
 		return
@@ -531,10 +539,15 @@ def save_cropped_images(prms):
 		return
 
 	#Get all the keys
-	folderKeys = su.get_folder_keys()
+	folderKeys = su.get_folder_keys(prms)
+	inArgs = []
 	for k in folderKeys:
-		save_crop_images_by_folder(prms,k)		
-	
+		inArgs.append([prms, k, isForceWrite])
+	pool = Pool(processes=10)
+	jobs = pool.map_async(_save_crop_images_by_folderid, inArgs)	
+	res  = jobs.get()
+	del pool
+
 ##
 #Filter groups by distance
 def filter_groups_by_dist(groups, seedGroups, minDist):
