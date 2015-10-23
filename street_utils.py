@@ -424,10 +424,10 @@ def get_label_ptch(prms, groups, numSamples, randSeed=1005):
 
 ##
 #Get labels for ptch
-def get_label_pose_ptch(prms, groups, numSamples, randSeed=1005):
+def get_label_pose_ptch(prms, groups, numSamples, randSeed=1005, randSeedAdd=0):
 	N = len(groups)
 	oldState  = np.random.get_state()
-	randState = np.random.RandomState(randSeed)
+	randState = np.random.RandomState(randSeed + randSeedAdd)
 	lbs, prefix = [],[]
 	lbCount = 0
 	perm1   = randState.choice(N,numSamples)
@@ -595,9 +595,80 @@ def make_window_file(prms, setNames=['test', 'train']):
 		gen.close()
 
 
+def get_label_by_folderid(prms, folderId):
+	grps   = get_groups(prms, folderId, setName=None)
+	lbNums = []
+	for (i,l) in enumerate(prms.labelNames):
+		if l == 'nrml':
+			lbNums.append(6 * len(grps))
+		elif l == 'pose':
+			lbNums.append(25 * len(grps))
+		elif l == 'ptch':
+			lbInfo = prms.labels[i]
+			num = int(25.0 / lbInfo.posFrac_)
+			lbNums.append(num * len(grps))			
+	folderInt = int(folderId)
+	if prms.isMultiLabel:
+		mxCount = max(lbNums)
+		mxIdx   = lbNums.index(mxCount)
+		if prms.labelNameStr == 'pose_ptch':
+			lbs, prefix = get_label_pose_ptch(prms, grps, mxCount, randSeedAdd=79 * folderInt)
+		else:
+			raise Exception('%s multilabel not found' % prms.labelNameStr)
+	else:
+		assert(len(prms.labelNames)==1)
+		lbName    = prms.labelNames[0]
+		numSample = lbNums[0] 
+		if lbName == 'nrml':
+			lbs, prefix = get_label_nrml(prms, grps, numSample)
+		elif lbName == 'pose':
+			lbs, prefix = get_label_pose(prms, grps, numSample)
+		elif lbName == 'ptch':
+			lbs, prefix = get_label_ptch(prms, grps, numSample)
+	return lbs, prefix	
+
+##
+#Make a windown file per folder
+def make_window_file_by_folderid(prms, folderId):
+	if len(prms.labelNames)==1 and prms.labelNames[0] == 'nrml':
+		numImPerExample = 1
+	else:
+		numImPerExample = 2	
+
+	#Assuming the size of images
+	h, w, ch = prms.rawImSz, prms.rawImSz, 3
+	hCenter, wCenter = int(h/2), int(w/2)
+	cr = int(prms.crpSz/2)
+	minH = max(0, hCenter - cr)
+	maxH = min(h, hCenter + cr)
+	minW = max(0, wCenter - cr)
+	maxW = min(w, wCenter + cr)  
+
+	#Get the im-label data
+	lb, prefix = get_label_by_folderid(prms, folderid)
+	if prms.geoFence is None:	
+		imNames1 = prefix2imname(prms, prefix)
+	else:
+		imNames1 = prefix2imname_geo(prms, prefix) 
+	#Randomly permute the data
+	N = len(imNames1)
+	randState = np.random.RandomState(19)
+	perm      = randState.permutation(N) 
+	#The output file
+	gen = mpio.GenericWindowWriter(prms['paths']['windowFile'][s],
+					len(imNames1), numImPerExample, prms['labelSz'])
+	for i in perm:
+		line = []
+		for n in range(numImPerExample):
+			line.append([imNames1[i][n], [ch, h, w], [minW, minH, maxW, maxH]])
+		gen.write(lb[i], *line)
+	gen.close()
+
+
+'''
 ##
 #Process the labels according to prms
-def get_labels_old(prms, setName='train'):
+def get_labels_old(prms, setName="train"):
 	#The main quantity that requires randomization is patch matching
 	#So we will base this code around that. 
 	rawLb = get_groups_all(prms, setName=setName)
@@ -673,4 +744,4 @@ def get_labels_old(prms, setName='train'):
 	np.random.set_state(oldState)		
 	return lb, prefix					
 
-
+'''
