@@ -102,10 +102,7 @@ def get_folder_keys_aligned(prms):
 ##
 #Get the keys for a folder
 def get_folder_keys(prms):
-	if prms.isAligned:
-		keys = get_folder_keys_aligned(prms)
-	else:
-		keys,_   = get_folder_keys_all(prms)
+	keys,_   = get_folder_keys_all(prms)
 	return keys
 
 ##

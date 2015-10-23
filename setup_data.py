@@ -341,21 +341,30 @@ def save_groups_aligned(prms, isForceCompute=False):
 #Save geo localized groups
 def save_geo_groups(prms):
 	keys = su.get_folder_keys(prms)
-	for k in keys:
-		print (k)
-		grpFile  = prms.paths.label.grps % k
-		grpDat   = pickle.load(open(grpFile, 'r'))
-		grpDat   = grpDat['groups']
-		geoGrp   = edict()
-		geoKeys  = []
-		for gKey, gDat in grpDat.iteritems(): 
-			isInside = su.is_group_in_geo(prms, gDat)
-			if isInside:
-				geoGrp[gKey] = gDat
-				geoKeys.append(gKey)
-		outName = prms.paths.grp.geoFile % k
-		print ('Saving to %s' % outName) 
-		pickle.dump({'groups': geoGrp, 'groupIds': geoKeys}, open(outName,'w'))
+	if prms.geoFence == 'dc-v1':
+		for k in keys:
+			print (k)
+			grpFile  = prms.paths.label.grps % k
+			grpDat   = pickle.load(open(grpFile, 'r'))
+			grpDat   = grpDat['groups']
+			geoGrp   = edict()
+			geoKeys  = []
+			for gKey, gDat in grpDat.iteritems(): 
+				isInside = su.is_group_in_geo(prms, gDat)
+				if isInside:
+					geoGrp[gKey] = gDat
+					geoKeys.append(gKey)
+			outName = prms.paths.grp.geoFile % k
+			print ('Saving to %s' % outName) 
+			pickle.dump({'groups': geoGrp, 'groupIds': geoKeys}, open(outName,'w'))
+
+	elif prms.geoFence == 'dc-v2':
+		#This specifies groups a subset of folders
+		#so nothing needs to be saved
+		pass
+	else:
+		raise Exception('Cannot save groups')
+			
 
 ##
 #Get the prefixes for a particular geo group
