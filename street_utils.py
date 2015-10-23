@@ -239,6 +239,20 @@ def read_geo_groups(prms, folderId):
 	return data['groups']
 
 ##
+#Get geo folderids
+def get_geo_folderids(prms):
+	if prms.geoFence in ['dc-v2']:
+		keys = []
+		with open(prms.paths.geoFile,'r') as fid:
+			lines = fid.readlines()
+			for l in lines:
+				key, _ = l.strip().split()
+				keys.append(key)	
+	else:
+		raise Exception('Not found')
+	return keys
+
+##
 #Get the groups
 def get_groups(prms, folderId, setName='train'):
 	'''
@@ -246,12 +260,7 @@ def get_groups(prms, folderId, setName='train'):
 	'''
 	grpList   = []
 	if prms.geoFence == 'dc-v2':
-		keys = []
-		with open(prms.paths.geoFile,'r') as fid:
-			lines = fid.readlines()
-			for l in lines:
-				key, _ = l.strip().split()
-				keys.append(key)	
+		keys = get_geo_folderids(prms)
 		if folderId not in keys:
 			return grpList
 		
@@ -683,6 +692,20 @@ def make_window_file_by_folderid(prms, folderId):
 		gen.write(lb[i], *line)
 	gen.close()
 
+def _make_window_file_by_folderid(args):
+	make_window_file_by_folderid(*args)
+
+##
+#Make window files for multiple folders
+def make_window_files_geo_folders(prms):
+	keys   = get_geo_folderids(prms)
+	inArgs = []
+	for k in keys:
+		inArgs.append([prms, k])
+	pool = Pool(processes=24)
+	jobs = pool.map_async(_make_window_file_by_folderid, inArgs)
+	res  = jobs.get()
+	del pool		
 
 '''
 ##
