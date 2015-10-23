@@ -441,30 +441,6 @@ def save_croppped_images_dc_v1(prms):
 
 
 ##
-#Helper for save_cropped_images_by_folderid
-def _write_im_v2(prms, inNames, outNames, crpList):
-	N = len(inNames)
-	assert N == len(outNames)
-	assert N == len(crpList)
-	for n in range(N):
-		im       = scm.imread(osp.join(inNames[i])
-		h, w, ch = im.shape
-		if crpList[i] is not None:
-			cy, cx = crpList[i][0], crpList[i][1] 
-		else:
-			cy, cx = h/2, w/2
-		#Crop
-		hSt = max(0,int(cy - prms.rawImSz/2))
-		wSt = max(0,int(cx - prms.rawImSz/2))
-		hEn = min(h, int(hSt + prms.rawImSz))
-		wEn = min(w, int(wSt + prms.rawImSz))
-		imSave = np.zeros((prms.rawImSz/2, prms.rawImSz/2,3)).astype(np.uint8)
-		hL, wL  = hEn - hSt, wEn - wSt
-		imSave[0:hl, 0:wl,3] =  im[hSt:hEn, wSt:wEn, :] 
-		#Save the image
-		scm.imsave(outNames[i], imSave)
-
-##
 #Save the images by folderid
 def save_cropped_images_by_folderid(prms, folderId):
 	if prms.isAligned:
@@ -476,7 +452,6 @@ def save_cropped_images_by_folderid(prms, folderId):
 	
 	#Get the root folder
 	rootFolder = su.id2name_folder(prms, folderId)
-	svFolder   = prms.paths.proc.im.folder.dr % folderId
 	#Go through the pictures in all the groups
 	imCount = 0
 	lMax    = 1e+3
@@ -503,7 +478,7 @@ def save_cropped_images_by_folderid(prms, folderId):
 
 	#Writethe images out finally	
 	_write_im_v2(prms, inList, outList, crpList)	
-	keyFile = prms.paths.proc.im.folder.keyFile % folderId
+	keyFile = prms.paths.proc.im.folderKeyFile % folderId
 	pickle.dump({'imKeys':imKeys}, open(keyFile,'w'))	
 
 ##
@@ -572,6 +547,7 @@ def p_filter_groups_by_dist(prms, grps=None, seedGrps=None):
 	trKeys = [tk[0] for tk in trKeys if not(tk==[])]  
 	del pool
 	return trKeys
+
 
 ##
 #Save the splits data

@@ -16,6 +16,7 @@ import rot_utils as ru
 import vis_utils as vu
 import setup_data as sd
 import street_exp as se
+import street_utils as su
 
 #Polygon should be of type mplPath	
 def show_images(prms, folderId):
@@ -30,8 +31,8 @@ def show_images(prms, folderId):
 
 #Show the groups of images that have the same target point
 def show_image_groups(prms, folderId):
-	grps = get_target_groups(prms, folderId)
-	imNames, lbNames = folderid_to_im_label_files(prms, folderId)
+	grps = su.get_target_groups(prms, folderId)
+	imNames, lbNames = su.folderid_to_im_label_files(prms, folderId)
 	plt.ion()
 	plt.figure()
 	for ig, g in enumerate(grps[0:-1]):
@@ -43,11 +44,11 @@ def show_image_groups(prms, folderId):
 		pltCount = 0
 		for i in range(st,en):
 			im = plt.imread(imNames[i])
-			lb = parse_label_file(lbNames[i])
+			lb = su.parse_label_file(lbNames[i])
 			if lb.align is not None:
 				isAlgn = True
 				loc = (lb.align.loc[0], lb.align.loc[1])
-				#loc = (lb.align.loc[1], lb.align.loc[0])
+				loc2 = (lb.align.loc[1], lb.align.loc[0])
 			else:
 				isAlgn = False
 				print ('Align info not found')
@@ -57,6 +58,7 @@ def show_image_groups(prms, folderId):
 				ax = plt.subplot(3,3,count+1)
 				if isAlgn:
 					im = mydisp.box_on_im(im, loc, 27)
+					im = mydisp.box_on_im(im, loc2, 27, 'g')
 				else:
 					im = mydisp.box_on_im(im, loc, 27, 'b')
 				print im.shape
