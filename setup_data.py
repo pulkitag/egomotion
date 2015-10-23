@@ -451,28 +451,31 @@ def save_croppped_images_dc_v1(prms):
 
 ##
 #Helper for save_cropped_images_by_folderid
-def _write_im_v2(prms, inNames, outNames, crpList):
+def _write_im_v2(prms, inNames, outNames, crpList, isForceWrite=False):
 	N = len(inNames)
 	assert N == len(outNames)
 	assert N == len(crpList)
-	for n in range(N):
+	for i in range(N):
+		if osp.exists(outNames[i]) and not isForceWrite:
+			continue
 		im         = scm.imread(inNames[i])
-		dirName, _ = osp.split(inNames[i])
-		_mkdir(dirName)
 		h, w, ch = im.shape
 		if crpList[i] is not None:
 			cy, cx = crpList[i][0], crpList[i][1] 
 		else:
 			cy, cx = h/2, w/2
 		#Crop
-		hSt = max(0,int(cy - prms.rawImSz/2))
-		wSt = max(0,int(cx - prms.rawImSz/2))
+		hSt = min(h, max(0,int(cy - prms.rawImSz/2)))
+		wSt = min(w, max(0,int(cx - prms.rawImSz/2)))
 		hEn = min(h, int(hSt + prms.rawImSz))
 		wEn = min(w, int(wSt + prms.rawImSz))
-		imSave = np.zeros((prms.rawImSz/2, prms.rawImSz/2,3)).astype(np.uint8)
+		imSave = np.zeros((prms.rawImSz, prms.rawImSz,3)).astype(np.uint8)
 		hL, wL  = hEn - hSt, wEn - wSt
-		imSave[0:hl, 0:wl,3] =  im[hSt:hEn, wSt:wEn, :] 
+		#print hSt, hEn, wSt, wEn
+		imSave[0:hL, 0:wL,:] =  im[hSt:hEn, wSt:wEn, :] 
 		#Save the image
+		dirName, _ = osp.split(outNames[i])
+		sp._mkdir(dirName)
 		scm.imsave(outNames[i], imSave)
 
 ##
@@ -484,14 +487,14 @@ def save_crop_images_by_folderid(prms, folderId):
 	rootFolder = su.id2name_folder(prms, folderId)
 	svFolder   = prms.paths.proc.im.folder.dr % folderId
 	#Go through the pictures in all the groups
-	imCount = 0
+	imCount, lCount = 0, 0
 	lMax    = 1e+3
 	imKeys  = edict()
-	inList, outList = [], []
-	for g in grps:
+	inList, outList, crpList = [], [], []
+	for gk, g in grps.iteritems():
 		prefix = [pr.strip() for pr in g.prefix]
 		for (i,p) in enumerate(prefix):
-			inName    = osp.join(rootFolder, prefix + '.jpg')
+			inName    = osp.join(rootFolder, p + '.jpg')
 			outName   = 'l-%d/im%04d.jpg' % (lCount, imCount % int(lMax)) 			
 			imKeys[p] = outName
 			outName   = osp.join(svFolder, outName) 
@@ -501,6 +504,11 @@ def save_crop_images_by_folderid(prms, folderId):
 				crpList.append(g.data[i].align.loc)
 			else:
 				crpList.append(None)
+		
+			#Increment the counters
+			imCount = imCount + 1
+			lCount = int(np.floor(imCount/lMax))
+
 			if (imCount > lMax and (imCount % lMax)==0):
 				#Save the image
 				print (folderId, imCount)
@@ -525,7 +533,7 @@ def save_cropped_images(prms):
 	#Get all the keys
 	folderKeys = su.get_folder_keys()
 	for k in folderKeys:
-		save_cropped_images_by_folder(prms,k)		
+		save_crop_images_by_folder(prms,k)		
 	
 ##
 #Filter groups by distance

@@ -249,7 +249,6 @@ def get_groups(prms, folderId, setName='train'):
 		with open(prms.paths.geoFile,'r') as fid:
 			lines = fid.readlines()
 			for l in lines:
-				print l.strip().split()
 				key, _ = l.strip().split()
 				keys.append(key)	
 		if folderId not in keys:
