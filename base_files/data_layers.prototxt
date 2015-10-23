@@ -12,6 +12,7 @@ layer {
 		context_pad: 24
 		random_crop: false
 		max_jitter: 0
+		is_gray: false
 	}
 	transform_param {
 			mean_file: "/data0/pulkitag/kitti/lmdb-store/kitti_mean.binaryproto" 
@@ -33,6 +34,7 @@ layer {
 		context_pad: 24
 		random_crop: false
 		max_jitter: 0
+		is_gray: false
 	}
 	transform_param {
 		mean_file: "/data0/pulkitag/kitti/lmdb-store/kitti_mean.binaryproto" 

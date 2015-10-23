@@ -25,6 +25,7 @@ def get_nw_prms(**kwargs):
 	dArgs.multiLossProto   = None
 	dArgs.ptchStreamNum    = 256
 	dArgs.poseStreamNum    = 256
+	dArgs.isGray           = False
 	dArgs = mpu.get_defaults(kwargs, dArgs)
 	expStr = 'net-%s_cnct-%s_cnctDrp%d_contPad%d_imSz%d_imgntMean%d_jit%d'\
 						%(dArgs.netName, dArgs.concatLayer, dArgs.concatDrop, 
@@ -37,6 +38,8 @@ def get_nw_prms(**kwargs):
 	if dArgs.multiLossProto is not None:
 		expStr = '%s_mlpr%s-posn%d-ptsn%d' % (expStr,
 							dArgs.multiLossProto, dArgs.poseStreamNum, dArgs.ptchStreamNum)
+	if dArgs.isGray:
+		expStr = '%s_grayIm' % expStr
 	dArgs.expStr = expStr 
 	return dArgs 
 
@@ -170,6 +173,9 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 		#Random Crop
 		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
 			'%s' % str(cPrms.nwPrms.randCrop).lower(), phase=p)
+		#isGray
+		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'is_gray'],
+			'%s' % str(cPrms.nwPrms.isGray).lower(), phase=p)
 		#maxJitter
 		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'max_jitter'],
 			cPrms.nwPrms.maxJitter, phase=p)
@@ -184,9 +190,17 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 	mainDataDr = cfg.STREETVIEW_DATA_MAIN
 	if cPrms.nwPrms.imgntMean:
 		if prms.isSiamese:
-			fName = osp.join(mainDataDr, 'pulkitag/caffe_models/ilsvrc2012_mean.binaryproto')
+			if prms.nwPrms.isGray:
+				fName = osp.join(mainDataDr, 'pulkitag/caffe_models/ilsvrc2012_mean_gray.binaryproto')
+			else:
+				fName = osp.join(mainDataDr, 'pulkitag/caffe_models/ilsvrc2012_mean.binaryproto')
 		else:
-			fName = osp.join(mainDataDr, 'pulkitag/caffe_models/ilsvrc2012_mean_for_siamese.binaryproto')
+			if prms.nwPrms.isGray:
+				fName = osp.join(mainDataDr,\
+						 'pulkitag/caffe_models/ilsvrc2012_mean_gray_for_siamese.binaryproto')
+			else:
+				fName = osp.join(mainDataDr,\
+						 'pulkitag/caffe_models/ilsvrc2012_mean_for_siamese.binaryproto')
 		for p in ['TRAIN', 'TEST']:
 			protoDef.set_layer_property('window_data', ['transform_param', 'mean_file'],
 				'"%s"' % fName, phase=p)
