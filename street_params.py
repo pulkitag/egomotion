@@ -115,7 +115,6 @@ def get_paths():
 	_mkdir(grpsAlgnDir)
 	paths.label.grpsAlgn = osp.join(grpsAlgnDir, '%s.pkl')
 		
-
 	paths.exp    = edict()
 	paths.exp.dr = osp.join(paths.dataDr, 'exp')
 	_mkdir(paths.exp.dr)
@@ -386,7 +385,7 @@ def get_prms(isAligned=True,
 	#Files for storing the resized images
 	paths.proc.im.dr       = paths.proc.im.dr % rawImSz
 	paths.proc.im.keyFile  = paths.proc.im.keyFile % rawImSz
-	paths.proc.im.folder.dr       = paths.proc.im.folder.dr % rawImSz
+	paths.proc.im.folder.dr       = paths.proc.im.folder.dr % (rawImSz, '%s')
 	paths.proc.im.folder.keyFile  = paths.proc.im.folder.keyFile % (rawImSz, '%s')
 
 	prms['paths'] = paths

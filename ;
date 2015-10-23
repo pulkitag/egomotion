@@ -227,7 +227,7 @@ def read_geo_groups_all(prms):
 	geoGrps = edict()
 	keys    = get_folder_keys(prms)
 	for k in keys:
-		geoGrps[k] = read_geo_groups(prms, k)
+		geoGrps[k] = read_geo_group(prms, k)
 	return geoGrps
 
 ##
@@ -244,17 +244,9 @@ def get_groups(prms, folderId, setName='train'):
 		Labels for a particular split
 	'''
 	grpList   = []
-	if prms.geoFence == 'dc-v2':
-		keys = []
-		with open(prms.paths.geoFile,'r') as fid:
-			lines = fid.readlines()
-			for l in lines:
-				print l.strip().split()
-				key, _ = l.strip().split()
-				keys.append(key)	
-		if folderId not in keys:
-			return grpList
+	if prms.gepFence == 'dc-v2':
 		
+
 	if prms.geoFence == 'dc-v1':
 		groups = read_geo_groups(prms, folderId)
 		gKeys  = groups.keys()

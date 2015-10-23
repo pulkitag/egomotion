@@ -456,7 +456,9 @@ def _write_im_v2(prms, inNames, outNames, crpList):
 	assert N == len(outNames)
 	assert N == len(crpList)
 	for n in range(N):
-		im       = scm.imread(osp.join(inNames[i])
+		im         = scm.imread(inNames[i])
+		dirName, _ = osp.split(inNames[i])
+		_mkdir(dirName)
 		h, w, ch = im.shape
 		if crpList[i] is not None:
 			cy, cx = crpList[i][0], crpList[i][1] 
@@ -475,14 +477,9 @@ def _write_im_v2(prms, inNames, outNames, crpList):
 
 ##
 #Save the images by folderid
-def save_cropped_images_by_folderid(prms, folderId):
-	if prms.isAligned:
-		#Get the aligned groups
-		pass
-	else:
-		#Get all the groups
-		grps = su.get_groups(prms, folderId, setName=None)
-	
+def save_crop_images_by_folderid(prms, folderId):
+	#Get the groups
+	grps = su.get_groups(prms, folderId, setName=None)
 	#Get the root folder
 	rootFolder = su.id2name_folder(prms, folderId)
 	svFolder   = prms.paths.proc.im.folder.dr % folderId

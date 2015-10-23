@@ -28,4 +28,3 @@
 0067 	 /data0/pulkitag/data_sets/streetview/raw/0075
 0068 	 /data0/pulkitag/data_sets/streetview/raw/0076
 0069 	 /data0/pulkitag/data_sets/streetview/raw/0077
-
