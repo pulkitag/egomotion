@@ -124,6 +124,12 @@ def get_paths():
 	_mkdir(paths.exp.window.dr) 
 	paths.exp.window.tr = osp.join(paths.exp.window.dr, 'train-%s.txt')
 	paths.exp.window.te = osp.join(paths.exp.window.dr, 'test-%s.txt')
+	#Folderwise window dir
+	paths.exp.window.folderDr   = osp.join(paths.exp.dr, 'folder-window-files')
+	_mkdir(paths.exp.window.folderDr)
+	# %s, %s -- folderId, windowFile-str   
+	paths.exp.window.folderFile = osp.join(paths.exp.window.dr, '%s', '%s.txt')
+	
 	#Snapshot dir
 	paths.exp.snapshot    = edict()
 	paths.exp.snapshot.dr = osp.join(paths.exp.dr, 'snapshots') 
@@ -367,6 +373,7 @@ def get_prms(isAligned=True,
 		imStr = ''
 	expName   = '%s_crpSz%d_nTr-%.2e%s' % (expStr, crpSz, numTrain, imStr)
 	teExpName = '%s_crpSz%d_nTe-%.2e%s' % (expStr, crpSz, numTest, imStr)
+	expName2  = '%s_crpSz%d%s' % (expStr, crpSz, imStr) 
 	prms['expName'] = expName
 
 	#Form the window files
@@ -374,7 +381,7 @@ def get_prms(isAligned=True,
 	windowDir = paths.exp.window.dr
 	paths['windowFile']['train'] = osp.join(windowDir, 'train_%s.txt' % expName)
 	paths['windowFile']['test']  = osp.join(windowDir, 'test_%s.txt'  % teExpName)
-	#paths['resFile']       = osp.join(paths['resDir'], expName, '%s.h5')
+	paths.exp.window.folderFile  = paths.exp.window.folderFile  %  ('%s', expName)
 
 	#Files for saving the geolocalized groups
 	if prms.geoPoly is not None:

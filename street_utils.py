@@ -545,15 +545,18 @@ def prefix2imname(prms, prefixes):
 ##
 #Convert prefixes to image name
 def prefix2imname_geo(prms, prefixes):
-	keyData = pickle.load(open(prms.paths.proc.im.keyFile, 'r'))
-	imKeys  = keyData['imKeys']
-	imNames = []
-	for pf in prefixes:
-		f1, p1, f2, p2 = pf
-		if f2 is not None:
-			imNames.append([imKeys[f1][p1], imKeys[f2][p2]])
-		else:
-			imNames.append([imKeys[f1][p1], None])
+	if prms.geoFence=='dc-v1':
+		keyData = pickle.load(open(prms.paths.proc.im.keyFile, 'r'))
+		imKeys  = keyData['imKeys']
+		imNames = []
+		for pf in prefixes:
+			f1, p1, f2, p2 = pf
+			if f2 is not None:
+				imNames.append([imKeys[f1][p1], imKeys[f2][p2]])
+			else:
+				imNames.append([imKeys[f1][p1], None])
+	elif prms.geoFence == 'dc-v2':
+		raise Exception('Doesnot work for %s', prms.geoFence)
 	return imNames
 			
 ##
@@ -646,16 +649,27 @@ def make_window_file_by_folderid(prms, folderId):
 
 	#Get the im-label data
 	lb, prefix = get_label_by_folderid(prms, folderid)
-	if prms.geoFence is None:	
-		imNames1 = prefix2imname(prms, prefix)
-	else:
-		imNames1 = prefix2imname_geo(prms, prefix) 
+	#For the imNames
+	imNames1 = []
+	imKeys   = pickle.load(open(prms.paths.proc.im.folder.keyFile % folderId, 'r'))
+	imKeys   = imKeys['imKeys']
+	for pref in prefix:
+		tmpNames = []
+		_,p1,_,p2 = pref
+		tmpNames.append(osp.join(folderId, imKeys[p1]))
+		if p2 is not None:
+			tmpNames.append(osp.join(folderId, imKeys[p2]))
+		imNames1.append(tmpNames) 
+
 	#Randomly permute the data
 	N = len(imNames1)
 	randState = np.random.RandomState(19)
 	perm      = randState.permutation(N) 
 	#The output file
-	gen = mpio.GenericWindowWriter(prms['paths']['windowFile'][s],
+	wFile     = prms.paths.window.folderFile % folderId
+	wDir,_    = osp.splits(wFile)
+	sp._mkdir(wDir)
+	gen = mpio.GenericWindowWriter(wFile,
 					len(imNames1), numImPerExample, prms['labelSz'])
 	for i in perm:
 		line = []
