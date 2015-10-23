@@ -1,3 +1,6 @@
+## @package street_params
+#	Parameter settings
+
 import numpy as np
 from easydict import EasyDict as edict
 import os.path as osp
@@ -82,7 +85,12 @@ def get_paths():
 	#Note that this count maynot be accurate but will be larger than the total number
 	#of images saved 	
 	paths.proc.im.keyCountFile = osp.join(paths.proc.im.dr, 'im%d-key-count.pkl') 
-
+	#Storing images folderwise
+	paths.proc.im.folder = edict()
+	folderDr = osp.join(paths.proc.im.dr, '%s')
+	paths.proc.im.folder.keyFile = osp.join(folderDr, 'keys.pkl')
+	paths.proc.im.folder.dr = folderDr
+			
 	#Count info
 	paths.proc.countFile = osp.join(paths.proc.folders.dr, 'counts.h5')	
 
@@ -378,6 +386,8 @@ def get_prms(isAligned=True,
 	#Files for storing the resized images
 	paths.proc.im.dr       = paths.proc.im.dr % rawImSz
 	paths.proc.im.keyFile  = paths.proc.im.keyFile % rawImSz
+	paths.proc.im.folder.dr       = paths.proc.im.folder.dr % rawImSz
+	paths.proc.im.folder.keyFile  = paths.proc.im.folder.keyFile % (rawImSz, '%s')
 
 	prms['paths'] = paths
 	#Get the pose stats

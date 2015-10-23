@@ -1,5 +1,5 @@
 ## @package setup_data
-#Functions for setting up the data
+#	Functions for setting up the data
 
 import numpy as np
 from easydict import EasyDict as edict
@@ -19,12 +19,14 @@ from multiprocessing import Pool, Manager, Queue, Process
 import time
 import copy
 
+##
 def get_tar_files(prms):
 	with open(prms.paths.tar.fileList,'r') as f:
 		fNames = f.readlines()
 	fNames = [f.strip() for f in fNames]
 	return fNames
 
+##
 def download_tar(prms):
 	fNames = get_tar_files(prms)
 	for f in fNames:
@@ -388,7 +390,7 @@ def get_prefixes_geo_all(prms):
 
 ##
 #Helper for save_cropped_images_geo
-def _write_im(prms, readList, outNames):
+def _write_im(prms, readList, outNames, rootDir):
 	if prms.isAligned:
 		rootDir = osp.join(cfg.STREETVIEW_DATA_MAIN, 
 							'pulkitag/data_sets/streetview/raw/ssd105/Amir/WashingtonAligned/')
@@ -421,6 +423,7 @@ def save_croppped_images_dc_v1(prms):
 	outNames  = []
 	for k in pref.keys():
 		imKeys[k]= edict()
+		rootFolder = su.id2name_folder(k)
 		print (k, imCount)
 		for i in range(len(pref[k])):
 			imNum  = imCount % 1000
@@ -447,10 +450,70 @@ def save_croppped_images_dc_v1(prms):
 
 
 ##
+#Helper for save_cropped_images_by_folderid
+def _write_im_v2(prms, inNames, outNames, crpList):
+	N = len(inNames)
+	assert N == len(outNames)
+	assert N == len(crpList)
+	for n in range(N):
+		im       = scm.imread(osp.join(inNames[i])
+		h, w, ch = im.shape
+		if crpList[i] is not None:
+			cy, cx = crpList[i][0], crpList[i][1] 
+		else:
+			cy, cx = h/2, w/2
+		#Crop
+		hSt = max(0,int(cy - prms.rawImSz/2))
+		wSt = max(0,int(cx - prms.rawImSz/2))
+		hEn = min(h, int(hSt + prms.rawImSz))
+		wEn = min(w, int(wSt + prms.rawImSz))
+		imSave = np.zeros((prms.rawImSz/2, prms.rawImSz/2,3)).astype(np.uint8)
+		hL, wL  = hEn - hSt, wEn - wSt
+		imSave[0:hl, 0:wl,3] =  im[hSt:hEn, wSt:wEn, :] 
+		#Save the image
+		scm.imsave(outNames[i], imSave)
+
+##
 #Save the images by folderid
 def save_cropped_images_by_folderid(prms, folderId):
-	grps = su.get_groups(prms, folderId, setName=None)
+	if prms.isAligned:
+		#Get the aligned groups
+		pass
+	else:
+		#Get all the groups
+		grps = su.get_groups(prms, folderId, setName=None)
 	
+	#Get the root folder
+	rootFolder = su.id2name_folder(prms, folderId)
+	svFolder   = prms.paths.proc.im.folder.dr % folderId
+	#Go through the pictures in all the groups
+	imCount = 0
+	lMax    = 1e+3
+	imKeys  = edict()
+	inList, outList = [], []
+	for g in grps:
+		prefix = [pr.strip() for pr in g.prefix]
+		for (i,p) in enumerate(prefix):
+			inName    = osp.join(rootFolder, prefix + '.jpg')
+			outName   = 'l-%d/im%04d.jpg' % (lCount, imCount % int(lMax)) 			
+			imKeys[p] = outName
+			outName   = osp.join(svFolder, outName) 
+			inList.append(inName)
+			outList.append(outName)
+			if g.data[i].align is not None:
+				crpList.append(g.data[i].align.loc)
+			else:
+				crpList.append(None)
+			if (imCount > lMax and (imCount % lMax)==0):
+				#Save the image
+				print (folderId, imCount)
+				_write_im_v2(prms, inList, outList, crpList)	
+				inList, outList, crpList = [], [], []
+
+	#Writethe images out finally	
+	_write_im_v2(prms, inList, outList, crpList)	
+	keyFile = prms.paths.proc.im.folder.keyFile % folderId
+	pickle.dump({'imKeys':imKeys}, open(keyFile,'w'))	
 
 ##
 #Save cropped images
@@ -518,7 +581,6 @@ def p_filter_groups_by_dist(prms, grps=None, seedGrps=None):
 	trKeys = [tk[0] for tk in trKeys if not(tk==[])]  
 	del pool
 	return trKeys
-
 
 ##
 #Save the splits data
