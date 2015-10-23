@@ -128,7 +128,7 @@ def get_paths():
 	paths.exp.window.folderDr   = osp.join(paths.exp.dr, 'folder-window-files')
 	_mkdir(paths.exp.window.folderDr)
 	# %s, %s -- folderId, windowFile-str   
-	paths.exp.window.folderFile = osp.join(paths.exp.window.dr, '%s', '%s.txt')
+	paths.exp.window.folderFile = osp.join(paths.exp.window.folderDr, '%s', '%s.txt')
 	
 	#Snapshot dir
 	paths.exp.snapshot    = edict()

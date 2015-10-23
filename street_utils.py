@@ -19,6 +19,7 @@ import matplotlib.path as mplPath
 import rot_utils as ru
 from geopy.distance import vincenty as geodist
 import copy
+import street_params as sp
 
 ##
 #Get the prefixes for a specific folderId
@@ -306,7 +307,10 @@ def get_label_nrml(prms, groups, numSamples, randSeed=1001):
 		ptchIdx  = prms.labelNames.index('ptch')
 		ptchLoc  = prms.labelSzList[ptchIdx]
 	for p in perm1:
-		gp  = groups[p]
+		try:
+			gp  = groups[p]
+		except:
+			pdb.set_trace()
 		idx = randState.permutation(gp.num)[0]
 		#Ignore the last dimension as its always 0.
 		lb        = np.zeros((prms.labelSz,)).astype(np.float32)
@@ -599,7 +603,8 @@ def make_window_file(prms, setNames=['test', 'train']):
 
 
 def get_label_by_folderid(prms, folderId):
-	grps   = get_groups(prms, folderId, setName=None)
+	grpDict = get_groups(prms, folderId, setName=None)
+	grps    = [g for (gk,g) in grpDict.iteritems()] 
 	lbNums = []
 	for (i,l) in enumerate(prms.labelNames):
 		if l == 'nrml':
@@ -648,7 +653,7 @@ def make_window_file_by_folderid(prms, folderId):
 	maxW = min(w, wCenter + cr)  
 
 	#Get the im-label data
-	lb, prefix = get_label_by_folderid(prms, folderid)
+	lb, prefix = get_label_by_folderid(prms, folderId)
 	#For the imNames
 	imNames1 = []
 	imKeys   = pickle.load(open(prms.paths.proc.im.folder.keyFile % folderId, 'r'))
@@ -666,8 +671,8 @@ def make_window_file_by_folderid(prms, folderId):
 	randState = np.random.RandomState(19)
 	perm      = randState.permutation(N) 
 	#The output file
-	wFile     = prms.paths.window.folderFile % folderId
-	wDir,_    = osp.splits(wFile)
+	wFile     = prms.paths.exp.window.folderFile % folderId
+	wDir,_    = osp.split(wFile)
 	sp._mkdir(wDir)
 	gen = mpio.GenericWindowWriter(wFile,
 					len(imNames1), numImPerExample, prms['labelSz'])
