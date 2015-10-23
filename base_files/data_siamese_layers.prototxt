@@ -11,6 +11,7 @@ layer {
 		batch_size: 128
 		context_pad: 24
 		random_crop: false
+		is_gray: false
 	}
 	transform_param {
 			mean_file: "/data0/pulkitag/kitti/lmdb-store/kitti_mean.binaryproto" 
@@ -31,6 +32,7 @@ layer {
 		batch_size: 50
 		context_pad: 24
 		random_crop: false
+		is_gray: false
 	}
 	transform_param {
 		mean_file: "/data0/pulkitag/kitti/lmdb-store/kitti_mean.binaryproto" 
