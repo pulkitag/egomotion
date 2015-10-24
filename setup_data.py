@@ -478,14 +478,20 @@ def _write_im_v2(prms, inNames, outNames, crpList, isForceWrite=False):
 		sp._mkdir(dirName)
 		scm.imsave(outNames[i], imSave)
 
+def _write_im_v2_p(args):
+	_write_im_v2(*args)
+	return True
+
 ##
 #Save the images by folderid
-def save_crop_images_by_folderid(prms, folderId, isForceWrite=False):
+def save_crop_images_by_folderid(prms, folderId,
+							 isForceWrite=False, isParallel=False):
 	#Get the groups
 	grps = su.get_groups(prms, folderId, setName=None)
 	if grps == []:
 		print ('%s is excluded for some reason' % folderId)
 		return
+
 	#Get the root folder
 	rootFolder = su.id2name_folder(prms, folderId)
 	svFolder   = prms.paths.proc.im.folder.dr % folderId
@@ -494,6 +500,7 @@ def save_crop_images_by_folderid(prms, folderId, isForceWrite=False):
 	lMax    = 1e+3
 	imKeys  = edict()
 	inList, outList, crpList = [], [], []
+	inArgs = []
 	for gk, g in grps.iteritems():
 		prefix = [pr.strip() for pr in g.prefix]
 		for (i,p) in enumerate(prefix):
@@ -515,12 +522,23 @@ def save_crop_images_by_folderid(prms, folderId, isForceWrite=False):
 			if (imCount > lMax and (imCount % lMax)==0):
 				#Save the image
 				print (folderId, imCount)
-				_write_im_v2(prms, inList, outList, crpList, isForceWrite)	
+				if isParallel:
+					inArgs.append([prms, inList, outList, crpList, isForceWrite])
+				else:	
+					_write_im_v2(prms, inList, outList, crpList, isForceWrite)
 				inList, outList, crpList = [], [], []
 
 	#Writethe images out finally	
-	_write_im_v2(prms, inList, outList, crpList, isForceWrite)	
+	if isParallel:
+		inArgs.append([prms, inList, outList, crpList, isForceWrite])
+	else:	
+		_write_im_v2(prms, inList, outList, crpList, isForceWrite)
 	keyFile = prms.paths.proc.im.folder.keyFile % folderId
+	if isParallel:
+		pool = Pool(processes=10)
+		jobs = pool.map_async(_write_im_v2_p, inArgs)	
+		res  = jobs.get()
+		del pool
 	pickle.dump({'imKeys':imKeys}, open(keyFile,'w'))	
 
 #Wrapper for save_crop_images_by_folderid
@@ -537,7 +555,6 @@ def save_cropped_images(prms, isForceWrite=False):
 	elif prms.geoFence is None:
 		print ('Image Cropping is only defined for cropped parts')
 		return
-
 	#Get all the keys
 	folderKeys = su.get_folder_keys(prms)
 	inArgs = []
@@ -547,6 +564,33 @@ def save_cropped_images(prms, isForceWrite=False):
 	jobs = pool.map_async(_save_crop_images_by_folderid, inArgs)	
 	res  = jobs.get()
 	del pool
+
+##
+#Tar the crop images by folderid
+def tar_crop_images_by_folderid(args):
+	prms, folderId = args
+	drName = prms.paths.proc.im.folder.dr % folderId
+	trFile = prms.paths.proc.im.folder.tarFile % folderId
+	print ('Making %s' % trFile)
+	subprocess.check_call(['tar -cf %s %s' % (trFile, drName)],shell=True)
+	return True
+
+##
+#Tar the crop images
+def tar_crop_images(prms):
+	folderKeys = su.get_geo_folderids(prms)
+	inArgs     = []
+	for k in folderKeys:
+		inArgs.append([prms, k])	
+	pool = Pool(processes=12)
+	jobs = pool.map_async(tar_crop_images_by_folderid, inArgs)	
+	res  = jobs.get()
+	del pool
+
+##
+#scp the tar files
+def scp_crop_images(prms):
+	pass		
 
 ##
 #Filter groups by distance

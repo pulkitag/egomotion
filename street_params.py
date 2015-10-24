@@ -89,7 +89,8 @@ def get_paths():
 	paths.proc.im.folder = edict()
 	folderDr = osp.join(paths.proc.im.dr, '%s')
 	paths.proc.im.folder.keyFile = osp.join(folderDr, 'keys.pkl')
-	paths.proc.im.folder.dr = folderDr
+	paths.proc.im.folder.dr      = folderDr
+	paths.proc.im.folder.tarFile = osp.join(paths.proc.im.dr, '%s.tar')
 			
 	#Count info
 	paths.proc.countFile = osp.join(paths.proc.folders.dr, 'counts.h5')	
@@ -128,7 +129,7 @@ def get_paths():
 	paths.exp.window.folderDr   = osp.join(paths.exp.dr, 'folder-window-files')
 	_mkdir(paths.exp.window.folderDr)
 	# %s, %s -- folderId, windowFile-str   
-	paths.exp.window.folderFile = osp.join(paths.exp.window.dr, '%s', '%s.txt')
+	paths.exp.window.folderFile = osp.join(paths.exp.window.folderDr, '%s', '%s.txt')
 	
 	#Snapshot dir
 	paths.exp.snapshot    = edict()
@@ -393,6 +394,7 @@ def get_prms(isAligned=True,
 	paths.proc.im.dr       = paths.proc.im.dr % rawImSz
 	paths.proc.im.keyFile  = paths.proc.im.keyFile % rawImSz
 	paths.proc.im.folder.dr       = paths.proc.im.folder.dr % (rawImSz, '%s')
+	paths.proc.im.folder.tarFile  = paths.proc.im.folder.tarFile % (rawImSz, '%s')
 	paths.proc.im.folder.keyFile  = paths.proc.im.folder.keyFile % (rawImSz, '%s')
 
 	prms['paths'] = paths

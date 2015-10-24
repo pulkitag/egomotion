@@ -19,6 +19,8 @@ import matplotlib.path as mplPath
 import rot_utils as ru
 from geopy.distance import vincenty as geodist
 import copy
+import street_params as sp
+from multiprocessing import Pool
 
 ##
 #Get the prefixes for a specific folderId
@@ -238,6 +240,20 @@ def read_geo_groups(prms, folderId):
 	return data['groups']
 
 ##
+#Get geo folderids
+def get_geo_folderids(prms):
+	if prms.geoFence in ['dc-v2']:
+		keys = []
+		with open(prms.paths.geoFile,'r') as fid:
+			lines = fid.readlines()
+			for l in lines:
+				key, _ = l.strip().split()
+				keys.append(key)	
+	else:
+		raise Exception('Not found')
+	return keys
+
+##
 #Get the groups
 def get_groups(prms, folderId, setName='train'):
 	'''
@@ -245,12 +261,7 @@ def get_groups(prms, folderId, setName='train'):
 	'''
 	grpList   = []
 	if prms.geoFence == 'dc-v2':
-		keys = []
-		with open(prms.paths.geoFile,'r') as fid:
-			lines = fid.readlines()
-			for l in lines:
-				key, _ = l.strip().split()
-				keys.append(key)	
+		keys = get_geo_folderids(prms)
 		if folderId not in keys:
 			return grpList
 		
@@ -306,7 +317,10 @@ def get_label_nrml(prms, groups, numSamples, randSeed=1001):
 		ptchIdx  = prms.labelNames.index('ptch')
 		ptchLoc  = prms.labelSzList[ptchIdx]
 	for p in perm1:
-		gp  = groups[p]
+		try:
+			gp  = groups[p]
+		except:
+			pdb.set_trace()
 		idx = randState.permutation(gp.num)[0]
 		#Ignore the last dimension as its always 0.
 		lb        = np.zeros((prms.labelSz,)).astype(np.float32)
@@ -599,7 +613,8 @@ def make_window_file(prms, setNames=['test', 'train']):
 
 
 def get_label_by_folderid(prms, folderId):
-	grps   = get_groups(prms, folderId, setName=None)
+	grpDict = get_groups(prms, folderId, setName=None)
+	grps    = [g for (gk,g) in grpDict.iteritems()] 
 	lbNums = []
 	for (i,l) in enumerate(prms.labelNames):
 		if l == 'nrml':
@@ -648,7 +663,7 @@ def make_window_file_by_folderid(prms, folderId):
 	maxW = min(w, wCenter + cr)  
 
 	#Get the im-label data
-	lb, prefix = get_label_by_folderid(prms, folderid)
+	lb, prefix = get_label_by_folderid(prms, folderId)
 	#For the imNames
 	imNames1 = []
 	imKeys   = pickle.load(open(prms.paths.proc.im.folder.keyFile % folderId, 'r'))
@@ -666,8 +681,8 @@ def make_window_file_by_folderid(prms, folderId):
 	randState = np.random.RandomState(19)
 	perm      = randState.permutation(N) 
 	#The output file
-	wFile     = prms.paths.window.folderFile % folderId
-	wDir,_    = osp.splits(wFile)
+	wFile     = prms.paths.exp.window.folderFile % folderId
+	wDir,_    = osp.split(wFile)
 	sp._mkdir(wDir)
 	gen = mpio.GenericWindowWriter(wFile,
 					len(imNames1), numImPerExample, prms['labelSz'])
@@ -678,6 +693,25 @@ def make_window_file_by_folderid(prms, folderId):
 		gen.write(lb[i], *line)
 	gen.close()
 
+def _make_window_file_by_folderid(args):
+	make_window_file_by_folderid(*args)
+
+##
+#Make window files for multiple folders
+def make_window_files_geo_folders(prms, isForceWrite=False):
+	keys   = get_geo_folderids(prms)
+	inArgs = []
+	for k in keys:
+		if not isForceWrite:
+			wFile     = prms.paths.exp.window.folderFile % k
+			if osp.exists(wFile):
+				print ('Window file for %s exists, skipping rewriting' % wFile)
+				continue
+		inArgs.append([prms, k])
+	pool = Pool(processes=6)
+	jobs = pool.map_async(_make_window_file_by_folderid, inArgs)
+	res  = jobs.get()
+	del pool		
 
 '''
 ##

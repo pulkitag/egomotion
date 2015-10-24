@@ -5,7 +5,8 @@ Sep 29 2015
 #Download the data
 download_tar(prms)
 
-#Untar the files by hand
+#Untar the files
+untar_and_del(prms, isDel=False)
 
 #Create a list of folders -- this generates a key for each folder. 
 save_foldernames(prms)
@@ -41,8 +42,12 @@ l1-%d/
 Each folder in the second level holds a thousand images
 l2-%d/
 
-#Save the normals data
-su.save_normals(prms)
+#Save folderwise cropped images
+save_crop_images_by_folderid(prms, folderId)
+
+#Tar the cropped files so that they can be transported across machines
+#if needed
+
 
 ##For scalibility I am going to construct the following pipeline
 Given a folder:
