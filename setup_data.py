@@ -30,7 +30,7 @@ def download_tar(prms):
 
 ##
 #Untar the files and then delete them. 
-def untar_and_del(prms):
+def untar_and_del(prms, isDel=True):
 	fNames = get_tar_files(prms)	
 	suffix = []
 	for f in fNames:
@@ -40,7 +40,8 @@ def untar_and_del(prms):
 		if not osp.exists(f):
 			continue
 		subprocess.check_call(['tar -xf %s -C %s' % (f, prms.paths.raw.dr)],shell=True) 
-		subprocess.check_call(['rm %s' % f],shell=True) 
+		if isDel:
+			subprocess.check_call(['rm %s' % f],shell=True) 
 	return fNames	
 
 ##

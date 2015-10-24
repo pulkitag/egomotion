@@ -47,7 +47,7 @@ def get_lr_prms(**kwargs):
 	dArgs  = mpu.get_defaults(kwargs, dArgs)
 	#Make the solver 
 	solArgs = edict({'test_iter': 100, 'test_interval': 1000,
-						 'snapshot': 2000, 'debug_info': 'true'})
+						 'snapshot': 2000, 'debug_info': 'false'})
 	for k in dArgs.keys():
 		if k in ['batchsize']:
 			continue
