@@ -591,6 +591,8 @@ def tar_crop_images(prms):
 def get_hostaddr(hostName):
 	if hostName == 'psi':
 		addr   = 'pulkitag@psi.millennium.berkeley.edu:/work5/pulkitag/data_sets/streetview/'
+	elif hostName == 'nvidia':
+		addr  = 'pagrawal@psglogin.nvidia.com:/puresan/shared/pulkitag/data_sets/streetview/'
 	else:
 		raise Exception('Not found %s' % hostName)
 	return addr
@@ -605,14 +607,20 @@ def scp_cropim_tar_by_folderid(args):
 #scp the tar files
 def scp_cropim_tars(prms, hostName='psi'):
 	folderKeys = su.get_geo_folderids(prms)
-	hostAddr   = osp.join(get_hostaddr(hostName), 'resize-im', 'im256') 
+	if hostName == 'psi':
+		hostAddr   = osp.join(get_hostaddr(hostName), 'resize-im', 'im256') 
+	else:
+		hostAddr   = osp.join(get_hostaddr(hostName), 'proc', 'resize-im', 'im256') 
 	inArgs     = []
 	for k in folderKeys:
 		inArgs.append([prms, k, hostAddr])	
-	pool = Pool(processes=12)
+	pool = Pool(processes=6)
 	jobs = pool.map_async(scp_cropim_tar_by_folderid, inArgs)	
 	res  = jobs.get()
 	del pool
+
+##
+#Untar the crop im files
 
 ##
 #Filter groups by distance

@@ -724,7 +724,7 @@ def find_first_false(idx):
 ##
 #Combine the window files
 def make_combined_window_file(prms, setName='train'):
-	keys = get_train_test_folders(prms, setName)
+	keys = sp.get_train_test_defs(prms, setName=setName)
 	wObjs, wNum = [], []
 	numIm = None
 	for i,k in enumerate(keys):

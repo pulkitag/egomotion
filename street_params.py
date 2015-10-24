@@ -226,16 +226,25 @@ class LabelNLoss(object):
 		return augLbSz, lbSz
 
 
-def get_train_test_defs(geoFence, ver='v1'):
+def get_train_test_defs(geoFence, ver='v1', setName=None):
 	if geoFence == 'dc-v1':
 		if ver=='v1':
 			trainFolderKeys = ['0048']
 			testFolderKeys  = ['0052'] 
 		else:
 			raise Exception('%s not recognized' % v1)
+	elif geoFence == 'dc-v2':
+			testFolderKeys = ['0008']
+			allKeys        = su.get_geo_folderids(prms) 
+			trainFolderKeys = [k for k in allKeys if k not in testFolderKeys]
 	else:
 		raise Exception('%s not recognized' % geoFence)
-	return trainFolderKeys, testFolderKeys
+	if setName == 'train':
+		return trainFolderKeys
+	elif setName == 'test':
+		return testFolderKeys
+	elif setName is None:
+		return trainFolderKeys, testFolderKeys
 
 ##
 #get prms
