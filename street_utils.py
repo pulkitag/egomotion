@@ -759,10 +759,11 @@ def make_combined_window_file(prms, setName='train'):
 		rand = randState.rand()	
 		idx  = find_first_false(rand >= pCum)
 		imNames, lbls = wObjs[idx].read_next()
-		mainWFile.fid_.write('# %d\n' % i)
-		for iml in imNames:
-			mainWFile.fid_.write(iml)
-		mainWFile.fid_.write(lbls)
+		mainWFile.write(lbls[0], *imNames)	
+		#mainWFile.fid_.write('# %d\n' % i)
+		#for iml in imNames:
+		#	mainWFile.fid_.write(iml)
+		#mainWFile.fid_.write(lbls[0])
 	mainWFile.close()
 
 '''
