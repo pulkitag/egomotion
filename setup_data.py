@@ -587,10 +587,32 @@ def tar_crop_images(prms):
 	res  = jobs.get()
 	del pool
 
+
+def get_hostaddr(hostName):
+	if hostName == 'psi':
+		addr   = 'pulkitag@psi.millennium.berkeley.edu:/work5/pulkitag/data_sets/streetview/'
+	else:
+		raise Exception('Not found %s' % hostName)
+	return addr
+
+def scp_cropim_tar_by_folderid(args):
+	prms, folderId, hostPath = args
+	trFile = prms.paths.proc.im.folder.tarFile % folderId
+	print ('Transferring %s' % trFile)
+	subprocess.check_call(['scp %s %s' % (trFile, hostPath)],shell=True)
+
 ##
 #scp the tar files
-def scp_crop_images(prms):
-	pass		
+def scp_cropim_tars(prms, hostName='psi'):
+	folderKeys = su.get_geo_folderids(prms)
+	hostAddr   = osp.join(get_hostaddr(hostName), 'resize-im', 'im256') 
+	inArgs     = []
+	for k in folderKeys:
+		inArgs.append([prms, k, hostAddr])	
+	pool = Pool(processes=12)
+	jobs = pool.map_async(scp_cropim_tar_by_folderid, inArgs)	
+	res  = jobs.get()
+	del pool
 
 ##
 #Filter groups by distance
