@@ -334,8 +334,9 @@ def get_prms(isAligned=True,
 	prms.splits = edict()
 	if splitDist is not None:
 		teGap = None
-	prms.splits.numTrain = numTrain
-	prms.splits.numTest  = numTest
+	prms.splits.num = edict()
+	prms.splits.num.train = numTrain
+	prms.splits.num.test  = numTest
 	prms.splits.tePct    = tePct
 	prms.splits.teGap    = teGap
 	prms.splits.dist     = splitDist

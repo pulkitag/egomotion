@@ -713,6 +713,49 @@ def make_window_files_geo_folders(prms, isForceWrite=False):
 	res  = jobs.get()
 	del pool		
 
+##
+#helper functions
+def find_first_false(idx):
+	for i in range(len(idx)):
+		if not idx[i]:
+			return i
+	return None
+
+##
+#Combine the window files
+def make_combined_window_file(prms, setName='train'):
+	keys = get_train_test_folders(prms, setName)
+	wObjs, wNum = [], []
+	numIm = None
+	for i,k in enumerate(keys):
+		wFile  = prms.paths.exp.window.folderFile % k
+		wObj   = mpio.GenericWindowReader(wFile)
+		wNum.append(wObj.num_)
+		wObjs.append(wObj)
+		if i==0:
+			numIm = wObj.num_
+		else:
+			assert(numIm==wObj.num_)
+	
+	mainWFile = mpio.GenericWindowWriter(prms['paths']['windowFile'][setName],
+					prms.splits.num[setName], numImPerExample, prms['labelSz'])
+	
+	wNum = np.array(wNum).astype(float)
+	wNum = wNum/sum(wNum)
+	pCum = np.cumsum(wNum)
+	print (pCum)
+	assert (pCum==1, 'Something is wrong')
+	randState = np.random.RandomState(31)	
+	for i in range(prms.splits.num[setName]):
+		rand = randState.random()	
+		idx  = find_first_false(rand >= pCum)
+		imNames, lbls = wObjs[idx].read_next()
+		mainWFile.fid_.write('# %d\n' % i)
+		for iml in imNames:
+			mainWFile.fid_.write(iml)
+		mainWFile.fid_.write(lbls)
+	mainWFile.close()
+
 '''
 ##
 #Process the labels according to prms
