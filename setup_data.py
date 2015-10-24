@@ -555,7 +555,6 @@ def save_cropped_images(prms, isForceWrite=False):
 	elif prms.geoFence is None:
 		print ('Image Cropping is only defined for cropped parts')
 		return
-
 	#Get all the keys
 	folderKeys = su.get_folder_keys(prms)
 	inArgs = []
@@ -565,6 +564,33 @@ def save_cropped_images(prms, isForceWrite=False):
 	jobs = pool.map_async(_save_crop_images_by_folderid, inArgs)	
 	res  = jobs.get()
 	del pool
+
+##
+#Tar the crop images by folderid
+def tar_crop_images_by_folderid(args):
+	prms, folderId = args
+	drName = prms.paths.proc.im.folder.dr % folderId
+	trFile = prms.paths.proc.im.folder.tarFile % folderId
+	print ('Making %s' % trFile)
+	subprocess.check_call(['tar -cf %s %s' % (trFile, drName)],shell=True)
+	return True
+
+##
+#Tar the crop images
+def tar_crop_images(prms):
+	folderKeys = su.get_geo_folderids(prms)
+	inArgs     = []
+	for k in folderKeys:
+		inArgs.append([prms, k])	
+	pool = Pool(processes=12)
+	jobs = pool.map_async(tar_crop_images_by_folderid, inArgs)	
+	res  = jobs.get()
+	del pool
+
+##
+#scp the tar files
+def scp_crop_images(prms):
+	pass		
 
 ##
 #Filter groups by distance

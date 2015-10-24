@@ -20,6 +20,7 @@ import rot_utils as ru
 from geopy.distance import vincenty as geodist
 import copy
 import street_params as sp
+from multiprocessing import Pool
 
 ##
 #Get the prefixes for a specific folderId
@@ -697,12 +698,17 @@ def _make_window_file_by_folderid(args):
 
 ##
 #Make window files for multiple folders
-def make_window_files_geo_folders(prms):
+def make_window_files_geo_folders(prms, isForceWrite=False):
 	keys   = get_geo_folderids(prms)
 	inArgs = []
 	for k in keys:
+		if not isForceWrite:
+			wFile     = prms.paths.exp.window.folderFile % k
+			if osp.exists(wFile):
+				print ('Window file for %s exists, skipping rewriting' % wFile)
+				continue
 		inArgs.append([prms, k])
-	pool = Pool(processes=24)
+	pool = Pool(processes=6)
 	jobs = pool.map_async(_make_window_file_by_folderid, inArgs)
 	res  = jobs.get()
 	del pool		
