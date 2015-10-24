@@ -28,7 +28,87 @@ def smallnetv2_pool4_ptch(isRun=False):
 	else:
 		return prms, cPrms	
 
+def smallnetv2_pool4_ptch_crp192_rawImSz256_oldsplits(isRun=False):
+	prms  = sp.get_prms(geoFence='dc-v1', labels=['ptch'], 
+											labelType=['wngtv'],
+											lossType=['classify'],
+											rawImSz=256, crpSz=192)
+	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
+							 concatLayer='pool4', lossWeight=10.0)
+	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000, clip_gradients=10.0)
+	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=[0])
+	if isRun:
+		exp   = se.make_experiment(prms, cPrms)
+		exp.run()
+	else:
+		return prms, cPrms	
 
+def smallnetv2_pool4_ptch_crp192_rawImSz256_newsplits(isRun=False, isGray=False):
+	prms  = sp.get_prms(geoFence='dc-v1', labels=['ptch'], 
+											labelType=['wngtv'],
+											lossType=['classify'],
+											rawImSz=256, crpSz=192,
+											splitDist=100)
+	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
+							 concatLayer='pool4', lossWeight=10.0,
+							 isGray=isGray)
+	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000, clip_gradients=10.0)
+	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=[0])
+	if isRun:
+		exp   = se.make_experiment(prms, cPrms)
+		exp.run()
+	else:
+		return prms, cPrms	
+
+
+def smallnetv2_pool4_nrml_crp192_rawImSz256_newsplits(isRun=False):
+	prms  = sp.get_prms(geoFence='dc-v1', labels=['nrml'], 
+											labelType=['xyz'],
+											lossType=['l2'],
+											rawImSz=256, crpSz=192)
+	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
+							 concatLayer='pool4', lossWeight=10.0, maxJitter=0)
+	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000, clip_gradients=10.0)
+	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=[1])
+	if isRun:
+		exp   = se.make_experiment(prms, cPrms)
+		exp.run()
+	else:
+		return prms, cPrms	
+
+
+def smallnetv2_pool4_ptch_pose_crp192_rawImSz256(isRun=False):
+	prms  = sp.get_prms(geoFence='dc-v1', labels=['pose', 'ptch'], 
+											labelType=['quat', 'wngtv'],
+											lossType=['l2', 'classify'], labelFrac=[0.5,0.5],
+											rawImSz=256, crpSz=192)
+	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
+							 concatLayer='pool4', lossWeight=10.0)
+	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000, clip_gradients=10.0)
+	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=[1])
+	if isRun:
+		exp   = se.make_experiment(prms, cPrms)
+		exp.run()
+	else:
+		return prms, cPrms	
+
+def smallnetv2_pool4_ptch_pose_crp192_rawImSz256_newsplits(isRun=False, isGray=False):
+	prms  = sp.get_prms(geoFence='dc-v1', crpSz=192,
+													 rawImSz=256, splitDist=100,
+													 labels=['pose', 'ptch'], labelType=['quat', 'wngtv'],
+													 labelFrac=[0.5, 0.5], lossType=['l2', 'classify'])
+	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
+							 concatLayer='pool4', lossWeight=10.0,
+								randCrop=False, concatDrop=False,
+								isGray=isGray)
+	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000, clip_gradients=10.0)
+	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=[0])
+	if isRun:
+		exp   = se.make_experiment(prms, cPrms)
+		exp.run()
+	else:
+		return prms, cPrms	
+	
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%% POSE %%%%%%%%%%%%%%%%%%%%%%%%%%% #
 def smallnetv2_pool4_pose(isRun=False):
@@ -96,6 +176,35 @@ def smallnetv2_pool4_pose_crp192(isRun=False):
 	else:
 		return prms, cPrms	
 
+def smallnetv2_pool4_pose_crp192_rawImSz256(isRun=False):
+	prms  = sp.get_prms_pose(geoFence='dc-v1', crpSz=192,
+													 rawImSz=256)
+	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
+							 concatLayer='pool4', lossWeight=10.0)
+	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000, clip_gradients=10.0)
+	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=[1])
+	if isRun:
+		exp   = se.make_experiment(prms, cPrms)
+		exp.run()
+	else:
+		return prms, cPrms	
+
+def smallnetv2_pool4_pose_crp192_rawImSz256_newsplits(isRun=False, isGray=False):
+	prms  = sp.get_prms_pose(geoFence='dc-v1', crpSz=192,
+													 rawImSz=256, splitDist=100)
+	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
+							 concatLayer='pool4', lossWeight=10.0,
+								randCrop=False, concatDrop=False,
+								isGray=isGray)
+	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000, clip_gradients=10.0)
+	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=[1])
+	if isRun:
+		exp   = se.make_experiment(prms, cPrms)
+		exp.run()
+	else:
+		return prms, cPrms	
+	
+
 #Same as above but with random cropping
 def smallnetv2_pool4_pose_crp192_randcrp(isRun=False):
 	prms  = sp.get_prms_pose(geoFence='dc-v1', crpSz=192)
@@ -109,6 +218,39 @@ def smallnetv2_pool4_pose_crp192_randcrp(isRun=False):
 		exp.run()
 	else:
 		return prms, cPrms	
+
+#Same as above but with dropouts
+def smallnetv2_pool4_pose_crp192_randcrp_drop(isRun=False):
+	prms  = sp.get_prms_pose(geoFence='dc-v1', crpSz=192)
+	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
+							 concatLayer='pool4', lossWeight=10.0,
+								randCrop=True, concatDrop=True)
+	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000, clip_gradients=10.0)
+	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=[1])
+	if isRun:
+		exp   = se.make_experiment(prms, cPrms)
+		exp.run()
+	else:
+		return prms, cPrms	
+
+
+#Pose and patch networks
+def smallnetv2_pool4_pose_ptch_crp192(isRun=False):
+	prms  = sp.get_prms(geoFence='dc-v1', crpSz=192,
+						labels=['pose', 'ptch'],
+						labelType=['quat', 'wngtv'],
+						lossType=['l2', 'classify'],
+						ptchPosFrac=0.5)
+	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
+							 concatLayer='pool4', lossWeight=10.0)
+	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000, clip_gradients=10.0)
+	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=[1])
+	if isRun:
+		exp   = se.make_experiment(prms, cPrms)
+		exp.run()
+	else:
+		return prms, cPrms	
+
 
 
 ########### NETWORK V3 ######################################

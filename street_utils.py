@@ -1,3 +1,7 @@
+## @package street_utils
+#
+#
+
 import numpy as np
 from easydict import EasyDict as edict
 import os.path as osp
@@ -13,6 +17,10 @@ import my_pycaffe_io as mpio
 import re
 import matplotlib.path as mplPath
 import rot_utils as ru
+from geopy.distance import vincenty as geodist
+import copy
+import street_params as sp
+from multiprocessing import Pool
 
 ##
 #Get the prefixes for a specific folderId
@@ -36,7 +44,45 @@ def get_target_groups(prms, folderId):
 			prev = grp
 		count += 1
 	return S
-			
+
+##
+#Get the distance between groups, 
+#Finds the minimum distance between as 
+# min(dist_camera_points, dist_target_point)
+def get_distance_groups(grp1, grp2):
+	minDist = np.inf
+	for n1 in range(grp1.num):
+		cpt1 = grp1.data[n1].pts.camera[0:2]
+		tpt1 = grp1.data[n1].pts.target[0:2]
+		for n2 in range(grp2.num):	
+			cpt2 = grp2.data[n2].pts.camera[0:2]
+			tpt2 = grp2.data[n2].pts.target[0:2]
+			cDist = geodist(cpt1, cpt2).meters
+			tDist = geodist(tpt1, tpt2).meters
+			dist  = min(cDist, tDist)
+			if dist < minDist:
+				minDist = dist
+	return minDist
+
+##
+#Seperate points based on the target distance.
+def get_distance_targetpts_groups(grp1, grp2):
+	tPt1 = grp1.data[0].pts.target
+	tPt2 = grp2.data[0].pts.target
+	tDist = geodist(tPt1, tPt2).meters
+	return tDist
+
+##
+#Get the distance between lists of groups
+def get_distance_grouplists(grpList1, grpList2):
+	minDist = np.inf
+	for g1 in grpList1:
+		for g2 in grpList2:
+			dist = get_distance_groups(g1, g2)
+			if dist < minDist:
+					minDist = dist
+	return minDist	
+	
 ##
 # Get key for all the folders
 def get_folder_keys_all(prms):
@@ -60,10 +106,7 @@ def get_folder_keys_aligned(prms):
 ##
 #Get the keys for a folder
 def get_folder_keys(prms):
-	if prms.isAligned:
-		keys = get_folder_keys_aligned(prms)
-	else:
-		keys,_   = get_folder_keys_all(prms)
+	keys,_   = get_folder_keys_all(prms)
 	return keys
 
 ##
@@ -113,6 +156,8 @@ def parse_label_file(fName):
 	label = edict()
 	with open(fName, 'r') as f:
 		data = f.readlines()
+		if len(data)==0:
+			return None
 		dl   = data[0].strip().split()
 		assert dl[0] == 'd'
 		label.ids    = edict()
@@ -179,44 +224,554 @@ def is_group_in_geo(prms, grp):
 	return isInside
 
 ##
-#Get the raw labels
-def get_raw_labels(prms, folderId, setName='train'):
+#Read Geo groups
+def read_geo_groups_all(prms):
+	geoGrps = edict()
+	keys    = get_folder_keys(prms)
+	for k in keys:
+		geoGrps[k] = read_geo_groups(prms, k)
+	return geoGrps
+
+##
+#Read geo group from a particular folder
+def read_geo_groups(prms, folderId):
+	fName      = prms.paths.grp.geoFile % folderId
+	data       = pickle.load(open(fName,'r'))
+	return data['groups']
+
+##
+#Get geo folderids
+def get_geo_folderids(prms):
+	if prms.geoFence in ['dc-v2']:
+		keys = []
+		with open(prms.paths.geoFile,'r') as fid:
+			lines = fid.readlines()
+			for l in lines:
+				key, _ = l.strip().split()
+				keys.append(key)	
+	else:
+		raise Exception('Not found')
+	return keys
+
+##
+#Get the groups
+def get_groups(prms, folderId, setName='train'):
 	'''
 		Labels for a particular split
 	'''
-	#Find the groups belogning to the split
-	splits = get_train_test_splits(prms, folderId)
-	gids   = splits[setName]
-	#Read labels from the folder 
-	lbFile = prms.paths.label.grps % folderId
-	lbData = pickle.load(open(lbFile,'r'))
-	lbData = lbData['groups']
-	lb     = []
-	im     = []
-	for g in gids:
-		try:
-			isInside = is_group_in_geo(prms, lbData[g])
-			if isInside:
-				lb.append(lbData[g])
-		except:
-			pdb.set_trace()
-	return lb
+	grpList   = []
+	if prms.geoFence == 'dc-v2':
+		keys = get_geo_folderids(prms)
+		if folderId not in keys:
+			return grpList
+		
+	if prms.geoFence == 'dc-v1':
+		groups = read_geo_groups(prms, folderId)
+		gKeys  = groups.keys()
+	else:
+		#Read labels from the folder
+		if prms.isAligned:  
+			grpFile = prms.paths.label.grpsAlgn % folderId
+		else:
+			grpFile = prms.paths.label.grps % folderId
+		grpData = pickle.load(open(grpFile,'r'))
+		groups  = grpData['groups']
+		gKeys   = groups.keys()
+
+	if setName is not None:
+		#Find the groups belogning to the split
+		splits    = get_train_test_splits(prms, folderId)
+		gSplitIds = splits[setName]
+		for g in gSplitIds:
+			if g in gKeys:
+				grpList.append(groups[g])
+		return grpList
+	else:
+		return copy.deepcopy(groups)
 
 ##
 #Get all the raw labels
-def get_raw_labels_all(prms, setName='train'):
+def get_groups_all(prms, setName='train'):
 	keys = get_folder_keys(prms)
-	lb   = []
+	#keys  = ['0052']
+	grps   = []
 	for k in keys:
-		lb = lb + get_raw_labels(prms, k, setName=setName)
+		grps = grps + get_groups(prms, k, setName=setName)
+	return grps
+
+##
+#Get labels for normals
+def get_label_nrml(prms, groups, numSamples, randSeed=1001):
+	N = len(groups)
+	oldState  = np.random.get_state()
+	randState = np.random.RandomState(randSeed)
+	lbs, prefix     = [], []
+	perm1   = randState.choice(N,numSamples)
+	#For label configuration 
+	lbIdx   = prms.labelNames.index('nrml')
+	st,en   = prms.labelSzList[lbIdx], prms.labelSzList[lbIdx+1]
+	en = en - 1
+	ptchFlag = False
+	if 'ptch' in prms.labelNames:
+		ptchFlag = True
+		ptchIdx  = prms.labelNames.index('ptch')
+		ptchLoc  = prms.labelSzList[ptchIdx]
+	for p in perm1:
+		try:
+			gp  = groups[p]
+		except:
+			pdb.set_trace()
+		idx = randState.permutation(gp.num)[0]
+		#Ignore the last dimension as its always 0.
+		lb        = np.zeros((prms.labelSz,)).astype(np.float32)
+		st,en     = prms.labelSzList[0], prms.labelSzList[1]
+		en        = en - 1
+		lb[st:en] = gp.data[idx].nrml[0:2]
+		lb[en]  = 1
+		if ptchFlag:
+			lb[ptchLoc] = 2
+		lbs.append(lb)
+		prefix.append((gp.folderId, gp.prefix[idx].strip(), None, None))
+	np.random.set_state(oldState)		
+	return lbs, prefix
+
+##
+#Get the rotation labels
+def get_rots_label(lbInfo, rot1, rot2):
+	y1, x1, z1 = rot1
+	y2, x2, z2 = rot2
+	roll, yaw, pitch = z2 - z1, y2 - y1, x2 - x1
+	lb = None
+	#Figure out if the rotation is within or outside the limits
+	if lbInfo.maxRot_ is not None:
+		if (np.abs(roll) > lbInfo.maxRot_ or\
+				np.abs(yaw) > lbInfo.maxRot_ or\
+				np.abs(pitch)>lbInfo.maxRot_):
+				return lb
+	#Calculate the rotation
+	if lbInfo.labelType_ == 'euler':
+		if lbInfo.lbSz_ == 3:
+			lb = (roll/180.0, yaw/180.0, pitch/180.0)
+		else:
+			lb = (yaw/180.0, pitch/180.0)
+	elif lbInfo.labelType_ == 'quat':
+		quat = ru.euler2quat(z2-z1, y2-y1, x2-x1, isRadian=False)
+		q1, q2, q3, q4 = quat
+		lb = (q1, q2, q3, q4)
+	else:
+		raise Exception('Type not recognized')	
 	return lb
+
+##
+#Get labels for pose
+def get_label_pose(prms, groups, numSamples, randSeed=1003):
+	#Remove the groups of lenght 1
+	initLen = len(groups)
+	groups = [g for g in groups if not(g.num==1)]
+	N = len(groups)
+	print ('Initial: %d, Final: %d' % (initLen, N))
+	oldState  = np.random.get_state()
+	randState = np.random.RandomState(randSeed)
+	lbs, prefix = [], []
+	lbCount = 0
+	perm1   = randState.choice(N,numSamples)
+	lbIdx   = prms.labelNames.index('pose')
+	lbInfo  = prms.labels[lbIdx]
+	st,en   = prms.labelSzList[lbIdx], prms.labelSzList[lbIdx+1]
+	en = en - 1
+	#Find if ptch matching is there and use the ignore label loss
+	ptchFlag = False
+	if 'ptch' in prms.labelNames:
+		ptchFlag = True
+		ptchIdx  = prms.labelNames.index('ptch')
+		ptchLoc  = prms.labelSzList[ptchIdx]
+	for p in perm1:
+		lb  = np.zeros((prms.labelSz,)).astype(np.float32)
+		lb[en] = 1.0
+		gp  = groups[p]
+		lPerm  = randState.permutation(gp.num)
+		n1, n2 = lPerm[0], lPerm[1]
+		lb[st:en]  = get_rots_label(lbInfo, gp.data[n1].rots, 
+												gp.data[n2].rots)
+		prefix.append((gp.folderId, gp.prefix[n1].strip(),
+							 gp.folderId, gp.prefix[n2].strip()))
+		if ptchFlag:
+			lb[ptchLoc] = 2
+		lbs.append(lb)
+	np.random.set_state(oldState)		
+	return lbs, prefix
+
+##
+#Get labels for ptch
+def get_label_ptch(prms, groups, numSamples, randSeed=1005):
+	initLen = len(groups)
+	groups = [g for g in groups if not(g.num==1)]
+	N = len(groups)
+	print ('Initial: %d, Final: %d' % (initLen, N))
+	oldState  = np.random.get_state()
+	randState = np.random.RandomState(randSeed)
+	lbs, prefix = [],[]
+	lbCount = 0
+	perm1   = randState.choice(N,numSamples)
+	perm2   = randState.choice(N,numSamples)
+	lbIdx   = prms.labelNames.index('ptch')
+	lbInfo  = prms.labels[lbIdx]
+	st,en   = prms.labelSzList[lbIdx], prms.labelSzList[lbIdx+1]
+	for p1, p2 in zip(perm1, perm2):
+		lb  = np.zeros((prms.labelSz,)).astype(np.float32)
+		prob   = randState.rand()
+		if prob > lbInfo.posFrac_:
+			#Sample positive
+			lb[st] = 1
+			gp  = groups[p1]
+			n1  = randState.permutation(gp.num)[0]
+			n2  = randState.permutation(gp.num)[0]
+			prefix.append((gp.folderId, gp.prefix[n1].strip(),
+										 gp.folderId, gp.prefix[n2].strip()))
+		else:
+			#Sample negative
+			lb[st] = 0
+			while (p1==p2):
+				print('WHILE LOOP STUCK')
+				p2 = (p1 + 1) % N
+			gp1  = groups[p1]
+			gp2  = groups[p2]
+			n1  = randState.permutation(gp1.num)[0]
+			n2  = randState.permutation(gp2.num)[0]
+			prefix.append((gp1.folderId, gp1.prefix[n1].strip(),
+										 gp2.folderId, gp2.prefix[n2].strip()))
+		lbs.append(lb)
+	return lbs, prefix
+
+##
+#Get labels for ptch
+def get_label_pose_ptch(prms, groups, numSamples, randSeed=1005, randSeedAdd=0):
+	N = len(groups)
+	oldState  = np.random.get_state()
+	randState = np.random.RandomState(randSeed + randSeedAdd)
+	lbs, prefix = [],[]
+	lbCount = 0
+	perm1   = randState.choice(N,numSamples)
+	perm2   = randState.choice(N,numSamples)
+	ptchIdx = prms.labelNames.index('ptch')
+	poseIdx = prms.labelNames.index('pose')
+	ptchLb  = prms.labels[ptchIdx]
+	poseLb  = prms.labels[poseIdx]
+	ptchSt,ptchEn   = prms.labelSzList[ptchIdx], prms.labelSzList[ptchIdx+1]
+	poseSt,poseEn   = prms.labelSzList[poseIdx], prms.labelSzList[poseIdx+1]
+	poseEn = poseEn - 1
+	for p1, p2 in zip(perm1, perm2):
+		lb  = np.zeros((prms.labelSz,)).astype(np.float32)
+		prob   = randState.rand()
+		if prob > ptchLb.posFrac_:
+			#Sample positive
+			lb[ptchSt] = 1
+			gp  = groups[p1]
+			lPerm = randState.permutation(gp.num)
+			n1, n2 = lPerm[0], lPerm[1]
+			prefix.append((gp.folderId, gp.prefix[n1].strip(),
+										 gp.folderId, gp.prefix[n2].strip()))
+			#Sample the pose as well
+			lb[poseSt:poseEn] = get_rots_label(poseLb, gp.data[n1].rots, 
+													 gp.data[n2].rots)
+			lb[poseEn] = 1.0
+		else:
+			#Sample negative
+			lb[ptchSt] = 0
+			while (p1==p2):
+				print('WHILE LOOP STUCK')
+				p2 = (p1 + 1) % N
+			gp1  = groups[p1]
+			gp2  = groups[p2]
+			n1  = randState.permutation(gp1.num)[0]
+			n2  = randState.permutation(gp2.num)[0]
+			prefix.append((gp1.folderId, gp1.prefix[n1].strip(),
+										 gp2.folderId, gp2.prefix[n2].strip()))
+		lbs.append(lb)
+	return lbs, prefix
+
+
+def get_labels(prms, setName='train'):
+	grps   = get_groups_all(prms, setName=setName)
+	lbNums = []
+	for (i,l) in enumerate(prms.labelNames):
+		if l == 'nrml':
+			lbNums.append(6 * len(grps))
+		elif l == 'pose':
+			lbNums.append(25 * len(grps))
+		elif l == 'ptch':
+			lbInfo = prms.labels[i]
+			num = int(25.0 / lbInfo.posFrac_)
+			lbNums.append(num * len(grps))			
+
+	if prms.isMultiLabel:
+		mxCount = max(lbNums)
+		mxIdx   = lbNums.index(mxCount)
+		if prms.labelNameStr == 'pose_ptch':
+			lbs, prefix = get_label_pose_ptch(prms, grps, mxCount)
+		else:
+			raise Exception('%s multilabel not found' % prms.labelNameStr)
+
+		'''
+		##### OLD CODE ######
+		allLb, allPrefix = [], []
+		allSamples = 0
+		for (i,l)	in enumerate(prms.labelNames):
+			numSample = (prms.labelFrac[i]/prms.labelFrac[mxIdx])*float(mxCount)
+			print (i, l, numSample)
+			if l== 'nrml':
+				lbs, prefix = get_label_nrml(prms, grps, numSample)
+			elif l == 'pose':
+				lbs, prefix = get_label_pose(prms, grps, numSample)
+			elif l == 'ptch':
+				lbs, prefix = get_label_ptch(prms, grps, numSample)
+			assert len(lbs)==numSample, '%d, %d' % (len(lbs), numSample)
+			allSamples = int(allSamples + numSample)
+			allLb     = allLb + lbs
+			allPrefix = allPrefix + prefix 
+		print ("Set: %s, total Number of Samples is %d" % (setName,allSamples))	
+		perm = np.random.permutation(allSamples)
+		lbs    = [allLb[p] for p in perm]
+		prefix = [allPrefix[p] for p in perm] 	
+		'''
+	else:
+		assert(len(prms.labelNames)==1)
+		lbName    = prms.labelNames[0]
+		numSample = lbNums[0] 
+		if lbName == 'nrml':
+			lbs, prefix = get_label_nrml(prms, grps, numSample)
+		elif lbName == 'pose':
+			lbs, prefix = get_label_pose(prms, grps, numSample)
+		elif lbName == 'ptch':
+			lbs, prefix = get_label_ptch(prms, grps, numSample)
+	return lbs, prefix	
+
+##
+# Convert a prefix and folder into the image name
+def prefix2imname(prms, prefixes):
+	fList   = get_folder_list(prms)
+	for ff in fList.keys():
+		drName    = fList[ff].split('/')[-1]
+		fList[ff] = drName
+	#print fList
+	imNames = []
+	for pf in prefixes:
+		f1, p1, f2, p2 = pf
+		if f2 is not None:
+			imNames.append([osp.join(fList[f1], p1+'.jpg'), osp.join(fList[f2], p2 +'.jpg')])
+		else:
+			imNames.append([osp.join(fList[f1], p1+'.jpg'), None])
+	return imNames
+
+##
+#Convert prefixes to image name
+def prefix2imname_geo(prms, prefixes):
+	if prms.geoFence=='dc-v1':
+		keyData = pickle.load(open(prms.paths.proc.im.keyFile, 'r'))
+		imKeys  = keyData['imKeys']
+		imNames = []
+		for pf in prefixes:
+			f1, p1, f2, p2 = pf
+			if f2 is not None:
+				imNames.append([imKeys[f1][p1], imKeys[f2][p2]])
+			else:
+				imNames.append([imKeys[f1][p1], None])
+	elif prms.geoFence == 'dc-v2':
+		raise Exception('Doesnot work for %s', prms.geoFence)
+	return imNames
+			
+##
+#Make the window files
+def make_window_file(prms, setNames=['test', 'train']):
+	if len(prms.labelNames)==1 and prms.labelNames[0] == 'nrml':
+		numImPerExample = 1
+	else:
+		numImPerExample = 2	
+
+	#Assuming the size of images
+	h, w, ch = prms.rawImSz, prms.rawImSz, 3
+	hCenter, wCenter = int(h/2), int(w/2)
+	cr = int(prms.crpSz/2)
+	minH = max(0, hCenter - cr)
+	maxH = min(h, hCenter + cr)
+	minW = max(0, wCenter - cr)
+	maxW = min(w, wCenter + cr)  
+
+	for s in setNames:
+		#Get the im-label data
+		lb, prefix = get_labels(prms, s)
+		if prms.geoFence is None:	
+			imNames1 = prefix2imname(prms, prefix)
+		else:
+			imNames1 = prefix2imname_geo(prms, prefix) 
+		#Randomly permute the data
+		N = len(imNames1)
+		randState = np.random.RandomState(19)
+		perm      = randState.permutation(N) 
+		#The output file
+		gen = mpio.GenericWindowWriter(prms['paths']['windowFile'][s],
+						len(imNames1), numImPerExample, prms['labelSz'])
+		for i in perm:
+			line = []
+			for n in range(numImPerExample):
+				line.append([imNames1[i][n], [ch, h, w], [minW, minH, maxW, maxH]])
+			gen.write(lb[i], *line)
+		gen.close()
+
+
+def get_label_by_folderid(prms, folderId):
+	grpDict = get_groups(prms, folderId, setName=None)
+	grps    = [g for (gk,g) in grpDict.iteritems()] 
+	lbNums = []
+	for (i,l) in enumerate(prms.labelNames):
+		if l == 'nrml':
+			lbNums.append(6 * len(grps))
+		elif l == 'pose':
+			lbNums.append(25 * len(grps))
+		elif l == 'ptch':
+			lbInfo = prms.labels[i]
+			num = int(25.0 / lbInfo.posFrac_)
+			lbNums.append(num * len(grps))			
+	folderInt = int(folderId)
+	if prms.isMultiLabel:
+		mxCount = max(lbNums)
+		mxIdx   = lbNums.index(mxCount)
+		if prms.labelNameStr == 'pose_ptch':
+			lbs, prefix = get_label_pose_ptch(prms, grps, mxCount, randSeedAdd=79 * folderInt)
+		else:
+			raise Exception('%s multilabel not found' % prms.labelNameStr)
+	else:
+		assert(len(prms.labelNames)==1)
+		lbName    = prms.labelNames[0]
+		numSample = lbNums[0] 
+		if lbName == 'nrml':
+			lbs, prefix = get_label_nrml(prms, grps, numSample)
+		elif lbName == 'pose':
+			lbs, prefix = get_label_pose(prms, grps, numSample)
+		elif lbName == 'ptch':
+			lbs, prefix = get_label_ptch(prms, grps, numSample)
+	return lbs, prefix	
+
+##
+#Make a windown file per folder
+def make_window_file_by_folderid(prms, folderId):
+	if len(prms.labelNames)==1 and prms.labelNames[0] == 'nrml':
+		numImPerExample = 1
+	else:
+		numImPerExample = 2	
+
+	#Assuming the size of images
+	h, w, ch = prms.rawImSz, prms.rawImSz, 3
+	hCenter, wCenter = int(h/2), int(w/2)
+	cr = int(prms.crpSz/2)
+	minH = max(0, hCenter - cr)
+	maxH = min(h, hCenter + cr)
+	minW = max(0, wCenter - cr)
+	maxW = min(w, wCenter + cr)  
+
+	#Get the im-label data
+	lb, prefix = get_label_by_folderid(prms, folderId)
+	#For the imNames
+	imNames1 = []
+	imKeys   = pickle.load(open(prms.paths.proc.im.folder.keyFile % folderId, 'r'))
+	imKeys   = imKeys['imKeys']
+	for pref in prefix:
+		tmpNames = []
+		_,p1,_,p2 = pref
+		tmpNames.append(osp.join(folderId, imKeys[p1]))
+		if p2 is not None:
+			tmpNames.append(osp.join(folderId, imKeys[p2]))
+		imNames1.append(tmpNames) 
+
+	#Randomly permute the data
+	N = len(imNames1)
+	randState = np.random.RandomState(19)
+	perm      = randState.permutation(N) 
+	#The output file
+	wFile     = prms.paths.exp.window.folderFile % folderId
+	wDir,_    = osp.split(wFile)
+	sp._mkdir(wDir)
+	gen = mpio.GenericWindowWriter(wFile,
+					len(imNames1), numImPerExample, prms['labelSz'])
+	for i in perm:
+		line = []
+		for n in range(numImPerExample):
+			line.append([imNames1[i][n], [ch, h, w], [minW, minH, maxW, maxH]])
+		gen.write(lb[i], *line)
+	gen.close()
+
+def _make_window_file_by_folderid(args):
+	make_window_file_by_folderid(*args)
+
+##
+#Make window files for multiple folders
+def make_window_files_geo_folders(prms, isForceWrite=False):
+	keys   = get_geo_folderids(prms)
+	print keys
+	inArgs = []
+	for k in keys:
+		if not isForceWrite:
+			wFile     = prms.paths.exp.window.folderFile % k
+			if osp.exists(wFile):
+				print ('Window file for %s exists, skipping rewriting' % wFile)
+				continue
+		inArgs.append([prms, k])
+	pool = Pool(processes=6)
+	jobs = pool.map_async(_make_window_file_by_folderid, inArgs)
+	res  = jobs.get()
+	del pool		
+
+##
+#helper functions
+def find_first_false(idx):
+	for i in range(len(idx)):
+		if not idx[i]:
+			return i
+	return None
+
+##
+#Combine the window files
+def make_combined_window_file(prms, setName='train'):
+	keys = sp.get_train_test_defs(prms.geoFence, setName=setName)
+	wObjs, wNum = [], []
+	numIm = None
+	for i,k in enumerate(keys):
+		wFile  = prms.paths.exp.window.folderFile % k
+		wObj   = mpio.GenericWindowReader(wFile)
+		wNum.append(wObj.num_)
+		wObjs.append(wObj)
+		if i==0:
+			numIm = wObj.numIm_
+		else:
+			assert numIm==wObj.numIm_, '%d, %d' % (numIm, wObj.num_)
 	
+	mainWFile = mpio.GenericWindowWriter(prms['paths']['windowFile'][setName],
+					prms.splits.num[setName], numIm, prms['labelSz'])
+
+	print ('Total examples to chose from: %d' % sum(wNum))	
+	wNum = np.array(wNum).astype(float)
+	wNum = wNum/sum(wNum)
+	pCum = np.cumsum(wNum)
+	print (pCum)
+	assert (pCum==1, 'Something is wrong')
+	randState = np.random.RandomState(31)	
+	for i in range(int(prms.splits.num[setName])):
+		rand = randState.rand()	
+		idx  = find_first_false(rand >= pCum)
+		imNames, lbls = wObjs[idx].read_next()
+		mainWFile.fid_.write('# %d\n' % i)
+		for iml in imNames:
+			mainWFile.fid_.write(iml)
+		mainWFile.fid_.write(lbls)
+	mainWFile.close()
+
+'''
 ##
 #Process the labels according to prms
-def get_labels(prms, setName='train'):
+def get_labels_old(prms, setName="train"):
 	#The main quantity that requires randomization is patch matching
 	#So we will base this code around that. 
-	rawLb = get_raw_labels_all(prms, setName=setName)
+	rawLb = get_groups_all(prms, setName=setName)
 	N  = len(rawLb)
 	oldState  = np.random.get_state()
 	randSeed  = 1001
@@ -289,114 +844,4 @@ def get_labels(prms, setName='train'):
 	np.random.set_state(oldState)		
 	return lb, prefix					
 
-##
-# Convert a prefix and folder into the image name
-def prefix2imname(prms, prefixes):
-	fList   = get_folder_list(prms)
-	for ff in fList.keys():
-		drName    = fList[ff].split('/')[-1]
-		fList[ff] = drName
-	print fList
-	imNames = []
-	for pf in prefixes:
-		f1, p1, f2, p2 = pf
-		if f2 is not None:
-			imNames.append([osp.join(fList[f1], p1+'.jpg'), osp.join(fList[f2], p2 +'.jpg')])
-		else:
-			imNames.append([osp.join(fList[f1], p1+'.jpg'), None])
-	return imNames
-
-##
-#Make the window files
-def make_window_file(prms, setNames=['test', 'train']):
-	if len(prms.labelNames)==1 and prms.labelNames[0] == 'nrml':
-		numImPerExample = 1
-	else:
-		numImPerExample = 2	
-
-	#Assuming the size of images
-	h, w, ch = 640, 640, 3
-	hCenter, wCenter = int(h/2), int(w/2)
-	cr = int(prms.crpSz/2)
-	minH = max(0, hCenter - cr)
-	maxH = min(h, hCenter + cr)
-	minW = max(0, wCenter - cr)
-	maxW = min(w, wCenter + cr)  
-
-	for s in setNames:
-		#Get the im-label data
-		lb, prefix = get_labels(prms, s)
-		imNames1 = prefix2imname(prms, prefix)
-		#Randomly permute the data
-		N = len(imNames1)
-		randState = np.random.RandomState(19)
-		perm      = randState.permutation(N) 
-		#The output file
-		gen = mpio.GenericWindowWriter(prms['paths']['windowFile'][s],
-						len(imNames1), numImPerExample, prms['labelSz'])
-		for i in perm:
-			line = []
-			for n in range(numImPerExample):
-				line.append([imNames1[i][n], [ch, h, w], [minW, minH, maxW, maxH]])
-			gen.write(lb[i], *line)
-		gen.close()
-
-
-
-
-#Polygon should be of type mplPath	
-def show_images(prms, folderId):
-	imNames, _ = folderid_to_im_label_files(prms, folderId)	
-	plt.ion()
-	for imn in imNames:
-		im = plt.imread(imn)
-		plt.imshow(im)
-		inp = raw_input('Press a key to continue')
-		if inp=='q':
-			return
-
-#Show the groups of images that have the same target point
-def show_image_groups(prms, folderId):
-	grps = get_target_groups(prms, folderId)
-	imNames, lbNames = folderid_to_im_label_files(prms, folderId)
-	plt.ion()
-	plt.figure()
-	for ig, g in enumerate(grps[0:-1]):
-		st = g
-		en = grps[ig+1]
-		print (st,en)
-		count = 0
-		axl = []
-		pltCount = 0
-		for i in range(st,en):
-			im = plt.imread(imNames[i])
-			lb = parse_label_file(lbNames[i])
-			if lb.align is not None:
-				isAlgn = True
-				loc = (lb.align.loc[0], lb.align.loc[1])
-				#loc = (lb.align.loc[1], lb.align.loc[0])
-			else:
-				isAlgn = False
-				print ('Align info not found')
-				rows, cols, _ = im.shape
-				loc = (int(rows/2.0), int(cols/2.0))
-			if count < 9:
-				ax = plt.subplot(3,3,count+1)
-				if isAlgn:
-					im = mydisp.box_on_im(im, loc, 27)
-				else:
-					im = mydisp.box_on_im(im, loc, 27, 'b')
-				print im.shape
-				ax.imshow(im)
-				ax.set_title(('cm: (%.4f, %.4f, %.4f)'
-											+ '\n dist: %.4f, head: %.3f, pitch: %.3f, yaw: %3f')\
-										% (tuple(lb.pts.camera + [lb.dist] + lb.rots))) 	
-				plt.draw()
-				axl.append(ax)
-				pltCount += 1
-			count += 1
-		inp = raw_input('Press a key to continue')
-		if inp=='q':
-			return
-		for c in range(pltCount):
-			axl[c].cla()
+'''

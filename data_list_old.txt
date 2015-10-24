@@ -53,17 +53,3 @@ gs://amirs/wbm_patches/may14/0060a.tar
 gs://amirs/wbm_patches/may14/0061.tar
 gs://amirs/wbm_patches/may14/0061a.tar
 gs://amirs/wbm_patches/may14/0063.tar
-gs://amirs/wbm_patches/may27/0064.tar
-gs://amirs/wbm_patches/may27/0065.tar
-gs://amirs/wbm_patches/may27/0066.tar
-gs://amirs/wbm_patches/may27/0067.tar
-gs://amirs/wbm_patches/may27/0068.tar
-gs://amirs/wbm_patches/may27/0069.tar
-gs://amirs/wbm_patches/may27/0070.tar
-gs://amirs/wbm_patches/may27/0071.tar
-gs://amirs/wbm_patches/may27/0072.tar
-gs://amirs/wbm_patches/may27/0073.tar
-gs://amirs/wbm_patches/may27/0074.tar
-gs://amirs/wbm_patches/may27/0075.tar
-gs://amirs/wbm_patches/may27/0076.tar
-gs://amirs/wbm_patches/may27/0077.tar

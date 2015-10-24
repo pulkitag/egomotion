@@ -391,10 +391,12 @@ layer {
   bottom: "concat_pool4"
   top: "common_fc"
   param {
+		name: "common_fc_w"
     lr_mult: 1
     decay_mult: 1
   }
   param {
+		name: "common_fc_b"
     lr_mult: 2
     decay_mult: 0
   }

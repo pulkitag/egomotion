@@ -1,3 +1,6 @@
+## @package street_params
+#	Parameter settings
+
 import numpy as np
 from easydict import EasyDict as edict
 import os.path as osp
@@ -11,6 +14,7 @@ import mydisplay as mydisp
 import pickle
 import matplotlib.path as mplPath
 import re
+import street_utils as su
 
 def _mkdir(fName):
 	if not osp.exists(fName):
@@ -68,8 +72,27 @@ def get_paths():
 	paths.proc.folders.key  = osp.join(paths.proc.folders.dr, 'key.txt') 
 	paths.proc.folders.pre  = osp.join(paths.proc.folders.dr, '%s.txt') 
 	#The keys for the algined folders
-	paths.proc.folders.aKey = osp.join(paths.proc.folders.dr, 'key-aligned.txt') 
+	paths.proc.folders.aKey  = osp.join(paths.proc.folders.dr, 'key-aligned.txt') 
+	#Keys for non-algined folders
+	paths.proc.folders.naKey = osp.join(paths.proc.folders.dr, 'key-non_aligned.txt') 
 
+	#Storing resized images
+	paths.proc.im    =  edict()
+	paths.proc.im.dr =  osp.join(paths.proc.dr, 'resize-im')
+	_mkdir(paths.proc.im.dr)
+	paths.proc.im.keyFile = osp.join(paths.proc.im.dr, 'im%d-keys.pkl') 
+	paths.proc.im.dr      = osp.join(paths.proc.im.dr, 'im%d')
+	#Count the number of keys already stored - useful for appending the files.
+	#Note that this count maynot be accurate but will be larger than the total number
+	#of images saved 	
+	paths.proc.im.keyCountFile = osp.join(paths.proc.im.dr, 'im%d-key-count.pkl') 
+	#Storing images folderwise
+	paths.proc.im.folder = edict()
+	folderDr = osp.join(paths.proc.im.dr, '%s')
+	paths.proc.im.folder.keyFile = osp.join(folderDr, 'keys.pkl')
+	paths.proc.im.folder.dr      = folderDr
+	paths.proc.im.folder.tarFile = osp.join(paths.proc.im.dr, '%s.tar')
+			
 	#Count info
 	paths.proc.countFile = osp.join(paths.proc.folders.dr, 'counts.h5')	
 
@@ -89,7 +112,11 @@ def get_paths():
 	grpsDir          = osp.join(paths.label.dr, 'groups')
 	_mkdir(grpsDir)
 	paths.label.grps = osp.join(grpsDir, '%s.pkl')
-
+	#Save the groups containing alignment data only
+	grpsAlgnDir      = osp.join(paths.label.dr, 'groups-aligned')
+	_mkdir(grpsAlgnDir)
+	paths.label.grpsAlgn = osp.join(grpsAlgnDir, '%s.pkl')
+		
 	paths.exp    = edict()
 	paths.exp.dr = osp.join(paths.dataDr, 'exp')
 	_mkdir(paths.exp.dr)
@@ -99,6 +126,12 @@ def get_paths():
 	_mkdir(paths.exp.window.dr) 
 	paths.exp.window.tr = osp.join(paths.exp.window.dr, 'train-%s.txt')
 	paths.exp.window.te = osp.join(paths.exp.window.dr, 'test-%s.txt')
+	#Folderwise window dir
+	paths.exp.window.folderDr   = osp.join(paths.exp.dr, 'folder-window-files')
+	_mkdir(paths.exp.window.folderDr)
+	# %s, %s -- folderId, windowFile-str   
+	paths.exp.window.folderFile = osp.join(paths.exp.window.folderDr, '%s', '%s.txt')
+	
 	#Snapshot dir
 	paths.exp.snapshot    = edict()
 	paths.exp.snapshot.dr = osp.join(paths.exp.dr, 'snapshots') 
@@ -113,7 +146,13 @@ def get_paths():
 	_mkdir(paths.res.dr)
 	paths.res.testImVisDr = osp.join(paths.res.dr, 'test-imvis')
 	_mkdir(paths.res.testImVisDr)
-	paths.res.testImVis   = osp.join(paths.res.testImVisDr, 'im%05d.jpg')   
+	#paths.res.testImVis   = osp.join(paths.res.testImVisDr, 'im%05d.jpg')   
+
+	paths.grp = edict()
+	paths.grp.keyStr    = '%07d'
+	paths.grp.geoDr     = osp.join(paths.res.dr, 'geo-grp') 
+	_mkdir(paths.grp.geoDr)
+	paths.grp.geoFile   = osp.join(paths.grp.geoDr, '%s', '%s.pkl')
 
 	#For legacy reasons
 	paths.expDir  = osp.join(paths.exp.dr, 'caffe-files')
@@ -151,7 +190,8 @@ def get_label_size(labelClass, labelType):
 ##
 class LabelNLoss(object):
 	def __init__(self, labelClass, labelType, loss, 
-							ptchPosFrac=0.5, maxRot=None, numBins=20):
+							ptchPosFrac=0.5, maxRot=None, numBins=20, 
+							isMultiLabel=False):
 		'''
 			ptchPosFrac: When considering patch matching data - the fraction of patches
 									 to consider as positives
@@ -162,9 +202,11 @@ class LabelNLoss(object):
 		self.label_     = labelClass
 		self.labelType_ = labelType
 		self.loss_      = loss
+		self.isMultiLabel = isMultiLabel
+		assert self.loss_ in ['l2', 'classify'], self.loss_
 		#augLbSz_ - augmented labelSz to include the ignore label option
 		self.augLbSz_, self.lbSz_  = self.get_label_sz()
-		self.lbStr_     = '%s-%s' % (self.label_, self.labelType_)
+		self.lbStr_       = '%s-%s' % (self.label_, self.labelType_)
 		if labelClass == 'ptch':
 			self.posFrac_ = ptchPosFrac
 			self.lbStr_   = self.lbStr_ + '-posFrac%.1f' % self.posFrac_ 	
@@ -176,36 +218,62 @@ class LabelNLoss(object):
 				self.lbStr_   = self.lbStr_ + 'classify-bn%d' % numBins
 				self.numBins_ = numBins 
 					
-	
 	def get_label_sz(self):
-		lbSz = get_label_size(self.label_, self.labelType_) 
-		if not(self.label_ == 'nrml') and self.loss_ in ['l2', 'l1', 'l2-tukey']:
-			#augLbSz = lbSz + 1
-			augLbSz  = lbSz
-		else:
+		lbSz = get_label_size(self.label_, self.labelType_)
+		if self.loss_ == 'classify':
 			augLbSz = lbSz
+		else:
+			augLbSz  = lbSz + 1
 		return augLbSz, lbSz
+
+
+def get_train_test_defs(geoFence, ver='v1', setName=None):
+	if geoFence == 'dc-v1':
+		if ver=='v1':
+			trainFolderKeys = ['0048']
+			testFolderKeys  = ['0052'] 
+		else:
+			raise Exception('%s not recognized' % v1)
+	elif geoFence == 'dc-v2':
+		geoFile = 'geofence/dc-v2.txt'
+		keys = []
+		with open(geoFile,'r') as fid:
+			lines = fid.readlines()
+			for l in lines:
+				key, _ = l.strip().split()
+				keys.append(key)	
+			testFolderKeys = ['0008']
+			trainFolderKeys = [k for k in keys if k not in testFolderKeys]
+	else:
+		raise Exception('%s not recognized' % geoFence)
+	if setName == 'train':
+		return trainFolderKeys
+	elif setName == 'test':
+		return testFolderKeys
+	elif setName is None:
+		return trainFolderKeys, testFolderKeys
 
 ##
 #get prms
 def get_prms(isAligned=True, 
 						 labels=['nrml'], labelType=['xyz'], 
-						 lossType=['l2'],
+						 lossType=['l2'], labelFrac=[1],
 						 labelNrmlz=None, 
 						 crpSz=101,
 						 numTrain=1e+06, numTest=1e+04,
 						 trnSeq=[], 
 						 tePct=1.0, teGap=5,
 						 ptchPosFrac=0.5, maxEulerRot=None, 
-						 geoFence=None):
+						 geoFence='dc-v1', rawImSz=640, 
+						 splitDist=None, splitVer='v1'):
 	'''
 		labels    : What labels to use - make it a list for multiple
 								kind of labels
 								 nrml - surface normals
 									 xyz - as nx, ny, nz
-								 ptch - patch matching
-									 wngtv - weak negatives 
-									 hngtv = hard negatices
+								 ptch: patch matching
+									 wngtv: weak negatives 
+									 hngtv: hard negatices
 								 pose - relative pose	
 									 euler - as euler angles
 									 quat  - as quaternions
@@ -220,6 +288,9 @@ def get_prms(isAligned=True,
 		tePct       : % of groups to be labelled as test
 		teGap       : The number of groups that should be skipped before and after test
 									to ensure there are very low chances of overlap
+		splitDist   : The minimum distance between the groups in train and test splits
+									in meters 
+									if splitDist is specified teGap is overriden
 		ptchPosFrac : The fraction of the positive patches in the matching
 
 		NOTES
@@ -232,6 +303,8 @@ def get_prms(isAligned=True,
 	assert type(lossType) == list, 'lossType should be list'
 	assert len(lossType) == len(labels)
 	assert len(labels)   == len(labelType)
+	assert len(labels)  == len(labelFrac)
+	assert sum(labelFrac)==1, 'Set labelFrac appropriately'
 	#Assert that labels are sorted
 	sortLabels = sorted(labels)
 	for i,l in enumerate(labels):
@@ -240,55 +313,106 @@ def get_prms(isAligned=True,
 	paths = get_paths()
 	prms  = edict()
 	prms.isAligned = isAligned
+	prms.rawImSz      = rawImSz
 	
 	#Label infoo
-	prms.labelSz = 0
-	prms.labels  = []
+	prms.labelSz   = 0
+	prms.labels    = []
 	prms.labelNames, prms.labelNameStr = labels, ''
-	for lb,lbT,ls in zip(labels, labelType, lossType):
+	prms.labelFrac = labelFrac
+	if len(labels) > 1:
+		isMultiLabel = True
+	else:
+		isMultiLabel = False
+	prms.isMultiLabel = isMultiLabel
+	prms.geoFence     = geoFence
+	#Form the label types
+	prms.labelSzList = [0]
+	for lb,lbT,ls,lbF in zip(labels, labelType, lossType, labelFrac):
 		prms.labels = prms.labels + [LabelNLoss(lb, lbT, ls,
-										 ptchPosFrac=ptchPosFrac, maxRot=maxEulerRot)]
+										 ptchPosFrac=ptchPosFrac, maxRot=maxEulerRot,
+										 isMultiLabel=isMultiLabel)]
 		prms.labelNameStr = prms.labelNameStr + '_%s' % lb
-		prms.labelSz      = prms.labelSz + prms.labels[-1].get_label_sz()[0]
+		lbSz              = prms.labels[-1].get_label_sz()[0]
+		prms.labelSzList.append(prms.labelSzList[-1] + lbSz)
+		prms.labelSz      = prms.labelSz + lbSz
 	prms.labelNameStr = prms.labelNameStr[1:]
+
 	if 'ptch' in labels or 'pose' in labels:
 		prms.isSiamese = True
 	else:
 		prms.isSiamese = False
-
 	prms['lbNrmlz'] = labelNrmlz
 	prms['crpSz']   = crpSz
 	prms['trnSeq']  = trnSeq
 	prms.geoPoly    = None 	
 
 	prms.splits = edict()
-	prms.splits.numTrain = numTrain
-	prms.splits.numTest  = numTest
+	if splitDist is not None:
+		teGap = None
+	prms.splits.num = edict()
+	prms.splits.num.train = numTrain
+	prms.splits.num.test  = numTest
 	prms.splits.tePct    = tePct
 	prms.splits.teGap    = teGap
+	prms.splits.dist     = splitDist
 	prms.splits.randSeed = 3
+	prms.splits.ver      = splitVer
 
 	#Form the splits file
-	splitsStr = 'tePct%.1f_teGap%d_teSeed%d' % (tePct, teGap, prms.splits.randSeed) 
+	if prms.splits.dist is not None:
+		if prms.geoFence is None:
+			splitsStr = 'spDist%d_spVer-%s'%(prms.splits.dist, prms.splits.ver) 
+		else:	
+			splitsStr = 'spDist%d_spVer-%s_geo%s'\
+									 %(prms.splits.dist, prms.splits.ver, prms.geoFence) 
+	else:
+		splitsStr = 'tePct%.1f_teGap%d_teSeed%d' % (tePct, teGap, prms.splits.randSeed) 
 	paths.proc.splitsFile = paths.proc.splitsFile % (splitsStr + '/%s') 	
 	splitDr, _ = osp.split(paths.proc.splitsFile)
 	_mkdir(splitDr)
 
-	expStr    = ''.join(['%s_' % lb.lbStr_ for lb in prms.labels])
+	if prms.isMultiLabel:
+		expStr    = ''.join(['%s-frac%.2f_' % (lb.lbStr_, lbf)\
+										 for lb,lbf in zip(prms.labels, labelFrac)])
+	else:
+		expStr    = ''.join(['%s_' % lb.lbStr_ for lb in prms.labels])
 	expStr    = expStr[0:-1]
+	if prms.splits.dist is not None:
+		expStr = '%s_%s' % (expStr,splitsStr)
+
 	if geoFence is not None:
 		expStr     = '%s_geo-%s' % (expStr, geoFence)
 		paths.geoFile = paths.geoFile % geoFence
-		prms.geoPoly  = read_geo_coordinates(paths.geoFile) 
-	expName   = '%s_crpSz%d_nTr-%.2e' % (expStr, crpSz, numTrain)
-	teExpName = '%s_crpSz%d_nTe-%.2e' % (expStr, crpSz, numTest)
+		prms.geoPoly  = read_geo_coordinates(paths.geoFile)
+	if not(rawImSz==640):
+		imStr = '_rawImSz%d' % rawImSz
+	else:
+		imStr = ''
+	expName   = '%s_crpSz%d_nTr-%.2e%s' % (expStr, crpSz, numTrain, imStr)
+	teExpName = '%s_crpSz%d_nTe-%.2e%s' % (expStr, crpSz, numTest, imStr)
+	expName2  = '%s_crpSz%d%s' % (expStr, crpSz, imStr) 
 	prms['expName'] = expName
 
+	#Form the window files
 	paths['windowFile'] = {}
 	windowDir = paths.exp.window.dr
 	paths['windowFile']['train'] = osp.join(windowDir, 'train_%s.txt' % expName)
 	paths['windowFile']['test']  = osp.join(windowDir, 'test_%s.txt'  % teExpName)
-	#paths['resFile']       = osp.join(paths['resDir'], expName, '%s.h5')
+	paths.exp.window.folderFile  = paths.exp.window.folderFile  %  ('%s', expName2)
+
+	#Files for saving the geolocalized groups
+	if prms.geoPoly is not None:
+		paths.grp.geoFile = paths.grp.geoFile % (geoFence, '%s')
+		geoDirName, _ = osp.split(paths.grp.geoFile)
+		_mkdir(geoDirName)
+
+	#Files for storing the resized images
+	paths.proc.im.dr       = paths.proc.im.dr % rawImSz
+	paths.proc.im.keyFile  = paths.proc.im.keyFile % rawImSz
+	paths.proc.im.folder.dr       = paths.proc.im.folder.dr % (rawImSz, '%s')
+	paths.proc.im.folder.tarFile  = paths.proc.im.folder.tarFile % (rawImSz, '%s')
+	paths.proc.im.folder.keyFile  = paths.proc.im.folder.keyFile % (rawImSz, '%s')
 
 	prms['paths'] = paths
 	#Get the pose stats

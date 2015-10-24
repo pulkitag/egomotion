@@ -5,19 +5,55 @@ Sep 29 2015
 #Download the data
 download_tar(prms)
 
-#Untar the files by hand
+#Untar the files
+untar_and_del(prms, isDel=False)
 
 #Create a list of folders -- this generates a key for each folder. 
 save_foldernames(prms)
 
+#To add a new list of folders
+append_foldernames(prms)
+
 #Store the prefixes
 #Folders contain <prefix>.jpg, <prefix>.txt as image, label pairs
 #Extract such prefixes and store them in one file per folder
-save_folder_prefixes(prms, forceWrite)
 #Set force write to true if replacing the files
+save_folder_prefixes(prms, forceWrite)
+
+#Save the counts of prefixes
+save_counts(prms)
 
 #Seperate the keys for the folders that contain Aligned Data
 save_aligned_keys(prms)
 
-#Save the normals data
-su.save_normals(prms)
+#Save the groups data
+save_groups(prms)
+
+#Save the dat a for geolocalization
+save_geo_groups(prms)
+
+#Save resized images
+Create a hash table for each folder. 
+The hash table stores the prefix name and the hashed name of the file.
+The directory struture
+imSz256/
+Each folder in the first level holds a million images
+l1-%d/
+Each folder in the second level holds a thousand images
+l2-%d/
+
+#Save folderwise cropped images
+save_crop_images_by_folderid(prms, folderId)
+
+#Tar the cropped files so that they can be transported across machines
+#if needed
+
+
+##For scalibility I am going to construct the following pipeline
+Given a folder:
+(1) Find all the prefixes (i.e. filter all files for which image-label pair donot exist)
+(2) Find all the groups (i.e. the set of images with the same target point)
+(3) Save the label information for each group
+(4) Resize and store the images in a suitable indexed order 
+(5) Make the window file for each folder. 
+

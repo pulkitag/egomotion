@@ -4,10 +4,12 @@ layer {
   bottom: "common_fc"
   top: "ptch_fc"
   param {
+		name: "ptch_fc_w"
     lr_mult: 1
     decay_mult: 1
   }
   param {
+		name: "ptch_fc_b"
     lr_mult: 2
     decay_mult: 0
   }
@@ -30,6 +32,9 @@ layer {
   bottom: "ptch_label"
   top: "ptch_loss"
 	loss_weight: 1.0
+	loss_param {	
+		ignore_label: 2
+	}
 }
 layer {
   name: "accuracy"
@@ -37,4 +42,7 @@ layer {
   bottom: "ptch_fc"
   bottom: "ptch_label"
   top: "accuracy"
+	accuracy_param {	
+		ignore_label: 2
+	}
 }

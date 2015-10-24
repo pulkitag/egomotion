@@ -1,6 +1,7 @@
 import os.path as osp
 import numpy as np
 import street_utils as su
+import street_params as sp
 import my_pycaffe_utils as mpu
 from easydict import EasyDict as edict
 import copy
@@ -21,6 +22,10 @@ def get_nw_prms(**kwargs):
 	dArgs.maxJitter   = 11
 	dArgs.randCrop    = False
 	dArgs.lossWeight  = 1.0
+	dArgs.multiLossProto   = None
+	dArgs.ptchStreamNum    = 256
+	dArgs.poseStreamNum    = 256
+	dArgs.isGray           = False
 	dArgs = mpu.get_defaults(kwargs, dArgs)
 	expStr = 'net-%s_cnct-%s_cnctDrp%d_contPad%d_imSz%d_imgntMean%d_jit%d'\
 						%(dArgs.netName, dArgs.concatLayer, dArgs.concatDrop, 
@@ -30,6 +35,11 @@ def get_nw_prms(**kwargs):
 		expStr = '%s_randCrp%d' % (expStr, dArgs.randCrop)
 	if not(dArgs.lossWeight==1.0):
 		expStr = '%s_lw%.1f' % (expStr, dArgs.lossWeight)
+	if dArgs.multiLossProto is not None:
+		expStr = '%s_mlpr%s-posn%d-ptsn%d' % (expStr,
+							dArgs.multiLossProto, dArgs.poseStreamNum, dArgs.ptchStreamNum)
+	if dArgs.isGray:
+		expStr = '%s_grayIm' % expStr
 	dArgs.expStr = expStr 
 	return dArgs 
 
@@ -123,16 +133,26 @@ def _merge_defs(defs):
 				allDef.add_layer(t, trLayer, phase=s)
 	return allDef
 
+##
+#
+def get_windowfile_rootdir(prms):
+	mainDataDr = cfg.STREETVIEW_DATA_MAIN
+	if prms.isAligned:
+		if prms.geoFence is not None and not(prms.rawImSz == 640):
+			rootDir = osp.join(mainDataDr,
+									 'pulkitag/data_sets/streetview/proc/resize-im/im%d/' % prms.rawImSz)
+		else:
+			rootDir = osp.join(mainDataDr, 
+									'pulkitag/data_sets/streetview/raw/ssd105/Amir/WashingtonAligned/')
+	else:
+		raise Exception('rootDir is not defined')
+	return rootDir
 
 ##
 #Adapt the ProtoDef for the data layers
 #Helper function for setup_experiment
 def _adapt_data_proto(protoDef, prms, cPrms):
-	mainDataDr = cfg.STREETVIEW_DATA_MAIN
-	if prms.isAligned:
-		rootDir = osp.join(mainDataDr, 'pulkitag/data_sets/streetview/raw/ssd105/Amir/WashingtonAligned/')
-	else:
-		raise Exception('rootDir is not defined')
+	rootDir = get_windowfile_rootdir(prms) 
 	#Get the source file for the train and test layers
 	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'source'],
 			'"%s"' % prms['paths']['windowFile']['train'], phase='TRAIN')
@@ -153,6 +173,9 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 		#Random Crop
 		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
 			'%s' % str(cPrms.nwPrms.randCrop).lower(), phase=p)
+		#isGray
+		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'is_gray'],
+			'%s' % str(cPrms.nwPrms.isGray).lower(), phase=p)
 		#maxJitter
 		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'max_jitter'],
 			cPrms.nwPrms.maxJitter, phase=p)
@@ -162,14 +185,26 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 		#Image Size
 		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'crop_size'],
 			cPrms.nwPrms.imSz, phase=p)
-
+	#Splitting for Siamese net
+	if prms.isSiamese and cPrms.nwPrms.isGray:
+		protoDef.set_layer_property('slice_pair', ['slice_param', 'slice_point'],
+		1)
+			
 	#Set the mean file
 	mainDataDr = cfg.STREETVIEW_DATA_MAIN
 	if cPrms.nwPrms.imgntMean:
 		if prms.isSiamese:
-			fName = osp.join(mainDataDr, 'pulkitag/caffe_models/ilsvrc2012_mean.binaryproto')
+			if cPrms.nwPrms.isGray:
+				fName = osp.join(mainDataDr, 'pulkitag/caffe_models/ilsvrc2012_mean_gray.binaryproto')
+			else:
+				fName = osp.join(mainDataDr, 'pulkitag/caffe_models/ilsvrc2012_mean.binaryproto')
 		else:
-			fName = osp.join(mainDataDr, 'pulkitag/caffe_models/ilsvrc2012_mean_for_siamese.binaryproto')
+			if cPrms.nwPrms.isGray:
+				fName = osp.join(mainDataDr,\
+						 'pulkitag/caffe_models/ilsvrc2012_mean_gray_for_siamese.binaryproto')
+			else:
+				fName = osp.join(mainDataDr,\
+						 'pulkitag/caffe_models/ilsvrc2012_mean_for_siamese.binaryproto')
 		for p in ['TRAIN', 'TEST']:
 			protoDef.set_layer_property('window_data', ['transform_param', 'mean_file'],
 				'"%s"' % fName, phase=p)
@@ -197,7 +232,8 @@ def make_data_proto(prms, cPrms):
 		#Add slicing of labels	
 		sliceFile = '%s_layers.prototxt' % prms.labelNameStr
 		sliceDef  = mpu.ProtoDef(osp.join(baseFilePath, sliceFile))
-		dataDef   = _merge_defs([dataDef, sliceDef])	
+		dataDef   = _merge_defs([dataDef, sliceDef])
+
 	#Set to the new window files
 	_adapt_data_proto(dataDef, prms, cPrms)
 	return dataDef
@@ -217,13 +253,36 @@ def make_net_proto(prms, cPrms):
 	if cPrms.nwPrms.concatDrop:
 		dropLayer = mpu.get_layerdef_for_proto('Dropout', 'drop-%s' % 'common_fc', 'common_fc',
                             **{'top': 'common_fc', 'dropout_ratio': 0.5})
-		netDef.add_layer('drop-%s' % eName, dropLayer, 'TRAIN')
+		netDef.add_layer('drop-%s' % 'common_fc', dropLayer, 'TRAIN')
 	return netDef
 
 ##
 # The proto definitions for the loss
 def make_loss_proto(prms, cPrms):
 	baseFilePath = prms.paths.baseNetsDr
+	lbDefs = []
+	if cPrms.nwPrms.multiLossProto is not None:
+		assert(prms.isMultiLabel)
+		fName = '%s_%s_loss_layers.prototxt' % (prms.labelNameStr, 
+							cPrms.nwPrms.multiLossProto)	
+		fName = osp.join(baseFilePath,fName)
+		lbDef  = mpu.ProtoDef(fName)
+		#Modify pose parameters
+		poseLb = prms.labels[prms.labelNames.index('pose')]
+		lbDef.set_layer_property('pose_fc', ['inner_product_param', 'num_output'],
+						 '%d' % poseLb.lbSz_)
+		lbDef.set_layer_property('pose_stream_fc', ['inner_product_param', 'num_output'],
+						 '%d' % cPrms.nwPrms.poseStreamNum)
+		lbDef.set_layer_property('pose_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
+		#Modify ptch parameters
+		ptchLb = prms.labels[prms.labelNames.index('ptch')]
+		lbDef.set_layer_property('ptch_fc', ['inner_product_param', 'num_output'],
+						 '%d' % ptchLb.lbSz_)
+		lbDef.set_layer_property('ptch_stream_fc', ['inner_product_param', 'num_output'],
+						 '%d' % cPrms.nwPrms.ptchStreamNum)
+		lbDef.set_layer_property('ptch_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
+		return lbDef
+
 	if prms.isSiamese and 'nrml' in prms.labelNames:
 		defFile = osp.join(baseFilePath, 'nrml_loss_layers.prototxt')
 		nrmlDef1 = mpu.ProtoDef(defFile)
@@ -235,14 +294,19 @@ def make_loss_proto(prms, cPrms):
 		nrmlDef2.set_layer_property('nrml_2_fc','top', '"nrml_2_fc"')
 		#Merge the two defs			 	
 		lbDef = _merge_defs(nrmlDef1, nrmlDef2)
+		lbDefs.append(lbDef)
 	elif 'nrml' in prms.labelNames:
 		defFile = osp.join(baseFilePath, 'nrml_loss_layers.prototxt')
 		lbDef   = mpu.ProtoDef(defFile)
 		idx     = prms.labelNames.index('nrml')
-	elif 'ptch' in prms.labelNames:
+		lbDef.set_layer_property('nrml_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
+		lbDefs.append(lbDef)
+	if 'ptch' in prms.labelNames:
 		defFile = osp.join(baseFilePath, 'ptch_loss_layers.prototxt')
 		lbDef   = mpu.ProtoDef(defFile)
-	elif 'pose' in prms.labelNames:
+		lbDef.set_layer_property('ptch_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
+		lbDefs.append(lbDef)
+	if 'pose' in prms.labelNames:
 		defFile = osp.join(baseFilePath, 'pose_loss_layers.prototxt')
 		lbDef   = mpu.ProtoDef(defFile)
 		idx     = prms.labelNames.index('pose')
@@ -250,6 +314,12 @@ def make_loss_proto(prms, cPrms):
 		lbDef.set_layer_property('pose_fc', ['inner_product_param', 'num_output'],
 						 '%d' % lb.lbSz_)
 		lbDef.set_layer_property('pose_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
+		lbDefs.append(lbDef)
+	lbDef = _merge_defs(lbDefs)
+	#Replace the EuclideanLoss with EuclideanLossWithIgnore 
+	l2Layers = lbDef.get_layernames_from_type('EuclideanLoss')
+	for ll in l2Layers:
+		lbDef.set_layer_property(ll, 'type', '"EuclideanLossWithIgnore"')
 	return lbDef	
 
 ##
@@ -268,6 +338,13 @@ def setup_experiment(prms, cPrms):
 	#Experiment Object	
 	caffeExp = get_experiment_object(prms, cPrms)
 	caffeExp.init_from_external(solDef, protoDef)
+
+	#Result paths
+	caffeExp.paths = edict()
+	caffeExp.paths.testImVis = osp.join(prms.paths.res.testImVisDr,
+														 prms.expName, cPrms.expStr)
+	sp._mkdir(caffeExp.paths.testImVis)	
+	caffeExp.paths.testImVis = osp.join(caffeExp.paths.testImVis, 'im%05d.jpg')
 	return caffeExp
 
 ##
@@ -339,6 +416,7 @@ def plot_experiment_accuracy(prms, cPrms, svFile=None,
 	if svFile is not None:
 		with PdfPages(svFile) as pdf:
 			pdf.savefig()
+	return ax
 
 
 def read_log(fileName):

@@ -59,3 +59,9 @@ def debug_generic_data():
 		  #with PdfPages(svFile) as pdf:
 			#	pdf.savefig()
 			count += 1
+
+def debug_euclidean_ignore():
+	me.smallnetv2_pool4_ptch_pose_crp192_rawImSz256(isRun=True)
+
+if __name__== "__main__":
+	debug_euclidean_ignore()

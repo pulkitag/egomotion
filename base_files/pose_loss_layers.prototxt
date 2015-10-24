@@ -4,10 +4,12 @@ layer {
   bottom: "common_fc"
   top: "pose_fc"
   param {
+		name: "pose_fc_w"
     lr_mult: 1
     decay_mult: 1
   }
   param {
+		name: "pose_fc_b"
     lr_mult: 2
     decay_mult: 0
   }
