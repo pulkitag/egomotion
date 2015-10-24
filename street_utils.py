@@ -404,7 +404,10 @@ def get_label_pose(prms, groups, numSamples, randSeed=1003):
 ##
 #Get labels for ptch
 def get_label_ptch(prms, groups, numSamples, randSeed=1005):
+	initLen = len(groups)
+	groups = [g for g in groups if not(g.num==1)]
 	N = len(groups)
+	print ('Initial: %d, Final: %d' % (initLen, N))
 	oldState  = np.random.get_state()
 	randState = np.random.RandomState(randSeed)
 	lbs, prefix = [],[]
@@ -729,7 +732,7 @@ def find_first_false(idx):
 ##
 #Combine the window files
 def make_combined_window_file(prms, setName='train'):
-	keys = sp.get_train_test_defs(prms, setName=setName)
+	keys = sp.get_train_test_defs(prms.geoFence, setName=setName)
 	wObjs, wNum = [], []
 	numIm = None
 	for i,k in enumerate(keys):
@@ -738,21 +741,22 @@ def make_combined_window_file(prms, setName='train'):
 		wNum.append(wObj.num_)
 		wObjs.append(wObj)
 		if i==0:
-			numIm = wObj.num_
+			numIm = wObj.numIm_
 		else:
-			assert(numIm==wObj.num_)
+			assert numIm==wObj.numIm_, '%d, %d' % (numIm, wObj.num_)
 	
 	mainWFile = mpio.GenericWindowWriter(prms['paths']['windowFile'][setName],
-					prms.splits.num[setName], numImPerExample, prms['labelSz'])
-	
+					prms.splits.num[setName], numIm, prms['labelSz'])
+
+	print ('Total examples to chose from: %d' % sum(wNum))	
 	wNum = np.array(wNum).astype(float)
 	wNum = wNum/sum(wNum)
 	pCum = np.cumsum(wNum)
 	print (pCum)
 	assert (pCum==1, 'Something is wrong')
 	randState = np.random.RandomState(31)	
-	for i in range(prms.splits.num[setName]):
-		rand = randState.random()	
+	for i in range(int(prms.splits.num[setName])):
+		rand = randState.rand()	
 		idx  = find_first_false(rand >= pCum)
 		imNames, lbls = wObjs[idx].read_next()
 		mainWFile.fid_.write('# %d\n' % i)

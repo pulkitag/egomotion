@@ -2,9 +2,10 @@
 import street_params as sp
 import street_exp as se
 
-def smallnetv2_pool4_pose_crp192_rawImSz256(isRun=False, isGray=False):
+def smallnetv2_pool4_pose_crp192_rawImSz256(isRun=False, isGray=False, numTrain=1e+7):
 	prms  = sp.get_prms_pose(geoFence='dc-v2', crpSz=192,
-													 rawImSz=256, splitDist=100)
+													 rawImSz=256, splitDist=100,
+													 numTrain=numTrain)
 	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
 							 concatLayer='pool4', lossWeight=10.0,
 								randCrop=False, concatDrop=False,
