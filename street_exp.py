@@ -185,17 +185,21 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 		#Image Size
 		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'crop_size'],
 			cPrms.nwPrms.imSz, phase=p)
-
+	#Splitting for Siamese net
+	if prms.isSiamese and cPrms.nwPrms.isGray:
+		protoDef.set_layer_property('slice_pair', ['slice_param', 'slice_point'],
+		1)
+			
 	#Set the mean file
 	mainDataDr = cfg.STREETVIEW_DATA_MAIN
 	if cPrms.nwPrms.imgntMean:
 		if prms.isSiamese:
-			if prms.nwPrms.isGray:
+			if cPrms.nwPrms.isGray:
 				fName = osp.join(mainDataDr, 'pulkitag/caffe_models/ilsvrc2012_mean_gray.binaryproto')
 			else:
 				fName = osp.join(mainDataDr, 'pulkitag/caffe_models/ilsvrc2012_mean.binaryproto')
 		else:
-			if prms.nwPrms.isGray:
+			if cPrms.nwPrms.isGray:
 				fName = osp.join(mainDataDr,\
 						 'pulkitag/caffe_models/ilsvrc2012_mean_gray_for_siamese.binaryproto')
 			else:
@@ -230,7 +234,6 @@ def make_data_proto(prms, cPrms):
 		sliceDef  = mpu.ProtoDef(osp.join(baseFilePath, sliceFile))
 		dataDef   = _merge_defs([dataDef, sliceDef])
 
-	
 	#Set to the new window files
 	_adapt_data_proto(dataDef, prms, cPrms)
 	return dataDef
