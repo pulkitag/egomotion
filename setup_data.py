@@ -655,7 +655,7 @@ def _filter_groups_by_dist(args):
 ##
 #Filter groups by dist parallel
 def p_filter_groups_by_dist(prms, grps=None, seedGrps=None):
-	pool = Pool(processes=32)
+	pool = Pool(processes=16)
 	if seedGrps is None:
 		seedGrps = su.get_groups(prms, '0052', setName=None)
 	if grps is None:
@@ -704,14 +704,12 @@ def save_train_test_splits(prms, isForceWrite=False):
 		grps      = copy.deepcopy(trGrps)
 		trKeys    = trGrps.keys()
 		teKeys    = []
-		'''
 		for tef in teFolderKeys:
 			trKeys = p_filter_groups_by_dist(prms, grps, teGrps[tef])
 			grps   = edict()
 			#Filter the groups
 			for t in trKeys:
 				grps[t] = trGrps[t]				 
-		'''
 		#Save the splits
 		splits = edict()
 		splits.train = trKeys	

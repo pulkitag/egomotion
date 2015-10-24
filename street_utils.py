@@ -365,7 +365,11 @@ def get_rots_label(lbInfo, rot1, rot2):
 ##
 #Get labels for pose
 def get_label_pose(prms, groups, numSamples, randSeed=1003):
+	#Remove the groups of lenght 1
+	initLen = len(groups)
+	groups = [g for g in groups if not(g.num==1)]
 	N = len(groups)
+	print ('Initial: %d, Final: %d' % (initLen, N))
 	oldState  = np.random.get_state()
 	randState = np.random.RandomState(randSeed)
 	lbs, prefix = [], []
@@ -700,6 +704,7 @@ def _make_window_file_by_folderid(args):
 #Make window files for multiple folders
 def make_window_files_geo_folders(prms, isForceWrite=False):
 	keys   = get_geo_folderids(prms)
+	print keys
 	inArgs = []
 	for k in keys:
 		if not isForceWrite:

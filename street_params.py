@@ -14,6 +14,7 @@ import h5py as h5
 import pickle
 import matplotlib.path as mplPath
 import re
+import street_utils as su
 
 def _mkdir(fName):
 	if not osp.exists(fName):
@@ -234,9 +235,15 @@ def get_train_test_defs(geoFence, ver='v1', setName=None):
 		else:
 			raise Exception('%s not recognized' % v1)
 	elif geoFence == 'dc-v2':
+		geoFile = 'geofence/dc-v2.txt'
+		keys = []
+		with open(geoFile,'r') as fid:
+			lines = fid.readlines()
+			for l in lines:
+				key, _ = l.strip().split()
+				keys.append(key)	
 			testFolderKeys = ['0008']
-			allKeys        = su.get_geo_folderids(prms) 
-			trainFolderKeys = [k for k in allKeys if k not in testFolderKeys]
+			trainFolderKeys = [k for k in keys if k not in testFolderKeys]
 	else:
 		raise Exception('%s not recognized' % geoFence)
 	if setName == 'train':
