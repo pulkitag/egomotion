@@ -446,7 +446,10 @@ def get_label_ptch(prms, groups, numSamples, randSeed=1005):
 ##
 #Get labels for ptch
 def get_label_pose_ptch(prms, groups, numSamples, randSeed=1005, randSeedAdd=0):
+	initLen = len(groups)
+	groups = [g for g in groups if not(g.num==1)]
 	N = len(groups)
+	print ('Initial: %d, Final: %d' % (initLen, N))
 	oldState  = np.random.get_state()
 	randState = np.random.RandomState(randSeed + randSeedAdd)
 	lbs, prefix = [],[]
@@ -748,16 +751,34 @@ def make_combined_window_file(prms, setName='train'):
 	mainWFile = mpio.GenericWindowWriter(prms['paths']['windowFile'][setName],
 					prms.splits.num[setName], numIm, prms['labelSz'])
 
+	nExamples  = sum(wNum)
 	print ('Total examples to chose from: %d' % sum(wNum))	
+	wCount = copy.deepcopy(np.array(wNum))
 	wNum = np.array(wNum).astype(float)
 	wNum = wNum/sum(wNum)
 	pCum = np.cumsum(wNum)
 	print (pCum)
 	assert (pCum==1, 'Something is wrong')
-	randState = np.random.RandomState(31)	
-	for i in range(int(prms.splits.num[setName])):
-		rand = randState.rand()	
-		idx  = find_first_false(rand >= pCum)
+	randState = np.random.RandomState(31)
+	N = min(nExamples, int(prms.splits.num[setName]))
+	ignoreCount = 0	
+	for i in range(N):
+		sampleFlag = True
+		idx  = None
+		while sampleFlag:
+			rand = randState.rand()
+			idx  = find_first_false(rand >= pCum)
+			if not wObjs[idx].is_eof():
+				sampleFlag = False
+			else:
+				ignoreCount += 1
+				if ignoreCount > 2000:
+					print (ignoreCount, 'Resetting prob distribution')			
+					pCum = np.cumsum(wCount/float(sum(wCount)))
+					print pCum
+					ignoreCount = 0	
+	
+		wCount[idx] -= 1	
 		imNames, lbls = wObjs[idx].read_next()
 		mainWFile.write(lbls[0], *imNames)	
 		#mainWFile.fid_.write('# %d\n' % i)
