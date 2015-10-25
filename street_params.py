@@ -51,6 +51,10 @@ def get_paths():
 	paths.dataDr  = osp.join(cfg.STREETVIEW_DATA_MAIN, 'pulkitag/data_sets/streetview')
 	paths.raw     = edict()
 	paths.raw.dr  = osp.join(paths.dataDr, 'raw')
+
+	#For reading data faster we will use a different data direcoty
+	imReadDr = osp.join(cfg.STREETVIEW_DATA_READ_IM, 'pulkitag/data_sets/streetview')
+
 	#Processed data
 	paths.proc    = edict()
 	paths.proc.dr = osp.join(paths.dataDr, 'proc')
@@ -77,11 +81,13 @@ def get_paths():
 	paths.proc.folders.naKey = osp.join(paths.proc.folders.dr, 'key-non_aligned.txt') 
 
 	#Storing resized images
+	imProcDr         = osp.join(imReadDr, 'proc')
+	_mkdir(imProcDr)
 	paths.proc.im    =  edict()
-	paths.proc.im.dr =  osp.join(paths.proc.dr, 'resize-im')
+	paths.proc.im.dr =  osp.join(imProcDr, 'resize-im')
 	_mkdir(paths.proc.im.dr)
-	paths.proc.im.keyFile = osp.join(paths.proc.im.dr, 'im%d-keys.pkl') 
-	paths.proc.im.dr      = osp.join(paths.proc.im.dr, 'im%d')
+	paths.proc.im.keyFile = osp.join(imProcDr, 'im%d-keys.pkl') 
+	paths.proc.im.dr      = osp.join(imProcDr, 'im%d')
 	#Count the number of keys already stored - useful for appending the files.
 	#Note that this count maynot be accurate but will be larger than the total number
 	#of images saved 	
