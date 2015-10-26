@@ -26,6 +26,7 @@ def get_nw_prms(**kwargs):
 	dArgs.ptchStreamNum    = 256
 	dArgs.poseStreamNum    = 256
 	dArgs.isGray           = False
+	dArgs.isPythonLayer    = False
 	dArgs = mpu.get_defaults(kwargs, dArgs)
 	expStr = 'net-%s_cnct-%s_cnctDrp%d_contPad%d_imSz%d_imgntMean%d_jit%d'\
 						%(dArgs.netName, dArgs.concatLayer, dArgs.concatDrop, 
@@ -40,6 +41,8 @@ def get_nw_prms(**kwargs):
 							dArgs.multiLossProto, dArgs.poseStreamNum, dArgs.ptchStreamNum)
 	if dArgs.isGray:
 		expStr = '%s_grayIm' % expStr
+	if dArgs.isPythonLayer:
+		expStr = '%s_pylayers' % expStr
 	dArgs.expStr = expStr 
 	return dArgs 
 
@@ -158,68 +161,83 @@ def get_windowfile_rootdir(prms):
 #Adapt the ProtoDef for the data layers
 #Helper function for setup_experiment
 def _adapt_data_proto(protoDef, prms, cPrms):
-	rootDir = get_windowfile_rootdir(prms) 
-	#Get the source file for the train and test layers
-	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'source'],
-			'"%s"' % prms['paths']['windowFile']['train'], phase='TRAIN')
-	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'source'],
-			'"%s"' % prms['paths']['windowFile']['test'], phase='TEST')
+	rootDir = get_windowfile_rootdir(prms)
+	#Set the mean file
+	mainDataDr = cfg.STREETVIEW_DATA_MAIN
+	if cPrms.nwPrms.imgntMean:
+		if cPrms.nwPrms.isGray:
+			fName = osp.join(mainDataDr, 'pulkitag/caffe_models/ilsvrc2012_mean_gray.binaryproto')
+		else:
+			fName = osp.join(mainDataDr, 'pulkitag/caffe_models/ilsvrc2012_mean.binaryproto')
 
-	#Set the root folder
-	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'root_folder'],
-			'"%s"' % rootDir, phase='TRAIN')
-	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'root_folder'],
-			'"%s"' % rootDir, phase='TEST')
-	
-	#Set the batch size
-	protoDef.set_layer_property('window_data', ['generic_window_data_param', 'batch_size'],
-			'%d' % cPrms.lrPrms.batchsize , phase='TRAIN')
+	if not cPrms.nwPrms.isPythonLayer: 
+		#Get the source file for the train and test layers
+		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'source'],
+				'"%s"' % prms['paths']['windowFile']['train'], phase='TRAIN')
+		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'source'],
+				'"%s"' % prms['paths']['windowFile']['test'], phase='TEST')
 
-	for p in ['TRAIN', 'TEST']:
-		#Random Crop
-		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
-			'%s' % str(cPrms.nwPrms.randCrop).lower(), phase=p)
-		#isGray
-		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'is_gray'],
-			'%s' % str(cPrms.nwPrms.isGray).lower(), phase=p)
-		#maxJitter
-		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'max_jitter'],
-			cPrms.nwPrms.maxJitter, phase=p)
-		#Context Pad
-		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'context_pad'],
-			cPrms.nwPrms.contextPad, phase=p)
-		#Image Size
-		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'crop_size'],
-			cPrms.nwPrms.imSz, phase=p)
+		#Set the root folder
+		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'root_folder'],
+				'"%s"' % rootDir, phase='TRAIN')
+		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'root_folder'],
+				'"%s"' % rootDir, phase='TEST')
+		
+		#Set the batch size
+		protoDef.set_layer_property('window_data', ['generic_window_data_param', 'batch_size'],
+				'%d' % cPrms.lrPrms.batchsize , phase='TRAIN')
+
+		for p in ['TRAIN', 'TEST']:
+			#Random Crop
+			protoDef.set_layer_property('window_data', ['generic_window_data_param', 'random_crop'],
+				'%s' % str(cPrms.nwPrms.randCrop).lower(), phase=p)
+			#isGray
+			protoDef.set_layer_property('window_data', ['generic_window_data_param', 'is_gray'],
+				'%s' % str(cPrms.nwPrms.isGray).lower(), phase=p)
+			#maxJitter
+			protoDef.set_layer_property('window_data', ['generic_window_data_param', 'max_jitter'],
+				cPrms.nwPrms.maxJitter, phase=p)
+			#Context Pad
+			protoDef.set_layer_property('window_data', ['generic_window_data_param', 'context_pad'],
+				cPrms.nwPrms.contextPad, phase=p)
+			#Image Size
+			protoDef.set_layer_property('window_data', ['generic_window_data_param', 'crop_size'],
+				cPrms.nwPrms.imSz, phase=p)
+			#Mean file
+			protoDef.set_layer_property('window_data', ['transform_param', 'mean_file'],
+				'"%s"' % fName, phase=p)
+	else:
+		#Python layer
+		if cPrms.nwPrms.isGray:
+			grayStr = 'is_gray'
+		else:
+			grayStr = 'no-is_gray'
+		
+		paramStr = '"--source %s --root_folder %s --crop_size %d\
+							  --batch_size %d --%s --mean_file %s"'
+		for p in ['TRAIN', 'TEST']:
+			if p == 'TRAIN':
+				batchSz = cPrms.lrPrms.batchsize
+			else:
+				batchSz = 50
+			params = paramStr % (prms['paths']['windowFile'][p.lower()],
+								rootDir, cPrms.nwPrms.imSz, batchSz, 
+								grayStr, fName)
+			protoDef.set_layer_property('window_data', ['python_param', 'param_str'],
+																	 params, phase=p)
 	#Splitting for Siamese net
 	if prms.isSiamese and cPrms.nwPrms.isGray:
 		protoDef.set_layer_property('slice_pair', ['slice_param', 'slice_point'],
 		1)
-			
-	#Set the mean file
-	mainDataDr = cfg.STREETVIEW_DATA_MAIN
-	if cPrms.nwPrms.imgntMean:
-		if prms.isSiamese:
-			if cPrms.nwPrms.isGray:
-				fName = osp.join(mainDataDr, 'pulkitag/caffe_models/ilsvrc2012_mean_gray.binaryproto')
-			else:
-				fName = osp.join(mainDataDr, 'pulkitag/caffe_models/ilsvrc2012_mean.binaryproto')
-		else:
-			if cPrms.nwPrms.isGray:
-				fName = osp.join(mainDataDr,\
-						 'pulkitag/caffe_models/ilsvrc2012_mean_gray_for_siamese.binaryproto')
-			else:
-				fName = osp.join(mainDataDr,\
-						 'pulkitag/caffe_models/ilsvrc2012_mean_for_siamese.binaryproto')
-		for p in ['TRAIN', 'TEST']:
-			protoDef.set_layer_property('window_data', ['transform_param', 'mean_file'],
-				'"%s"' % fName, phase=p)
 	
 ##
 #The proto definitions for the data
 def make_data_proto(prms, cPrms):
 	baseFilePath = prms.paths.baseNetsDr
-	dataFile     = osp.join(baseFilePath, 'data_layers.prototxt')
+	if cPrms.nwPrms.isPythonLayer:
+		dataFile     = osp.join(baseFilePath, 'data_layers_python.prototxt')
+	else:
+		dataFile     = osp.join(baseFilePath, 'data_layers.prototxt')
 	dataDef      = mpu.ProtoDef(dataFile)
 	appendFlag   = True
 	if len(prms.labelNames)==1:
