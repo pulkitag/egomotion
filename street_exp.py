@@ -159,18 +159,10 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 	#Set the mean file
 	mainDataDr = cfg.STREETVIEW_DATA_MAIN
 	if cPrms.nwPrms.imgntMean:
-		if prms.isSiamese:
-			if cPrms.nwPrms.isGray:
-				fName = osp.join(mainDataDr,\
-						 'pulkitag/caffe_models/ilsvrc2012_mean_gray_for_siamese.binaryproto')
-			else:
-				fName = osp.join(mainDataDr,\
-						 'pulkitag/caffe_models/ilsvrc2012_mean_for_siamese.binaryproto')
+		if cPrms.nwPrms.isGray:
+			fName = osp.join(mainDataDr, 'pulkitag/caffe_models/ilsvrc2012_mean_gray.binaryproto')
 		else:
-			if cPrms.nwPrms.isGray:
-				fName = osp.join(mainDataDr, 'pulkitag/caffe_models/ilsvrc2012_mean_gray.binaryproto')
-			else:
-				fName = osp.join(mainDataDr, 'pulkitag/caffe_models/ilsvrc2012_mean.binaryproto')
+			fName = osp.join(mainDataDr, 'pulkitag/caffe_models/ilsvrc2012_mean.binaryproto')
 
 	if not cPrms.nwPrms.isPythonLayer: 
 		#Get the source file for the train and test layers
@@ -210,16 +202,21 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 				'"%s"' % fName, phase=p)
 	else:
 		#Python layer
+		if cPrms.nwPrms.isGray:
+			grayStr = 'is_gray'
+		else:
+			grayStr = 'no-is_gray'
+		
 		paramStr = '"--source %s --root_folder %s --crop_size %d\
-							  --batch_size %d --is_gray %s --mean_file %s"'
+							  --batch_size %d --%s --mean_file %s"'
 		for p in ['TRAIN', 'TEST']:
 			if p == 'TRAIN':
 				batchSz = cPrms.lrPrms.batchsize
 			else:
 				batchSz = 50
 			params = paramStr % (prms['paths']['windowFile'][p.lower()],
-								rootDir, cPrms.nwPrms.imSz, cPrms.lrPrms.batchSz, 
-								cPrms.nwPrms.isGray, fName)
+								rootDir, cPrms.nwPrms.imSz, batchSz, 
+								grayStr, fName)
 			protoDef.set_layer_property('window_data', ['python_param', 'param_str'],
 																	 params, phase=p)
 	#Splitting for Siamese net

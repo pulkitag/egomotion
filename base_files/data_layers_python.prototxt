@@ -6,7 +6,7 @@ layer {
 	type: "Python"
 	python_param {
 		module: "python_window_data"
-		layer: "PythonWindowDataLayer"
+		layer: "PythonWindowDataParallelLayer"
 		param_str: ""
 	}
 	include {
@@ -20,7 +20,7 @@ layer {
 	type: "Python"
 	python_param {
 		module: "python_window_data"
-		layer: "PythonWindowDataLayer"
+		layer: "PythonWindowDataParallelLayer"
 		param_str: ""
 	}
 	include {
