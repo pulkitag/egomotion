@@ -796,9 +796,9 @@ def fetch_window_file_scp(prms):
 		wName      = prms['paths']['windowFile'][s]
 		_, fName   = osp.split(wName)
 		remoteName = hostName + fName
-	scpCmd = 'scp -i "pulkit-key.pem" '
-	localName = prms['paths']['windowFile'][s]
-	subprocess.check_call(['%s %s %s' % (scpCmd, hostName, localName)],shell=True) 
+		scpCmd = 'scp -i "pulkit-key.pem" '
+		localName = prms['paths']['windowFile'][s]
+		subprocess.check_call(['%s %s %s' % (scpCmd, remoteName, localName)],shell=True) 
  
 
 '''

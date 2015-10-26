@@ -54,10 +54,16 @@ def get_lr_prms(**kwargs):
 	dArgs.gamma     = 0.5
 	dArgs.weight_decay = 0.0005
 	dArgs.clip_gradients = -1
+	dArgs.debug_info = False
 	dArgs  = mpu.get_defaults(kwargs, dArgs)
 	#Make the solver 
+	debugStr = '%s' % dArgs.debug_info
+	debugStr = debugStr.lower()
+	del dArgs['debug_info']
 	solArgs = edict({'test_iter': 100, 'test_interval': 1000,
-						 'snapshot': 2000, 'debug_info': 'false'})
+						 'snapshot': 2000, 
+							'debug_info': debugStr})
+	print dArgs.keys()
 	for k in dArgs.keys():
 		if k in ['batchsize']:
 			continue
@@ -136,7 +142,7 @@ def _merge_defs(defs):
 ##
 #
 def get_windowfile_rootdir(prms):
-	mainDataDr = cfg.STREETVIEW_DATA_MAIN
+	mainDataDr = cfg.STREETVIEW_DATA_READ_IM
 	if prms.isAligned:
 		if prms.geoFence is not None and not(prms.rawImSz == 640):
 			rootDir = osp.join(mainDataDr,
