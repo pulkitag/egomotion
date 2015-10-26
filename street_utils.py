@@ -748,8 +748,9 @@ def make_combined_window_file(prms, setName='train'):
 		else:
 			assert numIm==wObj.numIm_, '%d, %d' % (numIm, wObj.num_)
 	
+	N = min(nExamples, int(prms.splits.num[setName]))
 	mainWFile = mpio.GenericWindowWriter(prms['paths']['windowFile'][setName],
-					prms.splits.num[setName], numIm, prms['labelSz'])
+					N, numIm, prms['labelSz'])
 
 	nExamples  = sum(wNum)
 	print ('Total examples to chose from: %d' % sum(wNum))	
@@ -760,7 +761,6 @@ def make_combined_window_file(prms, setName='train'):
 	print (pCum)
 	assert (pCum==1, 'Something is wrong')
 	randState = np.random.RandomState(31)
-	N = min(nExamples, int(prms.splits.num[setName]))
 	ignoreCount = 0	
 	for i in range(N):
 		sampleFlag = True
