@@ -197,7 +197,7 @@ def get_label_size(labelClass, labelType):
 class LabelNLoss(object):
 	def __init__(self, labelClass, labelType, loss, 
 							ptchPosFrac=0.5, maxRot=None, numBins=20, 
-							isMultiLabel=False):
+							binType=None, isMultiLabel=False):
 		'''
 			ptchPosFrac: When considering patch matching data - the fraction of patches
 									 to consider as positives
@@ -221,15 +221,21 @@ class LabelNLoss(object):
 			if maxRot is not None:
 				self.lbStr_   = self.lbStr_ + '-mxRot%d' % maxRot
 			if self.loss_ in ['classify']:
-				self.lbStr_   = self.lbStr_ + 'classify-bn%d' % numBins
-				self.numBins_ = numBins 
+				self.lbStr_   = self.lbStr_ + 'classify'
+		self.numBins_ = numBins
+		self.binType_ = binType
+		if self.binType_ is not None:
+			 self.lbStr_ = self.lbStr_ + '-nBins-%d' % numBins
 					
 	def get_label_sz(self):
 		lbSz = get_label_size(self.label_, self.labelType_)
-		if self.loss_ == 'classify':
-			augLbSz = lbSz
+		if selb.binType_ is None:
+			if self.loss_ == 'classify':
+				augLbSz = lbSz
+			else:
+				augLbSz  = lbSz + 1
 		else:
-			augLbSz  = lbSz + 1
+			augLbSz, lbSz = self.numBins_, self.numBins_
 		return augLbSz, lbSz
 
 
@@ -264,13 +270,14 @@ def get_train_test_defs(geoFence, ver='v1', setName=None):
 def get_prms(isAligned=True, 
 						 labels=['nrml'], labelType=['xyz'], 
 						 lossType=['l2'], labelFrac=[1],
+						 nBins=[20], binTypes=[None], 
 						 labelNrmlz=None, 
 						 crpSz=101,
 						 numTrain=1e+06, numTest=1e+04,
 						 trnSeq=[], 
 						 tePct=1.0, teGap=5,
 						 ptchPosFrac=0.5, maxEulerRot=None, 
-						 geoFence='dc-v1', rawImSz=640, 
+						 geoFence='dc-v1', rawImSz=640,
 						 splitDist=None, splitVer='v1'):
 	'''
 		labels    : What labels to use - make it a list for multiple
@@ -310,6 +317,8 @@ def get_prms(isAligned=True,
 	assert len(lossType) == len(labels)
 	assert len(labels)   == len(labelType)
 	assert len(labels)  == len(labelFrac)
+	assert len(labels)  == len(nBins)
+	assert len(labels)  == len(binTypes)
 	assert sum(labelFrac)==1, 'Set labelFrac appropriately'
 	#Assert that labels are sorted
 	sortLabels = sorted(labels)
