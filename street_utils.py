@@ -787,6 +787,20 @@ def make_combined_window_file(prms, setName='train'):
 		#mainWFile.fid_.write(lbls[0])
 	mainWFile.close()
 
+##
+#Fetch the window file from the main machine
+def fetch_window_file_scp(prms):
+	setNames = ['train', 'test']
+	hostName = 'ubuntu@52.91.252.65:/data0/pulkitag/data_sets/streetview/exp/window-files/'
+	for s in setNames:
+		wName      = prms['paths']['windowFile'][s]
+		_, fName   = osp.split(wName)
+		remoteName = hostName + fName
+		scpCmd = 'scp -i "pulkit-key.pem" '
+		localName = prms['paths']['windowFile'][s]
+		subprocess.check_call(['%s %s %s' % (scpCmd, remoteName, localName)],shell=True) 
+ 
+
 '''
 ##
 #Process the labels according to prms
