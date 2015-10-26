@@ -3,7 +3,7 @@ import street_params as sp
 import street_exp as se
 
 def smallnetv2_pool4_pose_crp192_rawImSz256(isRun=False, isGray=False, numTrain=1e+7,
-																						deviceId=[0,1]):
+																						deviceId=[0]):
 	prms  = sp.get_prms_pose(geoFence='dc-v2', crpSz=192,
 													 rawImSz=256, splitDist=100,
 													 numTrain=numTrain)
