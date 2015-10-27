@@ -803,6 +803,20 @@ def fetch_window_file_scp(prms):
 		scpCmd = 'scp -i "pulkit-key.pem" '
 		localName = prms['paths']['windowFile'][s]
 		subprocess.check_call(['%s %s %s' % (scpCmd, remoteName, localName)],shell=True) 
+
+##
+#Send the window file to a host
+def send_window_file_scp(prms):
+	setNames = ['train', 'test']
+	hostName = 'pulkitag@psi.millennium.berkeley.edu:/work5/pulkitag/data_sets/streetview/'
+	for s in setNames:
+		wName      = prms['paths']['windowFile'][s]
+		_, fName   = osp.split(wName)
+		remoteName = hostName + fName
+		scpCmd = 'scp '
+		localName = prms['paths']['windowFile'][s]
+		subprocess.check_call(['%s %s %s' % (scpCmd, localName, remoteName)],shell=True) 
+ 
  
 
 '''
