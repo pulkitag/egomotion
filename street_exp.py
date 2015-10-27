@@ -27,6 +27,7 @@ def get_nw_prms(**kwargs):
 	dArgs.poseStreamNum    = 256
 	dArgs.isGray           = False
 	dArgs.isPythonLayer    = False
+	dArgs.resumeIter       = 0
 	dArgs = mpu.get_defaults(kwargs, dArgs)
 	expStr = 'net-%s_cnct-%s_cnctDrp%d_contPad%d_imSz%d_imgntMean%d_jit%d'\
 						%(dArgs.netName, dArgs.concatLayer, dArgs.concatDrop, 
