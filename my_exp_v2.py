@@ -56,7 +56,8 @@ def smallnetv2_pool4_pose_euler_mx45_crp192_rawImSz256(isRun=False, numTrain=1e+
 def smallnetv2_pool4_pose_classify_euler_mx45_crp192_rawImSz256(isRun=False, numTrain=1e+7, 
 										deviceId=[0], isPythonLayer=False, isGray=False):
 	prms  = sp.get_prms(geoFence='dc-v2', labels=['pose'], labelType=['euler'],
-											lossType=['classify'], maxEulerRot=45, rawImSz=256,
+											lossType=['classify'], nBins=[10], binTypes=['uniform'], 
+											maxEulerRot=45, rawImSz=256,
 											splitDist=100, numTrain=numTrain, crpSz=192)
 	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
 							 concatLayer='pool4', lossWeight=10.0,
