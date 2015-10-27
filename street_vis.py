@@ -92,7 +92,6 @@ def vis_window_file(prms, setName='test', isSave=False,
 	else:
 		raise Exception('%s not recognized' % labelType)	
 	
-		
 	plt.ion()
 	fig = plt.figure()
 	count = 0

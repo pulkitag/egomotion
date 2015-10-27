@@ -215,18 +215,30 @@ class LabelNLoss(object):
 		#augLbSz_ - augmented labelSz to include the ignore label option
 		self.augLbSz_, self.lbSz_  = self.get_label_sz()
 		self.lbStr_       = '%s-%s' % (self.label_, self.labelType_)
+		#Patch Labels
 		if labelClass == 'ptch':
 			self.posFrac_ = ptchPosFrac
 			self.lbStr_   = self.lbStr_ + '-posFrac%.1f' % self.posFrac_ 	
+	
+		#Pose Labels
 		if labelClass == 'pose':
 			self.maxRot_  = maxRot 
 			if maxRot is not None:
 				self.lbStr_   = self.lbStr_ + '-mxRot%d' % maxRot
 			if self.loss_ in ['classify']:
 				self.lbStr_   = self.lbStr_ + 'classify'
-		if self.binType_ is not None:
-			 self.lbStr_ = self.lbStr_ + '-nBins-%d' % numBins
-					
+			if self.binType_ is not None:
+				self.lbStr_ = self.lbStr_ + '-nBins-%d' % numBins
+				if self.labelType_ == 'quat':
+					self.binRange_ = np.linspace(-1, 1, self.numBins_+1)	
+				elif self.labelType == 'euler':
+					self.binRange_ = np.linspace(-180, 180, self.numBins_+1)	
+		#Nrml Labels
+		if labelClass == 'nrml':
+			if self.binType_ is not None:
+				self.lbStr_ = self.lbStr_ + '-nBins-%d' % numBins
+				self.binRange_ = np.linspace(-1, 1, self.numBins_+1)	
+	
 	def get_label_sz(self):
 		lbSz = get_label_size(self.label_, self.labelType_)
 		if self.binType_ is None:
