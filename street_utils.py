@@ -792,7 +792,17 @@ def make_combined_window_file(prms, setName='train'):
 	print (pCum)
 	assert (pCum==1, 'Something is wrong')
 	randState = np.random.RandomState(31)
-	ignoreCount = 0	
+	ignoreCount = 0
+	
+	nrmlPrune = False
+	if 'nrml' in prms.labelNames and len(prms.labelNames)==1:
+		if prms.nrmlMakeUni is not None:
+			nrmlPrune = True
+			nrmlBins  = np.linspace(-1,1,101)
+			binCounts = np.zeros((2,101))
+			mxBinCount = int(prms.nrmlMakeUni * np.sum(wCount))
+			print ('mxBinCount :%d' % mxBinCount)
+	
 	for i in range(N):
 		sampleFlag = True
 		idx  = None
@@ -808,6 +818,15 @@ def make_combined_window_file(prms, setName='train'):
 					pCum = np.cumsum(wCount/float(sum(wCount)))
 					print pCum
 					ignoreCount = 0	
+	
+		if nrmlPrune:
+			nrmlIdx   = randState.permutation(2)
+			binIdx    = find_bin_index(nrmlBins,lbls[0][nrmlIdx])
+			if binCounts[nrmlIdx][binIdx] < mxBinCount:
+				binCounts[nrmlIdx][binIdx] += 1
+			else:
+				wCount[idx] -= 1	
+				continue			
 	
 		wCount[idx] -= 1	
 		imNames, lbls = wObjs[idx].read_next()
@@ -830,7 +849,21 @@ def fetch_window_file_scp(prms):
 		scpCmd = 'scp -i "pulkit-key.pem" '
 		localName = prms['paths']['windowFile'][s]
 		subprocess.check_call(['%s %s %s' % (scpCmd, remoteName, localName)],shell=True) 
- 
+
+##
+#Process the normals prototxt
+def process_normals_proto(prms, setName='test'):
+	wFileName = prms.paths.windowFile[setName]
+	wFid      = mpio.GenericWindowReader(wFileName)
+	lbls      = wFid.get_all_labels() 
+	N, nLb    = lbls.shape
+	nLb -= 1
+	nBins  = 100
+	binned = []
+	for n in range(nLb):
+		binned.append(np.histogram(lbls[:,n], 100))
+	return binned
+		 
 
 '''
 ##

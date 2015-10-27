@@ -290,7 +290,8 @@ def get_prms(isAligned=True,
 						 tePct=1.0, teGap=5,
 						 ptchPosFrac=0.5, maxEulerRot=None, 
 						 geoFence='dc-v1', rawImSz=640,
-						 splitDist=None, splitVer='v1'):
+						 splitDist=None, splitVer='v1',
+						 nrmlMakeUni=0.002):
 	'''
 		labels    : What labels to use - make it a list for multiple
 								kind of labels
@@ -317,6 +318,8 @@ def get_prms(isAligned=True,
 									in meters 
 									if splitDist is specified teGap is overriden
 		ptchPosFrac : The fraction of the positive patches in the matching
+		nrmlMakeUni :	nrmls are highly skewed - so this tries to make the normals uniformly
+									distributed. 
 
 		NOTES
 		I have tried to form prms so that they have enough information to specify
@@ -355,6 +358,7 @@ def get_prms(isAligned=True,
 	prms.geoFence     = geoFence
 	#Form the label types
 	prms.labelSzList = [0]
+	isNrml = False
 	for lb,lbT,ls,lbF in zip(labels, labelType, lossType, labelFrac):
 		prms.labels = prms.labels + [LabelNLoss(lb, lbT, ls,
 										 ptchPosFrac=ptchPosFrac, maxRot=maxEulerRot,
@@ -363,6 +367,8 @@ def get_prms(isAligned=True,
 		lbSz              = prms.labels[-1].get_label_sz()[0]
 		prms.labelSzList.append(prms.labelSzList[-1] + lbSz)
 		prms.labelSz      = prms.labelSz + lbSz
+		if lb=='nrml':
+			isNrml = True
 	prms.labelNameStr = prms.labelNameStr[1:]
 
 	if 'ptch' in labels or 'pose' in labels:
@@ -424,6 +430,10 @@ def get_prms(isAligned=True,
 	#Form the window files
 	paths['windowFile'] = {}
 	windowDir = paths.exp.window.dr
+	prms.nrmlMakeUni = nrmlMakeUni
+	if isNrml and nrmlMakeUni is not None:
+		expName   = expName   + '_nrml-unimax-%.3f' % nrmlMakeUni
+		teExpName = teExpName + '_nrml-unimax-%.3f' % nrmlMakeUni  
 	paths['windowFile']['train'] = osp.join(windowDir, 'train_%s.txt' % expName)
 	paths['windowFile']['test']  = osp.join(windowDir, 'test_%s.txt'  % teExpName)
 	paths.exp.window.folderFile  = paths.exp.window.folderFile  %  ('%s', expName2)
