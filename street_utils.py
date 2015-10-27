@@ -23,6 +23,24 @@ import street_params as sp
 from multiprocessing import Pool
 
 ##
+#helper functions
+def find_first_false(idx):
+	for i in range(len(idx)):
+		if not idx[i]:
+			return i
+	return None
+
+##
+#Find the bin index
+def find_bin_index(bins, val):
+	idx = find_first_false(val>=bins)
+	if idx==0:
+		print ('WARNING - CHECK THE RANGE OF VALUES - %f was BELOW THE MIN' % val)
+	if idx is None:
+		return len(bins)-2
+	return max(0,idx-1)
+
+##
 #Get the prefixes for a specific folderId
 def get_prefixes(prms, folderId):
 	with open(prms.paths.proc.folders.pre % folderId,'r') as f:
@@ -336,11 +354,18 @@ def get_label_nrml(prms, groups, numSamples, randSeed=1001):
 	return lbs, prefix
 
 ##
+def rot_range(rot):
+	rot = np.mod(rot, 360)
+	if rot > 180:
+		rot = -(360 - rot)
+	return rot
+
+##
 #Get the rotation labels
 def get_rots_label(lbInfo, rot1, rot2):
 	y1, x1, z1 = rot1
 	y2, x2, z2 = rot2
-	roll, yaw, pitch = z2 - z1, y2 - y1, x2 - x1
+	roll, yaw, pitch = rot_range(z2 - z1), rot_range(y2 - y1), rot_range(x2 - x1)
 	lb = None
 	#Figure out if the rotation is within or outside the limits
 	if lbInfo.maxRot_ is not None:
@@ -350,10 +375,19 @@ def get_rots_label(lbInfo, rot1, rot2):
 				return lb
 	#Calculate the rotation
 	if lbInfo.labelType_ == 'euler':
-		if lbInfo.lbSz_ == 3:
-			lb = (roll/30.0, yaw/30.0, pitch/30.0)
+		if lbInfo.loss_ == 'classify':
+			rollBin  = find_bin_index(lbInfo.binRange_, roll)
+			yawBin   = find_bin_index(lbInfo.binRange_, yaw)
+			pitchBin = find_bin_index(lbInfo.binRange_, pitch)
+			if lbInfo.lbSz_  == 3:
+				lb = (rollBin, yawBin, pitchBin)
+			else:
+				lb = (yawBin, pitchBin)
 		else:
-			lb = (yaw/30.0, pitch/30.0)
+			if lbInfo.lbSz_ == 3:
+				lb = (roll/30.0, yaw/30.0, pitch/30.0)
+			else:
+				lb = (yaw/30.0, pitch/30.0)
 	elif lbInfo.labelType_ == 'quat':
 		quat = ru.euler2quat(z2-z1, y2-y1, x2-x1, isRadian=False)
 		q1, q2, q3, q4 = quat
@@ -728,13 +762,6 @@ def make_window_files_geo_folders(prms, isForceWrite=False):
 	res  = jobs.get()
 	del pool		
 
-##
-#helper functions
-def find_first_false(idx):
-	for i in range(len(idx)):
-		if not idx[i]:
-			return i
-	return None
 
 ##
 #Combine the window files

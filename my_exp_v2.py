@@ -28,7 +28,7 @@ def smallnetv2_pool4_pose_euler_mx45_rawImSz256(isRun=False, numTrain=1e+7,
 							 concatLayer='pool4', lossWeight=10.0,
 								randCrop=False, concatDrop=False,
 								isGray=isGray, isPythonLayer=isPythonLayer)
-	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000, clip_gradients=1.0)
+	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000, clip_gradients=10.0)
 	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId)
 	if isRun:
 		exp   = se.make_experiment(prms, cPrms)
