@@ -87,7 +87,7 @@ def get_paths():
 	paths.proc.im.dr =  osp.join(imProcDr, 'resize-im')
 	_mkdir(paths.proc.im.dr)
 	paths.proc.im.keyFile = osp.join(imProcDr, 'im%d-keys.pkl') 
-	paths.proc.im.dr      = osp.join(imProcDr, 'im%d')
+	paths.proc.im.dr      = osp.join(paths.proc.im.dr, 'im%d')
 	#Count the number of keys already stored - useful for appending the files.
 	#Note that this count maynot be accurate but will be larger than the total number
 	#of images saved 	
@@ -209,6 +209,8 @@ class LabelNLoss(object):
 		self.labelType_ = labelType
 		self.loss_      = loss
 		self.isMultiLabel = isMultiLabel
+		self.numBins_ = numBins
+		self.binType_ = binType
 		assert self.loss_ in ['l2', 'classify'], self.loss_
 		#augLbSz_ - augmented labelSz to include the ignore label option
 		self.augLbSz_, self.lbSz_  = self.get_label_sz()
@@ -222,14 +224,12 @@ class LabelNLoss(object):
 				self.lbStr_   = self.lbStr_ + '-mxRot%d' % maxRot
 			if self.loss_ in ['classify']:
 				self.lbStr_   = self.lbStr_ + 'classify'
-		self.numBins_ = numBins
-		self.binType_ = binType
 		if self.binType_ is not None:
 			 self.lbStr_ = self.lbStr_ + '-nBins-%d' % numBins
 					
 	def get_label_sz(self):
 		lbSz = get_label_size(self.label_, self.labelType_)
-		if selb.binType_ is None:
+		if self.binType_ is None:
 			if self.loss_ == 'classify':
 				augLbSz = lbSz
 			else:

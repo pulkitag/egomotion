@@ -351,9 +351,9 @@ def get_rots_label(lbInfo, rot1, rot2):
 	#Calculate the rotation
 	if lbInfo.labelType_ == 'euler':
 		if lbInfo.lbSz_ == 3:
-			lb = (roll/180.0, yaw/180.0, pitch/180.0)
+			lb = (roll/30.0, yaw/30.0, pitch/30.0)
 		else:
-			lb = (yaw/180.0, pitch/180.0)
+			lb = (yaw/30.0, pitch/30.0)
 	elif lbInfo.labelType_ == 'quat':
 		quat = ru.euler2quat(z2-z1, y2-y1, x2-x1, isRadian=False)
 		q1, q2, q3, q4 = quat
@@ -391,8 +391,11 @@ def get_label_pose(prms, groups, numSamples, randSeed=1003):
 		gp  = groups[p]
 		lPerm  = randState.permutation(gp.num)
 		n1, n2 = lPerm[0], lPerm[1]
-		lb[st:en]  = get_rots_label(lbInfo, gp.data[n1].rots, 
+		rotLb  = get_rots_label(lbInfo, gp.data[n1].rots, 
 												gp.data[n2].rots)
+		if rotLb is None:
+			continue
+		lb[st:en]  = rotLb
 		prefix.append((gp.folderId, gp.prefix[n1].strip(),
 							 gp.folderId, gp.prefix[n2].strip()))
 		if ptchFlag:
@@ -676,6 +679,7 @@ def make_window_file_by_folderid(prms, folderId):
 	lb, prefix = get_label_by_folderid(prms, folderId)
 	#For the imNames
 	imNames1 = []
+	print('Window file for %s' % folderId)
 	imKeys   = pickle.load(open(prms.paths.proc.im.folder.keyFile % folderId, 'r'))
 	imKeys   = imKeys['imKeys']
 	for pref in prefix:
@@ -748,11 +752,11 @@ def make_combined_window_file(prms, setName='train'):
 		else:
 			assert numIm==wObj.numIm_, '%d, %d' % (numIm, wObj.num_)
 	
+	nExamples  = sum(wNum)
 	N = min(nExamples, int(prms.splits.num[setName]))
 	mainWFile = mpio.GenericWindowWriter(prms['paths']['windowFile'][setName],
 					N, numIm, prms['labelSz'])
 
-	nExamples  = sum(wNum)
 	print ('Total examples to chose from: %d' % sum(wNum))	
 	wCount = copy.deepcopy(np.array(wNum))
 	wNum = np.array(wNum).astype(float)
