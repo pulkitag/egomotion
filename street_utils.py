@@ -412,7 +412,12 @@ def get_label_pose(prms, groups, numSamples, randSeed=1003):
 	lbIdx   = prms.labelNames.index('pose')
 	lbInfo  = prms.labels[lbIdx]
 	st,en   = prms.labelSzList[lbIdx], prms.labelSzList[lbIdx+1]
-	en = en - 1
+	if lbInfo.loss_ == 'classify':
+		isClassify = True
+	else:
+		isClassify = False
+	if not isClassify:
+		en = en - 1
 	#Find if ptch matching is there and use the ignore label loss
 	ptchFlag = False
 	if 'ptch' in prms.labelNames:
@@ -421,7 +426,8 @@ def get_label_pose(prms, groups, numSamples, randSeed=1003):
 		ptchLoc  = prms.labelSzList[ptchIdx]
 	for p in perm1:
 		lb  = np.zeros((prms.labelSz,)).astype(np.float32)
-		lb[en] = 1.0
+		if not isClassify:
+			lb[en] = 1.0
 		gp  = groups[p]
 		lPerm  = randState.permutation(gp.num)
 		n1, n2 = lPerm[0], lPerm[1]

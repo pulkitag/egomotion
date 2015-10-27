@@ -228,15 +228,18 @@ class LabelNLoss(object):
 			if self.loss_ in ['classify']:
 				self.lbStr_   = self.lbStr_ + 'classify'
 			if self.binType_ is not None:
-				self.lbStr_ = self.lbStr_ + '-nBins-%d' % numBins
+				self.lbStr_ = self.lbStr_ + '-%s-nBins-%d' % (binType, numBins)
 				if self.labelType_ == 'quat':
 					self.binRange_ = np.linspace(-1, 1, self.numBins_+1)	
-				elif self.labelType == 'euler':
-					self.binRange_ = np.linspace(-180, 180, self.numBins_+1)	
+				elif self.labelType_ == 'euler':
+					if maxRot is None:
+						self.binRange_ = np.linspace(-180, 180, self.numBins_+1)
+					else:
+						self.binRange_ = np.linspace(-maxRot, maxRot, self.numBins_+1)
 		#Nrml Labels
 		if labelClass == 'nrml':
 			if self.binType_ is not None:
-				self.lbStr_ = self.lbStr_ + '-nBins-%d' % numBins
+				self.lbStr_ = self.lbStr_ + '%s-nBins-%d' % (binType, numBins)
 				self.binRange_ = np.linspace(-1, 1, self.numBins_+1)	
 	
 	def get_label_sz(self):
@@ -247,7 +250,7 @@ class LabelNLoss(object):
 			else:
 				augLbSz  = lbSz + 1
 		else:
-			augLbSz, lbSz = self.numBins_, self.numBins_
+			augLbSz, lbSz = lbSz, lbSz
 		return augLbSz, lbSz
 
 
@@ -355,10 +358,11 @@ def get_prms(isAligned=True,
 	prms.geoFence     = geoFence
 	#Form the label types
 	prms.labelSzList = [0]
-	for lb,lbT,ls,lbF in zip(labels, labelType, lossType, labelFrac):
+	for lb,lbT,ls,lbF,nbn,bt in zip(labels, labelType, lossType, labelFrac, nBins, binTypes):
 		prms.labels = prms.labels + [LabelNLoss(lb, lbT, ls,
 										 ptchPosFrac=ptchPosFrac, maxRot=maxEulerRot,
-										 isMultiLabel=isMultiLabel)]
+										 isMultiLabel=isMultiLabel, 
+										 numBins=nbn, binType=bt	)]
 		prms.labelNameStr = prms.labelNameStr + '_%s' % lb
 		lbSz              = prms.labels[-1].get_label_sz()[0]
 		prms.labelSzList.append(prms.labelSzList[-1] + lbSz)
