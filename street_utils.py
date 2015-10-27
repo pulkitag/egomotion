@@ -808,7 +808,8 @@ def make_combined_window_file(prms, setName='train'):
 			binCounts = np.zeros((2,101))
 			mxBinCount = int(prms.nrmlMakeUni * np.sum(wCount))
 			print ('mxBinCount :%d' % mxBinCount)
-	
+
+	writeCount = 0
 	for i in range(N):
 		sampleFlag = True
 		idx  = None
@@ -825,22 +826,37 @@ def make_combined_window_file(prms, setName='train'):
 					print pCum
 					ignoreCount = 0	
 	
+		wCount[idx] -= 1	
+		imNames, lbls = wObjs[idx].read_next()
 		if nrmlPrune:
-			nrmlIdx   = randState.permutation(2)
+			nrmlIdx   = randState.permutation(2)[0]
 			binIdx    = find_bin_index(nrmlBins,lbls[0][nrmlIdx])
 			if binCounts[nrmlIdx][binIdx] < mxBinCount:
 				binCounts[nrmlIdx][binIdx] += 1
 			else:
-				wCount[idx] -= 1	
 				continue			
-	
-		wCount[idx] -= 1	
-		imNames, lbls = wObjs[idx].read_next()
-		mainWFile.write(lbls[0], *imNames)	
-		#mainWFile.fid_.write('# %d\n' % i)
-		#for iml in imNames:
-		#	mainWFile.fid_.write(iml)
-		#mainWFile.fid_.write(lbls[0])
+		mainWFile.write(lbls[0], *imNames)
+		writeCount += 1	
+	mainWFile.close()
+	#Get the count correct for nrmlPrune scenarios
+	if nrmlPrune:
+		imNames, lbls = [], []
+		mainWFile = mpio.GenericWindowReader(prms.paths.windowFile[setName])
+		readFlag  = True
+		readCount = 0
+		while readFlag:
+			name, lb = mainWFile.read_next()
+			imNames.append(name)
+			lbls.append(lb)
+			readCount += 1
+			if readCount == writeCount:
+				readFlag = False
+	mainWFile.close()
+	#Write the corrected version
+	mainWFile = mpio.GenericWindowWriter(prms['paths']['windowFile'][setName],
+					writeCount, numIm, prms['labelSz'])
+	for n in range(writeCount):
+		mainWFile.write(lbls[n][0], *imNames[n])
 	mainWFile.close()
 
 ##
@@ -883,8 +899,6 @@ def process_normals_proto(prms, setName='test'):
 		binned.append(np.histogram(lbls[:,n], 100))
 	return binned
 		 
-
- 
 
 '''
 ##

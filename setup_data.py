@@ -655,7 +655,7 @@ def _filter_groups_by_dist(args):
 ##
 #Filter groups by dist parallel
 def p_filter_groups_by_dist(prms, grps=None, seedGrps=None):
-	pool = Pool(processes=16)
+	pool = Pool(processes=8)
 	if seedGrps is None:
 		seedGrps = su.get_groups(prms, '0052', setName=None)
 	if grps is None:
@@ -666,8 +666,12 @@ def p_filter_groups_by_dist(prms, grps=None, seedGrps=None):
 	inArgs = []
 	for gk in grps.keys():
 		inArgs.append(({'%s'%gk:grps[gk]}, seedGrps, prms.splits.dist))
-	res    = pool.map_async(_filter_groups_by_dist, inArgs) 
-	trKeys = res.get()
+	try:
+		res    = pool.map_async(_filter_groups_by_dist, inArgs) 
+		trKeys = res.get()
+	except KeyboardInterrupt:
+		pool.terminate()
+		raise Exception('Interrupt encountered')
 	t2     = time.time()
 	print ("Time: %f" % (t2-t1))
 	trKeys = [tk[0] for tk in trKeys if not(tk==[])]  
@@ -687,6 +691,7 @@ def save_train_test_splits(prms, isForceWrite=False):
 	#Load the test groups
 	teGrps = edict()
 	for tef in teFolderKeys:
+		fName = prms.paths.proc.splitsFile % tef
 		teGrps[tef] = su.get_groups(prms, tef, setName=None)
 		trKeys      = []
 		teKeys      = teGrps[tef].keys()
@@ -695,17 +700,21 @@ def save_train_test_splits(prms, isForceWrite=False):
 		splits.train = trKeys	
 		splits.test  = teKeys
 		#Save the data		
-		fName = prms.paths.proc.splitsFile % tef
 		pickle.dump({'splits': splits}, open(fName, 'w'))
 
 	#Ensure that train and test groups are far away
 	for trf in trFolderKeys:
+		fName = prms.paths.proc.splitsFile % trf
+		if osp.exists(fName) and not isForceWrite:
+			print ('%s exists, skipping computation' % fName)
+			continue
 		trGrps    = su.get_groups(prms, trf, setName=None)
 		grps      = copy.deepcopy(trGrps)
 		trKeys    = trGrps.keys()
 		teKeys    = []
 		for tef in teFolderKeys:
 			trKeys = p_filter_groups_by_dist(prms, grps, teGrps[tef])
+			print ('%s - Before: %d, After: %d' % (trf, len(trGrps.keys()), len(trKeys)))
 			grps   = edict()
 			#Filter the groups
 			for t in trKeys:
@@ -715,7 +724,6 @@ def save_train_test_splits(prms, isForceWrite=False):
 		splits.train = trKeys	
 		splits.test  = teKeys
 		#Save the data		
-		fName = prms.paths.proc.splitsFile % trf
 		pickle.dump({'splits': splits}, open(fName, 'w'))
 
 	#The remainder of folders have no train/test examples

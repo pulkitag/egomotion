@@ -89,10 +89,11 @@ def smallnetv2_pool4_ptch_crp192_rawImSz256(isRun=False, isGray=False, numTrain=
 		return prms, cPrms	
 
 def smallnetv2_pool4_nrml_crp192_rawImSz256(isRun=False, isGray=False,
-																			 numTrain=1e+7, deviceId=[0,1]):
+																			 numTrain=1e+7, deviceId=[0,1],
+																			 makeNrmlUni=0.002):
 	prms  = sp.get_prms_nrml(geoFence='dc-v2', crpSz=192,
 													 rawImSz=256, splitDist=100,
-													 numTrain=numTrain)
+													 numTrain=numTrain, nrmlMakeUni=makeNrmlUni)
 	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
 							 concatLayer='pool4', lossWeight=10.0,
 								randCrop=False, concatDrop=False,
@@ -107,10 +108,11 @@ def smallnetv2_pool4_nrml_crp192_rawImSz256(isRun=False, isGray=False,
 
 
 def smallnetv2_pool4_nrml_crp192_rawImSz256_nojitter(isRun=False, isGray=False,
-																			 numTrain=1e+7, deviceId=[0,1]):
+																			 numTrain=1e+7, deviceId=[0,1],
+																			 makeNrmlUni=0.002):
 	prms  = sp.get_prms_nrml(geoFence='dc-v2', crpSz=192,
 													 rawImSz=256, splitDist=100,
-													 numTrain=numTrain)
+													 numTrain=numTrain, nrmlMakeUni=makeNrmlUni)
 	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
 							 concatLayer='pool4', lossWeight=10.0,
 								randCrop=False, concatDrop=False,
