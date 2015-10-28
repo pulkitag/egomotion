@@ -72,7 +72,7 @@ def smallnetv2_pool4_pose_classify_euler_mx45_crp192_rawImSz256(isRun=False, num
 
 
 def smallnetv2_pool4_ptch_crp192_rawImSz256(isRun=False, isGray=False, numTrain=1e+7,
-																		isPythonLayer=False, deviceId=[2]):
+																		isPythonLayer=False, deviceId=[2], batchsize=256):
 	prms  = sp.get_prms_ptch(geoFence='dc-v2', crpSz=192,
 													 rawImSz=256, splitDist=100,
 													 numTrain=numTrain)
@@ -80,7 +80,7 @@ def smallnetv2_pool4_ptch_crp192_rawImSz256(isRun=False, isGray=False, numTrain=
 							 concatLayer='pool4', lossWeight=10.0,
 								randCrop=False, concatDrop=False,
 								isGray=isGray, isPythonLayer=isPythonLayer)
-	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000, clip_gradients=10.0)
+	lPrms = se.get_lr_prms(batchsize=batchsize, stepsize=10000, clip_gradients=10.0)
 	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId)
 	if isRun:
 		exp   = se.make_experiment(prms, cPrms)
@@ -89,15 +89,15 @@ def smallnetv2_pool4_ptch_crp192_rawImSz256(isRun=False, isGray=False, numTrain=
 		return prms, cPrms	
 
 def smallnetv2_pool4_nrml_crp192_rawImSz256(isRun=False, isGray=False,
-																			 numTrain=1e+7, deviceId=[0,1],
-																			 makeNrmlUni=0.002):
+																			 numTrain=1e+7, deviceId=[0],
+																			 makeNrmlUni=0.002, isPythonLayer=True):
 	prms  = sp.get_prms_nrml(geoFence='dc-v2', crpSz=192,
 													 rawImSz=256, splitDist=100,
 													 numTrain=numTrain, nrmlMakeUni=makeNrmlUni)
 	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
 							 concatLayer='pool4', lossWeight=10.0,
 								randCrop=False, concatDrop=False,
-								isGray=isGray)
+								isGray=isGray, isPythonLayer=isPythonLayer)
 	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000, clip_gradients=1.0)
 	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId)
 	if isRun:
@@ -108,15 +108,15 @@ def smallnetv2_pool4_nrml_crp192_rawImSz256(isRun=False, isGray=False,
 
 
 def smallnetv2_pool4_nrml_crp192_rawImSz256_nojitter(isRun=False, isGray=False,
-																			 numTrain=1e+7, deviceId=[0,1],
-																			 makeNrmlUni=0.002):
+																			 numTrain=1e+7, deviceId=[0],
+																			 makeNrmlUni=0.002, isPythonLayer=True):
 	prms  = sp.get_prms_nrml(geoFence='dc-v2', crpSz=192,
 													 rawImSz=256, splitDist=100,
 													 numTrain=numTrain, nrmlMakeUni=makeNrmlUni)
 	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
 							 concatLayer='pool4', lossWeight=10.0,
 								randCrop=False, concatDrop=False,
-								isGray=isGray, maxJitter=0)
+								isGray=isGray, maxJitter=0, isPythonLayer=isPythonLayer)
 	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000,
 												 clip_gradients=10.0, debug_info=True)
 	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId)
@@ -160,7 +160,7 @@ def ptch_pose_exp2(isRun=False, deviceId=[1], numPoseStream=256, numPatchStream=
 							 concatLayer='pool4', lossWeight=10.0,
 							 multiLossProto='v1', ptchStreamNum=numPatchStream,
 							 poseStreamNum=numPoseStream)
-	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000, clip_gradients=1.0)
+	lPrms = se.get_lr_prms(batchsize=batchsize, stepsize=10000, clip_gradients=1.0)
 	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId)
 	if isRun:
 		exp   = se.make_experiment(prms, cPrms)
