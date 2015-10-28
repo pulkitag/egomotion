@@ -662,6 +662,12 @@ def p_filter_groups_by_dist(prms, grps=None, seedGrps=None):
 	if grps is None:
 		grps     = su.get_groups(prms, '0048', setName=None)
 
+	if type(grps)==str:
+		assert type(seedGrps)==str
+		grps     = su.get_groups(prms, grps, setName=None)
+		seedGrps = su.get_groups(prms, seedGrps, setName=None)
+		
+
 	print (len(seedGrps), len(grps))
 	t1 = time.time()
 	inArgs = []
@@ -753,6 +759,17 @@ def save_train_test_splits(prms, isForceWrite=False):
 		#Save the data		
 		fName = prms.paths.proc.splitsFile % k
 		pickle.dump({'splits': splits}, open(fName, 'w'))
+
+##
+#
+def print_before_after_split_counts(prms):
+	trFolderKeys, teFolderKeys = sp.get_train_test_defs(prms.geoFence, prms.splits.ver)
+	for tr in trFolderKeys:
+		fName = prms.paths.proc.splitsFile % tr
+		dat   = pickle.load(open(fName, 'r'))
+		splitLen = len(dat['splits']['train'])
+		origGrps = su.get_groups(prms, tr, setName=None)
+		print '%s, after: %d, before: %d' % (tr, splitLen, len(origGrps.keys()))
 
 ##
 #The old hacky way of generating train-test splits
