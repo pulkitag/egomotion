@@ -676,7 +676,27 @@ def make_window_file(prms, setNames=['test', 'train']):
 
 def get_label_by_folderid(prms, folderId):
 	grpDict = get_groups(prms, folderId, setName=None)
-	grps    = [g for (gk,g) in grpDict.iteritems()] 
+	#Filter the ids if required
+	if prms.splits.ver in ['v1']:
+		#One folder either belongs to train or to test
+		splitFile = prms.paths.proc.splitsFile % folderId
+		splitDat  = pickle.load(open(splitFile, 'r'))
+		splitDat  = splitDat['splits']
+		if len(splitDat['train'])>0:
+			assert(len(splitDat['test'])==0)
+			gKeys = splitDat['train']
+			print ('Folder: %s is TRAIN with %d Keys' % (folderId, len(gKeys)))
+		else:
+			assert(len(splitDat['train'])==0)
+			gKeys = splitDat['test']
+			print ('Folder: %s is TEST with %d Keys' % (folderId, len(gKeys)))
+		grps = []
+		for gk in gKeys:
+			grps.append(grpDict[gk]) 
+	else:		
+		grps    = [g for (gk,g) in grpDict.iteritems()] 
+
+	#Form the Labels
 	lbNums = []
 	for (i,l) in enumerate(prms.labelNames):
 		if l == 'nrml':
