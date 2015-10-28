@@ -867,7 +867,7 @@ def make_combined_window_file(prms, setName='train'):
 #Fetch the window file from the main machine
 def fetch_window_file_scp(prms):
 	setNames = ['train', 'test']
-	hostName = 'ubuntu@52.91.252.65:/data0/pulkitag/data_sets/streetview/exp/window-files/'
+	hostName = 'ubuntu@54.173.41.3:/data0/pulkitag/data_sets/streetview/exp/window-files/'
 	for s in setNames:
 		wName      = prms['paths']['windowFile'][s]
 		_, fName   = osp.split(wName)
