@@ -53,6 +53,17 @@ layer {
   }
 }
 layer {
+  name: "slice_nrml_label"
+  type: "Slice"
+  bottom: "nrml_label"
+  top: "nrml_label_1"
+  top: "nrml_label_2"
+  slice_param {
+    slice_dim: 1
+    slice_point: 1
+  }
+}
+layer {
   name: "nrml_loss_1"
   type: "SoftmaxWithLoss"
   bottom: "nrml_fc_1"

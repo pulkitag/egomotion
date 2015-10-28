@@ -129,7 +129,7 @@ def smallnetv2_pool4_nrml_crp192_rawImSz256_nojitter(isRun=False, isGray=False,
 
 def smallnetv2_pool4_nrml_classify_crp192_rawImSz256_nojitter(isRun=False, isGray=False,
 																			 numTrain=1e+7, deviceId=[0,1],
-																			 makeNrmlUni=0.002):
+																			 makeNrmlUni=0.002, isPythonLayer=True):
 	prms  = sp.get_prms(labels=['nrml'], labelType=['xyz'],
 						lossType=['classify'], nBins=[20], binTypes=['uniform'], 
 						geoFence='dc-v2', crpSz=192,
@@ -138,7 +138,7 @@ def smallnetv2_pool4_nrml_classify_crp192_rawImSz256_nojitter(isRun=False, isGra
 	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
 							 concatLayer='pool4', lossWeight=10.0,
 								randCrop=False, concatDrop=False,
-								isGray=isGray, maxJitter=0)
+								isGray=isGray, maxJitter=0, isPythonLayer=isPythonLayer)
 	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000,
 												 clip_gradients=10.0, debug_info=True)
 	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId)
