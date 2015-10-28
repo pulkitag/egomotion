@@ -350,7 +350,11 @@ def get_label_nrml(prms, groups, numSamples, randSeed=1001):
 		if not isClassify:
 			en = en - 1
 			lb[en]  = 1
-		lb[st:en] = gp.data[idx].nrml[0:2]
+			lb[st:en] = gp.data[idx].nrml[0:2]
+		else:
+			nxBin  = find_bin_index(lbInfo.binRange_, gp.data[idx].nrml[0])
+			nyBin  = find_bin_index(lbInfo.binRange_, gp.data[idx].nrml[1])
+			lb[st:en] = nxBin, nyBin
 		if ptchFlag:
 			lb[ptchLoc] = 2
 		lbs.append(lb)
@@ -808,9 +812,15 @@ def make_combined_window_file(prms, setName='train'):
 	nrmlPrune = False
 	if 'nrml' in prms.labelNames and len(prms.labelNames)==1:
 		if prms.nrmlMakeUni is not None:
+			idx = prms.labelNames.index('nrml')
+			lbInfo = prms.labels[idx]
 			nrmlPrune = True
-			nrmlBins  = np.linspace(-1,1,101)
-			binCounts = np.zeros((2,101))
+			if lbInfo.loss_ == 'l2':
+				nrmlBins  = np.linspace(-1,1,101)
+				binCounts = np.zeros((2,101))
+			elif lbInfo.loss_ == 'classify':
+				nrmlBins  = np.array(range(lbInfo.numBins_+1))
+				binCounts = np.zeros((2,lbInfo.numBins_))
 			mxBinCount = int(prms.nrmlMakeUni * np.sum(wCount))
 			print ('mxBinCount :%d' % mxBinCount)
 
