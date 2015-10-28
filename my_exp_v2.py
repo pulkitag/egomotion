@@ -127,8 +127,30 @@ def smallnetv2_pool4_nrml_crp192_rawImSz256_nojitter(isRun=False, isGray=False,
 		return prms, cPrms	
 
 
-def ptch_pose_exp2(isRun=False, deviceId=[1], numPoseStream=256, numPatchStream=256,
-									 numTrain=1e+7, batchsize=256):
+def smallnetv2_pool4_nrml_classify_crp192_rawImSz256_nojitter(isRun=False, isGray=False,
+																			 numTrain=1e+7, deviceId=[0,1],
+																			 makeNrmlUni=0.002):
+	prms  = sp.get_prms(labels=['nrml'], labelType=['xyz'],
+						lossType=['classify'], nBins=[20], binTypes=['uniform'], 
+						geoFence='dc-v2', crpSz=192,
+						rawImSz=256, splitDist=100,
+						numTrain=numTrain, nrmlMakeUni=makeNrmlUni)
+	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
+							 concatLayer='pool4', lossWeight=10.0,
+								randCrop=False, concatDrop=False,
+								isGray=isGray, maxJitter=0)
+	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000,
+												 clip_gradients=10.0, debug_info=True)
+	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId)
+	if isRun:
+		exp   = se.make_experiment(prms, cPrms)
+		exp.run()
+	else:
+		return prms, cPrms	
+
+
+
+def ptch_pose_exp2(isRun=False, deviceId=[1], numPoseStream=256, numPatchStream=256, numTrain=1e+7):
 	prms  = sp.get_prms(geoFence='dc-v2', labels=['pose', 'ptch'], 
 											labelType=['quat', 'wngtv'],
 											lossType=['l2', 'classify'], labelFrac=[0.5,0.5],

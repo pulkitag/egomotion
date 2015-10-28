@@ -655,7 +655,7 @@ def _filter_groups_by_dist(args):
 ##
 #Filter groups by dist parallel
 def p_filter_groups_by_dist(prms, grps=None, seedGrps=None):
-	numProc = 16
+	numProc = 12
 	pool    = Pool(processes=numProc)
 	if seedGrps is None:
 		seedGrps = su.get_groups(prms, '0052', setName=None)
@@ -677,7 +677,8 @@ def p_filter_groups_by_dist(prms, grps=None, seedGrps=None):
 			count = 0
 			grpDict = {}
 	try:
-		res    = pool.map_async(_filter_groups_by_dist, inArgs) 
+		res    = pool.map_async(_filter_groups_by_dist, inArgs)
+		pool.close() 
 		resKeys = res.get()
 	except KeyboardInterrupt:
 		pool.terminate()
@@ -689,6 +690,7 @@ def p_filter_groups_by_dist(prms, grps=None, seedGrps=None):
 	t2     = time.time()
 	print ("Time: %f" % (t2-t1))
 	pool.terminate()
+	pool.join()
 	return trKeys
 
 ##
