@@ -655,7 +655,8 @@ def _filter_groups_by_dist(args):
 ##
 #Filter groups by dist parallel
 def p_filter_groups_by_dist(prms, grps=None, seedGrps=None):
-	pool = Pool(processes=8)
+	numProc = 16
+	pool    = Pool(processes=numProc)
 	if seedGrps is None:
 		seedGrps = su.get_groups(prms, '0052', setName=None)
 	if grps is None:
@@ -664,18 +665,30 @@ def p_filter_groups_by_dist(prms, grps=None, seedGrps=None):
 	print (len(seedGrps), len(grps))
 	t1 = time.time()
 	inArgs = []
-	for gk in grps.keys():
-		inArgs.append(({'%s'%gk:grps[gk]}, seedGrps, prms.splits.dist))
+	perProc = int(len(grps.keys())/float(numProc))
+	count = 0
+	grpDict = {}
+	L = len(grps.keys())
+	for i,gk in enumerate(grps.keys()):
+		grpDict[gk] = grps[gk]
+		count += 1
+		if count == perProc or i == L-1:
+			inArgs.append((grpDict, seedGrps, prms.splits.dist))
+			count = 0
+			grpDict = {}
 	try:
 		res    = pool.map_async(_filter_groups_by_dist, inArgs) 
-		trKeys = res.get()
+		resKeys = res.get()
 	except KeyboardInterrupt:
 		pool.terminate()
 		raise Exception('Interrupt encountered')
+
+	trKeys = []
+	for r in resKeys:
+		trKeys = trKeys + r
 	t2     = time.time()
 	print ("Time: %f" % (t2-t1))
-	trKeys = [tk[0] for tk in trKeys if not(tk==[])]  
-	del pool
+	pool.terminate()
 	return trKeys
 
 ##

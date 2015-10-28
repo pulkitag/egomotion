@@ -834,8 +834,12 @@ def make_combined_window_file(prms, setName='train'):
 			if binCounts[nrmlIdx][binIdx] < mxBinCount:
 				binCounts[nrmlIdx][binIdx] += 1
 			else:
-				continue			
-		mainWFile.write(lbls[0], *imNames)
+				continue		
+		try:	
+			mainWFile.write(lbls[0], *imNames)
+		except:
+			print 'Error'
+			pdb.set_trace()
 		writeCount += 1	
 	mainWFile.close()
 	#Get the count correct for nrmlPrune scenarios
@@ -851,13 +855,13 @@ def make_combined_window_file(prms, setName='train'):
 			readCount += 1
 			if readCount == writeCount:
 				readFlag = False
-	mainWFile.close()
-	#Write the corrected version
-	mainWFile = mpio.GenericWindowWriter(prms['paths']['windowFile'][setName],
-					writeCount, numIm, prms['labelSz'])
-	for n in range(writeCount):
-		mainWFile.write(lbls[n][0], *imNames[n])
-	mainWFile.close()
+		mainWFile.close()
+		#Write the corrected version
+		mainWFile = mpio.GenericWindowWriter(prms['paths']['windowFile'][setName],
+						writeCount, numIm, prms['labelSz'])
+		for n in range(writeCount):
+			mainWFile.write(lbls[n][0], *imNames[n])
+		mainWFile.close()
 
 ##
 #Fetch the window file from the main machine
