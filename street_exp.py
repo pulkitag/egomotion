@@ -321,10 +321,25 @@ def make_loss_proto(prms, cPrms):
 		lbDef = _merge_defs(nrmlDef1, nrmlDef2)
 		lbDefs.append(lbDef)
 	elif 'nrml' in prms.labelNames:
-		defFile = osp.join(baseFilePath, 'nrml_loss_layers.prototxt')
-		lbDef   = mpu.ProtoDef(defFile)
-		idx     = prms.labelNames.index('nrml')
-		lbDef.set_layer_property('nrml_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
+		idx    = prms.labelNames['nrml']
+		lbInfo = prms.labels[idx]
+		if lbInfo.loss_ == 'classify':
+			defFile = osp.join(baseFilePath, 'nrml_loss_classify_layers.prototxt')
+			lbDef   = mpu.ProtoDef(defFile)
+			lbDef.set_layer_property('nrml_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
+		else:
+			defFile = osp.join(baseFilePath, 'nrml_loss_layers.prototxt')
+			lbDef   = mpu.ProtoDef(defFile)
+			lbDef.set_layer_property('nrml_fc_1',['inner_product_param', 'num_output'],
+						 '%d' % lbInfo.numBins_)
+			lbDef.set_layer_property('nrml_fc_2',['inner_product_param', 'num_output'],
+						 '%d' % lbInfo.numBins_)
+			lbDef.set_layer_property('nrml_loss_1', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
+			lbDef.set_layer_property('nrml_loss_2', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
+			lbDef.set_layer_property('nrml_loss_1', ['loss_param', 'ignore_label'], 
+						 '%d' % lbInfo.numBins_)
+			lbDef.set_layer_property('nrml_loss_2', ['loss_param', 'ignore_label'], 
+						 '%d' % lbInfo.numBins_)
 		lbDefs.append(lbDef)
 	if 'ptch' in prms.labelNames:
 		defFile = osp.join(baseFilePath, 'ptch_loss_layers.prototxt')

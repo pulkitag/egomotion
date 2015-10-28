@@ -327,8 +327,12 @@ def get_label_nrml(prms, groups, numSamples, randSeed=1001):
 	perm1   = randState.choice(N,numSamples)
 	#For label configuration 
 	lbIdx   = prms.labelNames.index('nrml')
+	lbInfo  = prms.labels[lbIdx]
 	st,en   = prms.labelSzList[lbIdx], prms.labelSzList[lbIdx+1]
-	en = en - 1
+	if lbInfo.loss_ == 'classify':
+		isClassify = True
+	else:
+		isClassify = False
 	ptchFlag = False
 	if 'ptch' in prms.labelNames:
 		ptchFlag = True
@@ -343,9 +347,10 @@ def get_label_nrml(prms, groups, numSamples, randSeed=1001):
 		#Ignore the last dimension as its always 0.
 		lb        = np.zeros((prms.labelSz,)).astype(np.float32)
 		st,en     = prms.labelSzList[0], prms.labelSzList[1]
-		en        = en - 1
+		if not isClassify:
+			en = en - 1
+			lb[en]  = 1
 		lb[st:en] = gp.data[idx].nrml[0:2]
-		lb[en]  = 1
 		if ptchFlag:
 			lb[ptchLoc] = 2
 		lbs.append(lb)
