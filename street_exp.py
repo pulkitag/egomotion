@@ -110,7 +110,9 @@ def get_finetune_prms(**kwargs):
  	return dArgs 
 
 
-def get_caffe_prms(nwPrms, lrPrms, finePrms=None, isScratch=True, deviceId=1): 
+def get_caffe_prms(nwPrms, lrPrms, finePrms=None, 
+									 isScratch=True, deviceId=1,
+									 runNum=0): 
 	caffePrms = edict()
 	caffePrms.deviceId  = deviceId
 	caffePrms.isScratch = isScratch
@@ -121,6 +123,8 @@ def get_caffe_prms(nwPrms, lrPrms, finePrms=None, isScratch=True, deviceId=1):
 	expStr = nwPrms.expStr + '/' + lrPrms.expStr
 	if finePrms is not None:
 		expStr = expStr + '/' + finePrms.expStr
+	if runNum > 0:
+		expStr = expStr + '_run%d' % runNum
 	caffePrms['expStr'] = expStr
 	caffePrms['solver'] = lrPrms.solver
 	return caffePrms
