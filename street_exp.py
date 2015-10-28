@@ -46,7 +46,7 @@ def get_nw_prms(**kwargs):
 	if dArgs.isPythonLayer:
 		expStr = '%s_pylayers' % expStr
 	if dArgs.extraFc is not None:
-		expStr = '%s_extraFc%d' % extraFc
+		expStr = '%s_extraFc%d' % (expStr, dArgs.extraFc)
 	dArgs.expStr = expStr 
 	return dArgs 
 
@@ -284,18 +284,22 @@ def make_net_proto(prms, cPrms):
 	netDef  = mpu.ProtoDef(netFile)
 	if cPrms.nwPrms.extraFc is not None:
 		#Changethe name of the existing common_fc to common_fc_prev
-		netDef.set_layer_property('common_fc', 'top', '"%s"' % 'common_fc_prev')
-		netDef.set_layer_property('common_fc', 'name', '"%s"' % 'common_fc_prev')
-		netDef.set_layer_property('relu_common', 'top', '"%s"' % 'common_fc_prev')
-		netDef.set_layer_property('relu_common', 'bottom', '"%s"' % 'common_fc_prev')
-		netDef.set_layer_property('relu_common', 'name', '"%s"' % 'relu_common_prev')
+		netDef.rename_layer('common_fc', 'common_fc_prev')
+		netDef.set_layer_property('common_fc_prev', 'top', '"%s"' % 'common_fc_prev')
+		#Rename the params
+		netDef.set_layer_property('common_fc_prev', ['param', 'name'], '"%s"' % 'common_fc_prev_w')
+		netDef.set_layer_property('common_fc_prev', ['param', 'name'],
+							 '"%s"' % 'common_fc_prev_b', propNum=[1,0])
+		netDef.rename_layer('relu_common', 'relu_common_prev')
+		netDef.set_layer_property('relu_common_prev', 'top', '"%s"' % 'common_fc_prev')
+		netDef.set_layer_property('relu_common_prev', 'bottom', '"%s"' % 'common_fc_prev')
 		#Add the new layer
 		eName   = 'common_fc'
 		lastTop = 'common_fc_prev'
 		fcLayer = mpu.get_layerdef_for_proto('InnerProduct', eName, lastTop,
-                          **{'top': eName, 'num_output': prms.nwPrms.extraFc})
+                          **{'top': eName, 'num_output': cPrms.nwPrms.extraFc})
 		reLayer = mpu.get_layerdef_for_proto('ReLU', 'relu_common', eName, **{'top': eName})
-		netDef.add_layer(eName, ipLayer)
+		netDef.add_layer(eName, fcLayer)
 		netDef.add_layer('relu_common', reLayer)
 
 	if cPrms.nwPrms.concatDrop:
