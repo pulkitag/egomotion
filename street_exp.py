@@ -27,7 +27,6 @@ def get_nw_prms(**kwargs):
 	dArgs.poseStreamNum    = 256
 	dArgs.isGray           = False
 	dArgs.isPythonLayer    = False
-	dArgs.resumeIter       = 0
 	dArgs.extraFc          = None
 	dArgs = mpu.get_defaults(kwargs, dArgs)
 	expStr = 'net-%s_cnct-%s_cnctDrp%d_contPad%d_imSz%d_imgntMean%d_jit%d'\
@@ -112,13 +111,14 @@ def get_finetune_prms(**kwargs):
 
 def get_caffe_prms(nwPrms, lrPrms, finePrms=None, 
 									 isScratch=True, deviceId=1,
-									 runNum=0): 
+									 runNum=0, resumeIter=0): 
 	caffePrms = edict()
 	caffePrms.deviceId  = deviceId
 	caffePrms.isScratch = isScratch
 	caffePrms.nwPrms    = copy.deepcopy(nwPrms)
 	caffePrms.lrPrms    = copy.deepcopy(lrPrms)
 	caffePrms.finePrms  = copy.deepcopy(finePrms)
+	caffePrms.resumeIter = resumeIter
 
 	expStr = nwPrms.expStr + '/' + lrPrms.expStr
 	if finePrms is not None:
@@ -222,7 +222,7 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 			grayStr = 'no-is_gray'
 		
 		paramStr = '"--source %s --root_folder %s --crop_size %d\
-							  --batch_size %d --%s --mean_file %s"'
+							  --batch_size %d --%s --mean_file %s --resume_iter %d"'
 		for p in ['TRAIN', 'TEST']:
 			if p == 'TRAIN':
 				batchSz = cPrms.lrPrms.batchsize
@@ -230,7 +230,7 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 				batchSz = 50
 			params = paramStr % (prms['paths']['windowFile'][p.lower()],
 								rootDir, cPrms.nwPrms.imSz, batchSz, 
-								grayStr, fName)
+								grayStr, fName, cPrms.resumeIter)
 			protoDef.set_layer_property('window_data', ['python_param', 'param_str'],
 																	 params, phase=p)
 	#Splitting for Siamese net
@@ -420,12 +420,15 @@ def setup_experiment(prms, cPrms):
 
 ##
 #Write the files for running the experiment. 
-def make_experiment(prms, cPrms, isFine=False, resumeIter=None, 
+def make_experiment(prms, cPrms, isFine=False, 
 										srcModelFile=None, srcDefFile=None):
 	'''
 		Specifying the srcModelFile is a hack to overwrite a model file to 
 		use with pretraining. 
 	'''
+	resumeIter = cPrms.resumeIter
+	if resumeIter == 0:
+		resumeIter = None
 	if isFine:
 		caffeExp = setup_experiment_finetune(prms, cPrms, srcDefFile=srcDefFile)
 		if srcModelFile is None:
