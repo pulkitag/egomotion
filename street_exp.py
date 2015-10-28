@@ -28,6 +28,7 @@ def get_nw_prms(**kwargs):
 	dArgs.isGray           = False
 	dArgs.isPythonLayer    = False
 	dArgs.resumeIter       = 0
+	dArgs.extraFc          = None
 	dArgs = mpu.get_defaults(kwargs, dArgs)
 	expStr = 'net-%s_cnct-%s_cnctDrp%d_contPad%d_imSz%d_imgntMean%d_jit%d'\
 						%(dArgs.netName, dArgs.concatLayer, dArgs.concatDrop, 
@@ -44,6 +45,8 @@ def get_nw_prms(**kwargs):
 		expStr = '%s_grayIm' % expStr
 	if dArgs.isPythonLayer:
 		expStr = '%s_pylayers' % expStr
+	if dArgs.extraFc is not None:
+		expStr = '%s_extraFc%d' % extraFc
 	dArgs.expStr = expStr 
 	return dArgs 
 
@@ -107,7 +110,9 @@ def get_finetune_prms(**kwargs):
  	return dArgs 
 
 
-def get_caffe_prms(nwPrms, lrPrms, finePrms=None, isScratch=True, deviceId=1): 
+def get_caffe_prms(nwPrms, lrPrms, finePrms=None, 
+									 isScratch=True, deviceId=1,
+									 runNum=0): 
 	caffePrms = edict()
 	caffePrms.deviceId  = deviceId
 	caffePrms.isScratch = isScratch
@@ -118,6 +123,8 @@ def get_caffe_prms(nwPrms, lrPrms, finePrms=None, isScratch=True, deviceId=1):
 	expStr = nwPrms.expStr + '/' + lrPrms.expStr
 	if finePrms is not None:
 		expStr = expStr + '/' + finePrms.expStr
+	if runNum > 0:
+		expStr = expStr + '_run%d' % runNum
 	caffePrms['expStr'] = expStr
 	caffePrms['solver'] = lrPrms.solver
 	return caffePrms
@@ -275,6 +282,22 @@ def make_net_proto(prms, cPrms):
 												 cPrms.nwPrms.concatLayer) 
 	netFile = osp.join(baseFilePath, netFile)
 	netDef  = mpu.ProtoDef(netFile)
+	if cPrms.nwPrms.extraFc is not None:
+		#Changethe name of the existing common_fc to common_fc_prev
+		netDef.set_layer_property('common_fc', 'top', '"%s"' % 'common_fc_prev')
+		netDef.set_layer_property('common_fc', 'name', '"%s"' % 'common_fc_prev')
+		netDef.set_layer_property('relu_common', 'top', '"%s"' % 'common_fc_prev')
+		netDef.set_layer_property('relu_common', 'bottom', '"%s"' % 'common_fc_prev')
+		netDef.set_layer_property('relu_common', 'name', '"%s"' % 'relu_common_prev')
+		#Add the new layer
+		eName   = 'common_fc'
+		lastTop = 'common_fc_prev'
+		fcLayer = mpu.get_layerdef_for_proto('InnerProduct', eName, lastTop,
+                          **{'top': eName, 'num_output': prms.nwPrms.extraFc})
+		reLayer = mpu.get_layerdef_for_proto('ReLU', 'relu_common', eName, **{'top': eName})
+		netDef.add_layer(eName, ipLayer)
+		netDef.add_layer('relu_common', reLayer)
+
 	if cPrms.nwPrms.concatDrop:
 		dropLayer = mpu.get_layerdef_for_proto('Dropout', 'drop-%s' % 'common_fc', 'common_fc',
                             **{'top': 'common_fc', 'dropout_ratio': 0.5})

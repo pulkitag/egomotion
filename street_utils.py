@@ -350,7 +350,11 @@ def get_label_nrml(prms, groups, numSamples, randSeed=1001):
 		if not isClassify:
 			en = en - 1
 			lb[en]  = 1
-		lb[st:en] = gp.data[idx].nrml[0:2]
+			lb[st:en] = gp.data[idx].nrml[0:2]
+		else:
+			nxBin  = find_bin_index(lbInfo.binRange_, gp.data[idx].nrml[0])
+			nyBin  = find_bin_index(lbInfo.binRange_, gp.data[idx].nrml[1])
+			lb[st:en] = nxBin, nyBin
 		if ptchFlag:
 			lb[ptchLoc] = 2
 		lbs.append(lb)
@@ -672,7 +676,27 @@ def make_window_file(prms, setNames=['test', 'train']):
 
 def get_label_by_folderid(prms, folderId):
 	grpDict = get_groups(prms, folderId, setName=None)
-	grps    = [g for (gk,g) in grpDict.iteritems()] 
+	#Filter the ids if required
+	if prms.splits.ver in ['v1']:
+		#One folder either belongs to train or to test
+		splitFile = prms.paths.proc.splitsFile % folderId
+		splitDat  = pickle.load(open(splitFile, 'r'))
+		splitDat  = splitDat['splits']
+		if len(splitDat['train'])>0:
+			assert(len(splitDat['test'])==0)
+			gKeys = splitDat['train']
+			print ('Folder: %s is TRAIN with %d Keys' % (folderId, len(gKeys)))
+		else:
+			assert(len(splitDat['train'])==0)
+			gKeys = splitDat['test']
+			print ('Folder: %s is TEST with %d Keys' % (folderId, len(gKeys)))
+		grps = []
+		for gk in gKeys:
+			grps.append(grpDict[gk]) 
+	else:		
+		grps    = [g for (gk,g) in grpDict.iteritems()] 
+
+	#Form the Labels
 	lbNums = []
 	for (i,l) in enumerate(prms.labelNames):
 		if l == 'nrml':
@@ -808,9 +832,15 @@ def make_combined_window_file(prms, setName='train'):
 	nrmlPrune = False
 	if 'nrml' in prms.labelNames and len(prms.labelNames)==1:
 		if prms.nrmlMakeUni is not None:
+			idx = prms.labelNames.index('nrml')
+			lbInfo = prms.labels[idx]
 			nrmlPrune = True
-			nrmlBins  = np.linspace(-1,1,101)
-			binCounts = np.zeros((2,101))
+			if lbInfo.loss_ == 'l2':
+				nrmlBins  = np.linspace(-1,1,101)
+				binCounts = np.zeros((2,101))
+			elif lbInfo.loss_ == 'classify':
+				nrmlBins  = np.array(range(lbInfo.numBins_+1))
+				binCounts = np.zeros((2,lbInfo.numBins_))
 			mxBinCount = int(prms.nrmlMakeUni * np.sum(wCount))
 			print ('mxBinCount :%d' % mxBinCount)
 
