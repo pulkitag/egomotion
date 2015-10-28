@@ -2,6 +2,7 @@
 import street_params as sp
 import street_exp as se
 
+
 def smallnetv2_pool4_pose_crp192_rawImSz256(isRun=False, isGray=False, numTrain=1e+7,
 																						deviceId=[0], isPythonLayer=False, runNum=0):
 	prms  = sp.get_prms_pose(geoFence='dc-v2', crpSz=192,
@@ -48,9 +49,9 @@ def smallnetv2_pool4_pose_euler_mx45_crp192_rawImSz256(isRun=False, numTrain=1e+
 								isGray=isGray, isPythonLayer=isPythonLayer, 
 								extraFc=extraFc)
 	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000, clip_gradients=10.0)
-	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId)
+	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId, resumeIter=resumeIter)
 	if isRun:
-		exp   = se.make_experiment(prms, cPrms, resumeIter=resumeIter)
+		exp   = se.make_experiment(prms, cPrms)
 		exp.run()
 	return prms, cPrms	
 
@@ -90,23 +91,6 @@ def smallnetv2_pool4_pose_classify_euler_mx45_crp192_rawImSz256(isRun=False, num
 	return prms, cPrms	
 
 
-
-def smallnetv2_pool4_ptch_crp192_rawImSz256(isRun=False, isGray=False, numTrain=1e+7,
-																		isPythonLayer=False, deviceId=[2], batchsize=256):
-	prms  = sp.get_prms_ptch(geoFence='dc-v2', crpSz=192,
-													 rawImSz=256, splitDist=100,
-													 numTrain=numTrain)
-	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
-							 concatLayer='pool4', lossWeight=10.0,
-								randCrop=False, concatDrop=False,
-								isGray=isGray, isPythonLayer=isPythonLayer)
-	lPrms = se.get_lr_prms(batchsize=batchsize, stepsize=10000, clip_gradients=10.0)
-	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId)
-	if isRun:
-		exp   = se.make_experiment(prms, cPrms)
-		exp.run()
-	else:
-		return prms, cPrms	
 
 def smallnetv2_pool4_nrml_crp192_rawImSz256(isRun=False, isGray=False,
 																			 numTrain=1e+7, deviceId=[0],
