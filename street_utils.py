@@ -515,21 +515,28 @@ def get_label_pose_ptch(prms, groups, numSamples, randSeed=1005, randSeedAdd=0):
 	ptchSt,ptchEn   = prms.labelSzList[ptchIdx], prms.labelSzList[ptchIdx+1]
 	poseSt,poseEn   = prms.labelSzList[poseIdx], prms.labelSzList[poseIdx+1]
 	poseEn = poseEn - 1
+	poseIdx, negIdx  = [], []
+	idxCount          = 0
 	for p1, p2 in zip(perm1, perm2):
 		lb  = np.zeros((prms.labelSz,)).astype(np.float32)
 		prob   = randState.rand()
-		if prob > ptchLb.posFrac_:
+		if prob < ptchLb.posFrac_:
 			#Sample positive
 			lb[ptchSt] = 1
 			gp  = groups[p1]
 			lPerm = randState.permutation(gp.num)
 			n1, n2 = lPerm[0], lPerm[1]
+			#Sample the pose as well
+			rotLbs     = get_rots_label(poseLb, gp.data[n1].rots, 
+													 gp.data[n2].rots)
+			if rotLbs is None:
+				continue
+			lb[poseSt:poseEn] = rotLbs
+			lb[poseEn] = 1.0
 			prefix.append((gp.folderId, gp.prefix[n1].strip(),
 										 gp.folderId, gp.prefix[n2].strip()))
-			#Sample the pose as well
-			lb[poseSt:poseEn] = get_rots_label(poseLb, gp.data[n1].rots, 
-													 gp.data[n2].rots)
-			lb[poseEn] = 1.0
+			poseIdx.append(idxCount)
+			idxCount += 1
 		else:
 			#Sample negative
 			lb[ptchSt] = 0
@@ -542,7 +549,27 @@ def get_label_pose_ptch(prms, groups, numSamples, randSeed=1005, randSeedAdd=0):
 			n2  = randState.permutation(gp2.num)[0]
 			prefix.append((gp1.folderId, gp1.prefix[n1].strip(),
 										 gp2.folderId, gp2.prefix[n2].strip()))
+			negIdx.append(idxCount)
+			idxCount += 1
 		lbs.append(lb)
+
+	posCount = len(poseIdx)
+	negCount = len(negIdx)
+	expectedNegCount = int(np.ceil((float(posCount)/ptchLb.posFrac_)*(1.0 - ptchLb.posFrac_)))
+	if negCount > expectedNegCount:
+		print ('%d pos, %d neg, but there should be %d neg, adjusting'\
+							 % (posCount, negCount, expectedNegCount))
+		perm = randState.permutation(negCount)
+		permIdx = [negIdx[p] for p in perm]
+		keepIdx = permIdx[0:expectedNegCount] + poseIdx
+		#Randomly permute these indices
+		perm    = randState.permutation(len(keepIdx))
+		keepIdx = [keepIdx[p] for p in perm] 
+		lbs = [lbs[k] for k in keepIdx]
+		prefix = [prefix[k] for k in keepIdx] 
+	else:	
+		print ('%d negatives, there should be %d, NOT adjusting' % (negCount, expectedNegCount))	
+	print ('#Labels Extracted: %d' % len(lbs))
 	return lbs, prefix
 
 
