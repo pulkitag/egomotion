@@ -27,7 +27,6 @@ def get_nw_prms(**kwargs):
 	dArgs.poseStreamNum    = 256
 	dArgs.isGray           = False
 	dArgs.isPythonLayer    = False
-	dArgs.resumeIter       = 0
 	dArgs.extraFc          = None
 	dArgs = mpu.get_defaults(kwargs, dArgs)
 	expStr = 'net-%s_cnct-%s_cnctDrp%d_contPad%d_imSz%d_imgntMean%d_jit%d'\
@@ -46,7 +45,7 @@ def get_nw_prms(**kwargs):
 	if dArgs.isPythonLayer:
 		expStr = '%s_pylayers' % expStr
 	if dArgs.extraFc is not None:
-		expStr = '%s_extraFc%d' % extraFc
+		expStr = '%s_extraFc%d' % (expStr, dArgs.extraFc)
 	dArgs.expStr = expStr 
 	return dArgs 
 
@@ -112,13 +111,14 @@ def get_finetune_prms(**kwargs):
 
 def get_caffe_prms(nwPrms, lrPrms, finePrms=None, 
 									 isScratch=True, deviceId=1,
-									 runNum=0): 
+									 runNum=0, resumeIter=0): 
 	caffePrms = edict()
 	caffePrms.deviceId  = deviceId
 	caffePrms.isScratch = isScratch
 	caffePrms.nwPrms    = copy.deepcopy(nwPrms)
 	caffePrms.lrPrms    = copy.deepcopy(lrPrms)
 	caffePrms.finePrms  = copy.deepcopy(finePrms)
+	caffePrms.resumeIter = resumeIter
 
 	expStr = nwPrms.expStr + '/' + lrPrms.expStr
 	if finePrms is not None:
@@ -222,7 +222,7 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 			grayStr = 'no-is_gray'
 		
 		paramStr = '"--source %s --root_folder %s --crop_size %d\
-							  --batch_size %d --%s --mean_file %s"'
+							  --batch_size %d --%s --mean_file %s --resume_iter %d"'
 		for p in ['TRAIN', 'TEST']:
 			if p == 'TRAIN':
 				batchSz = cPrms.lrPrms.batchsize
@@ -230,7 +230,7 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 				batchSz = 50
 			params = paramStr % (prms['paths']['windowFile'][p.lower()],
 								rootDir, cPrms.nwPrms.imSz, batchSz, 
-								grayStr, fName)
+								grayStr, fName, cPrms.resumeIter)
 			protoDef.set_layer_property('window_data', ['python_param', 'param_str'],
 																	 params, phase=p)
 	#Splitting for Siamese net
@@ -284,18 +284,22 @@ def make_net_proto(prms, cPrms):
 	netDef  = mpu.ProtoDef(netFile)
 	if cPrms.nwPrms.extraFc is not None:
 		#Changethe name of the existing common_fc to common_fc_prev
-		netDef.set_layer_property('common_fc', 'top', '"%s"' % 'common_fc_prev')
-		netDef.set_layer_property('common_fc', 'name', '"%s"' % 'common_fc_prev')
-		netDef.set_layer_property('relu_common', 'top', '"%s"' % 'common_fc_prev')
-		netDef.set_layer_property('relu_common', 'bottom', '"%s"' % 'common_fc_prev')
-		netDef.set_layer_property('relu_common', 'name', '"%s"' % 'relu_common_prev')
+		netDef.rename_layer('common_fc', 'common_fc_prev')
+		netDef.set_layer_property('common_fc_prev', 'top', '"%s"' % 'common_fc_prev')
+		#Rename the params
+		netDef.set_layer_property('common_fc_prev', ['param', 'name'], '"%s"' % 'common_fc_prev_w')
+		netDef.set_layer_property('common_fc_prev', ['param', 'name'],
+							 '"%s"' % 'common_fc_prev_b', propNum=[1,0])
+		netDef.rename_layer('relu_common', 'relu_common_prev')
+		netDef.set_layer_property('relu_common_prev', 'top', '"%s"' % 'common_fc_prev')
+		netDef.set_layer_property('relu_common_prev', 'bottom', '"%s"' % 'common_fc_prev')
 		#Add the new layer
 		eName   = 'common_fc'
 		lastTop = 'common_fc_prev'
 		fcLayer = mpu.get_layerdef_for_proto('InnerProduct', eName, lastTop,
-                          **{'top': eName, 'num_output': prms.nwPrms.extraFc})
+                          **{'top': eName, 'num_output': cPrms.nwPrms.extraFc})
 		reLayer = mpu.get_layerdef_for_proto('ReLU', 'relu_common', eName, **{'top': eName})
-		netDef.add_layer(eName, ipLayer)
+		netDef.add_layer(eName, fcLayer)
 		netDef.add_layer('relu_common', reLayer)
 
 	if cPrms.nwPrms.concatDrop:
@@ -416,12 +420,15 @@ def setup_experiment(prms, cPrms):
 
 ##
 #Write the files for running the experiment. 
-def make_experiment(prms, cPrms, isFine=False, resumeIter=None, 
+def make_experiment(prms, cPrms, isFine=False, 
 										srcModelFile=None, srcDefFile=None):
 	'''
 		Specifying the srcModelFile is a hack to overwrite a model file to 
 		use with pretraining. 
 	'''
+	resumeIter = cPrms.resumeIter
+	if resumeIter == 0:
+		resumeIter = None
 	if isFine:
 		caffeExp = setup_experiment_finetune(prms, cPrms, srcDefFile=srcDefFile)
 		if srcModelFile is None:
@@ -443,6 +450,28 @@ def make_experiment(prms, cPrms, isFine=False, resumeIter=None,
 
 	caffeExp.make(modelFile=modelFile, resumeIter=resumeIter)
 	return caffeExp	
+
+##
+#Make an experiment by initializaing from a previos experiment
+def make_experiment_from_previous(srcPrms, srcCPrms, prms, cPrms,
+													 srcModelIter):
+
+	#For resuming the training
+	resumeIter = cPrms.resumeIter
+	if resumeIter == 0:
+		resumeIter = None
+	#Get the srcExperiment Model File
+	srcExp    = setup_experiment(srcPrms, srcCPrms)
+	modelFile = srcExp.get_snapshot_name(srcModelIter)
+	if not osp.exists(modelFile):
+		raise Exception('MODEL FILE DOESNOT EXIST')
+
+	#Name the target experiment appropriately  
+	prms['expName'] = 'fine-FROM/%s/%s_srcModelIter%dK/fine-TO/'\
+							 % (srcPrms['expName'], cPrms['expStr'], int(srcModelIter/1000))
+	exp = setup_experiment(prms, cPrms)
+	exp.make(modelFile=modelFile)
+	return exp	
 
 
 def get_experiment_accuracy(prms, cPrms, lossName=None):
