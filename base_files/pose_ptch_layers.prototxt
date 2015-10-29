@@ -17,6 +17,6 @@ layer {
   top: "ptch_label"
   slice_param {
     slice_dim: 1
-    slice_point: 5
+    slice_point: 3
   }
 }

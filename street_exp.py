@@ -451,6 +451,28 @@ def make_experiment(prms, cPrms, isFine=False,
 	caffeExp.make(modelFile=modelFile, resumeIter=resumeIter)
 	return caffeExp	
 
+##
+#Make an experiment by initializaing from a previos experiment
+def make_experiment_from_previous(srcPrms, srcCPrms, prms, cPrms,
+													 srcModelIter):
+
+	#For resuming the training
+	resumeIter = cPrms.resumeIter
+	if resumeIter == 0:
+		resumeIter = None
+	#Get the srcExperiment Model File
+	srcExp    = setup_experiment(srcPrms, srcCPrms)
+	modelFile = srcExp.get_snapshot_name(srcModelIter)
+	if not osp.exists(modelFile):
+		raise Exception('MODEL FILE DOESNOT EXIST')
+
+	#Name the target experiment appropriately  
+	prms['expName'] = 'fine-FROM/%s/%s_srcModelIter%dK/fine-TO/'\
+							 % (srcPrms['expName'], cPrms['expStr'], int(srcModelIter/1000))
+	exp = setup_experiment(prms, cPrms)
+	exp.make(modelFile=modelFile)
+	return exp	
+
 
 def get_experiment_accuracy(prms, cPrms, lossName=None):
 	#This will contain the log file name

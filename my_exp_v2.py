@@ -153,8 +153,60 @@ def smallnetv2_pool4_nrml_classify_crp192_rawImSz256_nojitter(isRun=False, isGra
 		return prms, cPrms	
 
 
+def ptch_pose_euler_mx45_exp1(isRun=False, deviceId=[1], numTrain=1e+7, batchsize=256,
+								 extraFc=None, isPythonLayer=True):
+	prms  = sp.get_prms(geoFence='dc-v2', labels=['pose', 'ptch'], 
+											labelType=['euler', 'wngtv'],
+											lossType=['l2', 'classify'], labelFrac=[0.5,0.5],
+											rawImSz=256, crpSz=192, splitDist=100,
+											numTrain=numTrain, maxEulerRot=45,
+											nBins=[None, None], binTypes=[None, None])
+	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
+							 concatLayer='pool4', lossWeight=10.0,
+							 multiLossProto=None, extraFc=extraFc,
+							 isPythonLayer=isPythonLayer)
+	lPrms = se.get_lr_prms(batchsize=batchsize, stepsize=20000, clip_gradients=10.0)
+	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId)
+	if isRun:
+		exp   = se.make_experiment(prms, cPrms)
+		exp.run()
+	else:
+		return prms, cPrms	
 
-def ptch_pose_euler_mx45_exp2(isRun=False, deviceId=[1], numPoseStream=256, numPatchStream=256, numTrain=1e+7, batchsize=256):
+
+def ptch_pose_euler_mx45_exp1_from_pose(isRun=False, deviceId=[1], 
+								 numTrain=1e+7, batchsize=256,
+								 extraFc=None, isPythonLayer=True,
+								 poseModelIter=10000):
+
+	srcPrms, srcCPrms = smallnetv2_pool4_pose_euler_mx45_rawImSz256(isRun=False,
+					isPythonLayer=True)
+
+
+	prms  = sp.get_prms(geoFence='dc-v2', labels=['pose', 'ptch'], 
+											labelType=['euler', 'wngtv'],
+											lossType=['l2', 'classify'], labelFrac=[0.5,0.5],
+											rawImSz=256, crpSz=192, splitDist=100,
+											numTrain=numTrain, maxEulerRot=45,
+											nBins=[None, None], binTypes=[None, None])
+	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
+							 concatLayer='pool4', lossWeight=10.0,
+							 multiLossProto=None, extraFc=extraFc,
+							 isPythonLayer=isPythonLayer)
+	lPrms = se.get_lr_prms(batchsize=batchsize, stepsize=20000, clip_gradients=10.0)
+	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId)
+
+	exp = se.make_experiment_from_previous(srcPrms, srcCPrms, prms, cPrms,
+						srcModelIter=poseModelIter)
+	if isRun:
+		exp.run()
+	return exp
+
+
+
+def ptch_pose_euler_mx45_exp2(isRun=False, deviceId=[1], numPoseStream=256,
+								 numPatchStream=256, numTrain=1e+7, batchsize=256,
+								 extraFc=None, isPythonLayer=True):
 	prms  = sp.get_prms(geoFence='dc-v2', labels=['pose', 'ptch'], 
 											labelType=['euler', 'wngtv'],
 											lossType=['l2', 'classify'], labelFrac=[0.5,0.5],
@@ -164,8 +216,9 @@ def ptch_pose_euler_mx45_exp2(isRun=False, deviceId=[1], numPoseStream=256, numP
 	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
 							 concatLayer='pool4', lossWeight=10.0,
 							 multiLossProto='v1', ptchStreamNum=numPatchStream,
-							 poseStreamNum=numPoseStream)
-	lPrms = se.get_lr_prms(batchsize=batchsize, stepsize=10000, clip_gradients=10.0)
+							 poseStreamNum=numPoseStream, extraFc=extraFc,
+							 isPythonLayer=isPythonLayer)
+	lPrms = se.get_lr_prms(batchsize=batchsize, stepsize=20000, clip_gradients=10.0)
 	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId)
 	if isRun:
 		exp   = se.make_experiment(prms, cPrms)
