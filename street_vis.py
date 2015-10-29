@@ -77,14 +77,18 @@ def show_image_groups(prms, folderId):
 			axl[c].cla()
 
 def vis_window_file(prms, setName='test', isSave=False,
-										labelType='pose_ptch'):
+										labelType='pose_ptch', isEuler=True):
 	rootDir = se.get_windowfile_rootdir(prms)
 	wFile   = prms.paths.windowFile[setName]
 	wDat    = mpio.GenericWindowReader(wFile)
 	runFlag = True
 	if labelType == 'pose_ptch':
-		lbStr   = 'roll: %.2f, yaw: %.2f, pitch: %.2f, isRot: %d'\
-							+ '\n patchMatch: %.2f'
+		if isEuler:
+			lbStr   = 'yaw: %.2f, pitch: %.2f, isRot: %d'\
+								+ '\n patchMatch: %.2f'
+		else:
+			lbStr   = 'roll: %.2f, yaw: %.2f, pitch: %.2f, isRot: %d'\
+								+ '\n patchMatch: %.2f'
 	elif labelType == 'pose':
 		lbStr   = 'roll: %.2f, yaw: %.2f, pitch: %.2f, isRot: %d'
 	elif labelType == 'ptch':
@@ -101,16 +105,26 @@ def vis_window_file(prms, setName='test', isSave=False,
 		imNames  = [osp.join(rootDir, n.split()[0]) for n in imNames]
 		#pdb.set_trace()
 		if 'pose' in labelType:
-			q1, q2, q3, q4 = lbs[0][0:4]
-			roll, yaw, pitch = ru.quat2euler([q1, q2, q3, q4])
-			roll  = 180 * (roll/np.pi)
-			yaw   = 180 * (yaw/np.pi)
-			pitch = 180 * (pitch/np.pi)
-			isRot          = lbs[0][4]
+			if isEuler:
+				yaw, pitch = lbs[0][0:2]
+				yaw        = (yaw * 180./6.)
+				pitch      = (pitch * 180./6.)
+				isRot          = lbs[0][2]
+			else:
+				q1, q2, q3, q4 = lbs[0][0:4]
+				roll, yaw, pitch = ru.quat2euler([q1, q2, q3, q4])
+				roll  = 180 * (roll/np.pi)
+				yaw   = 180 * (yaw/np.pi)
+				pitch = 180 * (pitch/np.pi)
+				isRot          = lbs[0][4]
 
 		if labelType == 'pose_ptch':
-			pMatch = lbs[0][5]
-			figTitle = lbStr % (roll, yaw, pitch, isRot, pMatch)
+			if isEuler:
+				pMatch = lbs[0][3]
+				figTitle = lbStr % (yaw, pitch, isRot, pMatch)
+			else:
+				pMatch = lbs[0][5]
+				figTitle = lbStr % (roll, yaw, pitch, isRot, pMatch)
 		elif labelType == 'pose':
 			figTitle = lbStr % (roll, yaw, pitch, isRot)
 		elif labelType == 'ptch':			
