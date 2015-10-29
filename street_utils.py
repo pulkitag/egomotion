@@ -526,8 +526,6 @@ def get_label_pose_ptch(prms, groups, numSamples, randSeed=1005, randSeedAdd=0):
 			gp  = groups[p1]
 			lPerm = randState.permutation(gp.num)
 			n1, n2 = lPerm[0], lPerm[1]
-			prefix.append((gp.folderId, gp.prefix[n1].strip(),
-										 gp.folderId, gp.prefix[n2].strip()))
 			#Sample the pose as well
 			rotLbs     = get_rots_label(poseLb, gp.data[n1].rots, 
 													 gp.data[n2].rots)
@@ -535,6 +533,8 @@ def get_label_pose_ptch(prms, groups, numSamples, randSeed=1005, randSeedAdd=0):
 				continue
 			lb[poseSt:poseEn] = rotLbs
 			lb[poseEn] = 1.0
+			prefix.append((gp.folderId, gp.prefix[n1].strip(),
+										 gp.folderId, gp.prefix[n2].strip()))
 			poseIdx.append(idxCount)
 			idxCount += 1
 		else:
