@@ -70,7 +70,7 @@ def pointid_2_iminfo(prms):
 	imStr       = prms.paths.rawIms 
 	imList      = []
 	for i,p in enumerate(pointIds):
-		if (not (p == prevId) and prevId is not None) or i ==len(pointIds)-1 :
+		if not (p == prevId) and prevId is not None:
 			key     = keyStr % prevId
 			svName  = svStr % (folderCount, ptCount)
 			ptHash[key] = svName
@@ -155,7 +155,6 @@ def save_images(prms, keyFile, egs, imCount=0):
 			ims1     = pickle.load(open(k1,'r'))['ims']
 			ims2     = pickle.load(open(k2,'r'))['ims']
 		except:
-			print(k1, k2)
 			pdb.set_trace()
 		l1, l2   = ims1.shape[0], ims2.shape[0]
 		continue
@@ -174,38 +173,30 @@ def save_images(prms, keyFile, egs, imCount=0):
 		imCount += 1
 		svName = osp.join(prms.paths.jpgDir, fName1)
 		_mkdir(svName)
-		scm.imsave(svName, im1)
+		#scm.imsave(svName, im1)
 		#Save Second Image	
 		folderCount = int(np.floor(imCount/1000))
 		fName2 = jpgPath % (folderCount, np.mod(imCount,1000))
 		imCount += 1
 		svName = osp.join(prms.paths.jpgDir, fName2)
 		_mkdir(svName)
-		scm.imsave(svName, im2)
+		#scm.imsave(svName, im2)
 		imNames.append([fName1, fName2])	
-	pickle.dump({'imNames':imNames}, open(keyFile, 'w'))
+	#pickle.dump({'imNames':imNames}, open(keyFile, 'w'))
 	return imCount
 
 def _save_images(args):
 	save_images(*args)
-	return True
 
 def save_pos_neg_images():
-	pool = Pool(processes=2)
 	prms = get_prms()
 	pos, neg = read_test(prms)
-	pos = pos[0:45000]
-	neg = neg[0:45000]
 	inArgs = []
 	inArgs.append([prms, prms.paths.jpgPosKey, pos, 0])
 	inArgs.append([prms, prms.paths.jpgNegKey, neg, len(pos)])
-	res = pool.map_async(_save_images, inArgs)
-	pool.close()
-	resData = res.get()
-	pool.terminate()
-
+	
 	#save_images(prms, prms.paths.jpgPosKey, pos)
-	#save_images(prms, prms.paths.jpgNegKey, neg, imCount=len(pos))
+	#save_images(prms, prms.paths.jpgNegKey, neg[8000:], imCount=len(pos))
 
 def make_window_file():	
 	prms   = get_prms()

@@ -5,9 +5,6 @@ import cPickle as pickle
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from multiprocessing import Pool
-import my_pycaffe_io as mpio
-import pdb
 
 def _mkdir(fName):
 	dirName, _ = osp.split(fName)
@@ -43,9 +40,8 @@ def get_prms():
 
 	#The imData Dir for saving pos-neg images
 	prms.paths.jpgDir = '/data0/pulkitag/data_sets/patch-match/liberty/proc/imJpgs/'
-	prms.paths.wFile  = '/data0/pulkitag/data_sets/patch-match/liberty/proc/window-file.txt'
-	prms.paths.jpgPosKey = osp.join(prms.paths.jpgDir, 'jpg-pos-key.pkl')
-	prms.paths.jpgNegKey = osp.join(prms.paths.jpgDir, 'jpg-neg-key.pkl')
+	prms.paths.jpgIm  = osp.join(prms.paths.jpgDir, 'folder-%05d', 'im%03d.jpg')
+	prms.paths.jpgKey = osp.join(prms.paths.jpgDir, 'jpg-key.pkl')
 	return prms
 
 
@@ -70,8 +66,8 @@ def pointid_2_iminfo(prms):
 	imStr       = prms.paths.rawIms 
 	imList      = []
 	for i,p in enumerate(pointIds):
-		if (not (p == prevId) and prevId is not None) or i ==len(pointIds)-1 :
-			key     = keyStr % prevId
+		if not (p == prevId) and prevId is not None:
+			key     = keyStr % p
 			svName  = svStr % (folderCount, ptCount)
 			ptHash[key] = svName
 			_mkdir(svName)
@@ -141,92 +137,6 @@ def vis_pos_neg():
 		if ip=='q':
 			return 
 
-def save_images(prms, keyFile, egs, imCount=0):
-	pt2im    = pickle.load(open(prms.paths.pt2imHash, 'r'))['pt2im']	
-	imNames  = []
-	jpgPath  = 'folder-%05d/im%03d.jpg'
-	for i,eg in enumerate(egs):
-		try:
-			if np.mod(i,1000)==1:
-				print (i)
-			_,p1,_,p2 = eg
-			k1       = pt2im['%s' % p1]
-			k2       = pt2im['%s' % p2]
-			ims1     = pickle.load(open(k1,'r'))['ims']
-			ims2     = pickle.load(open(k2,'r'))['ims']
-		except:
-			print(k1, k2)
-			pdb.set_trace()
-		l1, l2   = ims1.shape[0], ims2.shape[0]
-		continue
-		if k1 ==k2:
-			idx1, idx2 = 0, 1
-		else:
-			idx1 = np.random.permutation(l1)[0]
-			idx2 = np.random.permutation(l2)[0]
-		im1 = ims1[idx1]
-		im2 = ims2[idx2]
-		im1 = np.tile(im1,(3,1,1)).transpose((1,2,0))
-		im2 = np.tile(im2,(3,1,1)).transpose((1,2,0))
-		#Save First Image
-		folderCount = int(np.floor(imCount/1000))
-		fName1 = jpgPath % (folderCount, np.mod(imCount,1000))
-		imCount += 1
-		svName = osp.join(prms.paths.jpgDir, fName1)
-		_mkdir(svName)
-		scm.imsave(svName, im1)
-		#Save Second Image	
-		folderCount = int(np.floor(imCount/1000))
-		fName2 = jpgPath % (folderCount, np.mod(imCount,1000))
-		imCount += 1
-		svName = osp.join(prms.paths.jpgDir, fName2)
-		_mkdir(svName)
-		scm.imsave(svName, im2)
-		imNames.append([fName1, fName2])	
-	pickle.dump({'imNames':imNames}, open(keyFile, 'w'))
-	return imCount
-
-def _save_images(args):
-	save_images(*args)
-	return True
-
 def save_pos_neg_images():
-	pool = Pool(processes=2)
 	prms = get_prms()
-	pos, neg = read_test(prms)
-	pos = pos[0:45000]
-	neg = neg[0:45000]
-	inArgs = []
-	inArgs.append([prms, prms.paths.jpgPosKey, pos, 0])
-	inArgs.append([prms, prms.paths.jpgNegKey, neg, len(pos)])
-	res = pool.map_async(_save_images, inArgs)
-	pool.close()
-	resData = res.get()
-	pool.terminate()
-
-	#save_images(prms, prms.paths.jpgPosKey, pos)
-	#save_images(prms, prms.paths.jpgNegKey, neg, imCount=len(pos))
-
-def make_window_file():	
-	prms   = get_prms()
-	posDat = pickle.load(open(prms.paths.jpgPosKey,'r'))['imNames'] 
-	negDat = pickle.load(open(prms.paths.jpgNegKey,'r'))['imNames']
-	allDat = posDat + negDat
-	labels   = np.ones((len(allDat),))
-	labels[len(posDat):] = 0
-	perm     = np.random.permutation(len(allDat))
-	allDat   = [allDat[p] for p in perm]
-	labels   = [labels[p] for p in perm]
-	N        = len(allDat)
-
-	wFid   = mpio.GenericWindowWriter(prms.paths.wFile,N,2,1)
-	for dat, lb in zip(allDat, labels):
-		line = []
-		line.append([dat[0], [3, 64, 64], [0, 0, 64, 64]])
-		line.append([dat[1], [3, 64, 64], [0, 0, 64, 64]])
-		wFid.write([lb], *line)
-	wFid.close()
-		
-		 
 	
-			
