@@ -1,0 +1,10 @@
+smallnet-v2: 
+conv4 acts like a bottleneck of previous maps and is concatenated. kernel size of conv-4 is 1.
+
+streetnet:
+conv4 has 256 filters and kernel size = 3.
+
+smallnet-v5:
+xavier initialization of common_fc and fc layers in siamese tower.
+Use of Prelu units for the fc layers. 
+

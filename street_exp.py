@@ -29,6 +29,7 @@ def get_nw_prms(**kwargs):
 	dArgs.isPythonLayer    = False
 	dArgs.extraFc          = None
 	dArgs.numFc5           = None
+	dArgs.numConv4         = None
 	dArgs.numCommonFc      = None
 	dArgs = mpu.get_defaults(kwargs, dArgs)
 	if dArgs.numFc5 is not None:
@@ -39,6 +40,8 @@ def get_nw_prms(**kwargs):
 							dArgs.imSz, dArgs.imgntMean, dArgs.maxJitter)
 	if dArgs.numFc5 is not None:
 		expStr = '%s_numFc5-%d' % (expStr, dArgs.numFc5)
+	if dArgs.numConv4 is not None:
+		expStr = '%s_numConv4-%d' % (expStr, dArgs.numConv4)
 	if dArgs.numCommonFc is not None:
 		expStr = '%s_numCommonFc-%d' % (expStr, dArgs.numCommonFc)
 	if dArgs.randCrop:
@@ -335,6 +338,12 @@ def make_net_proto(prms, cPrms):
 								'%d' % cPrms.nwPrms.numFc5)
 		netDef.set_layer_property('fc5_p', ['inner_product_param', 'num_output'], 
 								'%d' % cPrms.nwPrms.numFc5)
+	
+	if cPrms.nwPrms.numConv4 is not None:
+		netDef.set_layer_property('conv4', ['convolution_param', 'num_output'], 
+								'%d' % cPrms.nwPrms.numConv4)
+		netDef.set_layer_property('conv4_p', ['convolution_param', 'num_output'], 
+								'%d' % cPrms.nwPrms.numConv4)
 
 	if cPrms.nwPrms.numCommonFc is not None:
 		netDef.set_layer_property('common_fc', ['inner_product_param', 'num_output'], 
