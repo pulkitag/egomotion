@@ -158,7 +158,6 @@ def save_images(prms, keyFile, egs, imCount=0):
 			print(k1, k2)
 			pdb.set_trace()
 		l1, l2   = ims1.shape[0], ims2.shape[0]
-		continue
 		if k1 ==k2:
 			idx1, idx2 = 0, 1
 		else:
@@ -198,7 +197,7 @@ def save_pos_neg_images():
 	neg = neg[0:45000]
 	inArgs = []
 	inArgs.append([prms, prms.paths.jpgPosKey, pos, 0])
-	inArgs.append([prms, prms.paths.jpgNegKey, neg, len(pos)])
+	inArgs.append([prms, prms.paths.jpgNegKey, neg, 2 * len(pos)])
 	res = pool.map_async(_save_images, inArgs)
 	pool.close()
 	resData = res.get()
