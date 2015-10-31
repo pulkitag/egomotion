@@ -164,9 +164,8 @@ layer {
     decay_mult: 0
   }
   convolution_param {
-    num_output: 64
-    pad: 1
-    kernel_size: 1
+    num_output: 256
+    kernel_size: 3
     weight_filler {
       type: "gaussian"
       std: 0.01
@@ -393,9 +392,8 @@ layer {
     decay_mult: 0
   }
   convolution_param {
-    num_output: 64
-    pad: 1
-    kernel_size: 1
+    num_output: 256
+    kernel_size: 3
     weight_filler {
       type: "gaussian"
       std: 0.01

@@ -217,7 +217,7 @@ def ptch_pose_euler_mx90_alexnet_exp1(isRun=False, deviceId=[1], numTrain=1e+7, 
 
 def ptch_pose_euler_mx90_smallnet_v2_fc5_exp1(isRun=False, deviceId=[1],
 						 numTrain=1e+7, batchsize=256, extraFc=None, isPythonLayer=True,
-					   numFc5=None):
+					   numFc5=None, numCommonFc=None):
 	prms  = sp.get_prms(geoFence='dc-v2', labels=['pose', 'ptch'], 
 											labelType=['euler', 'wngtv'],
 											lossType=['l2', 'classify'], labelFrac=[0.5,0.5],
@@ -227,7 +227,8 @@ def ptch_pose_euler_mx90_smallnet_v2_fc5_exp1(isRun=False, deviceId=[1],
 	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
 					 concatLayer='fc5', lossWeight=10.0,
 							 multiLossProto=None, extraFc=extraFc,
-							 isPythonLayer=isPythonLayer, numFc5=numFc5)
+							 isPythonLayer=isPythonLayer, numFc5=numFc5,
+							 numCommonFc=numCommonFc)
 	lPrms = se.get_lr_prms(batchsize=batchsize, stepsize=20000, clip_gradients=10.0)
 	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId)
 	if isRun:
@@ -235,6 +236,29 @@ def ptch_pose_euler_mx90_smallnet_v2_fc5_exp1(isRun=False, deviceId=[1],
 		exp.run()
 	else:
 		return prms, cPrms	
+
+def ptch_pose_euler_mx90_streetnet_fc5_exp1(isRun=False, deviceId=[1],
+						 numTrain=1e+7, batchsize=256, extraFc=None, isPythonLayer=True,
+					   numFc5=None, numCommonFc=None):
+	prms  = sp.get_prms(geoFence='dc-v2', labels=['pose', 'ptch'], 
+											labelType=['euler', 'wngtv'],
+											lossType=['l2', 'classify'], labelFrac=[0.5,0.5],
+											rawImSz=256, crpSz=192, splitDist=100,
+											numTrain=numTrain, maxEulerRot=90,
+											nBins=[None, None], binTypes=[None, None])
+	nPrms = se.get_nw_prms(imSz=101, netName='streetnet',
+					 concatLayer='fc5', lossWeight=10.0,
+							 multiLossProto=None, extraFc=extraFc,
+							 isPythonLayer=isPythonLayer, numFc5=numFc5,
+							 numCommonFc=numCommonFc)
+	lPrms = se.get_lr_prms(batchsize=batchsize, stepsize=20000, clip_gradients=10.0)
+	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId)
+	if isRun:
+		exp   = se.make_experiment(prms, cPrms)
+		exp.run()
+	else:
+		return prms, cPrms	
+
 
 
 def ptch_pose_euler_mx45_exp1_from_ptch(isRun=False, deviceId=[1], 
