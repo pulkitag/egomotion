@@ -47,7 +47,7 @@ layer {
 layer { 
  name: "conv2" 
  type: "Convolution" 
- bottom: "norm1" 
+ bottom: "pool1" 
  top: "conv2" 
  param { 
 	  name: "conv2_w" 
@@ -93,7 +93,7 @@ layer {
 layer { 
  name: "conv3" 
  type: "Convolution" 
- bottom: "norm2" 
+ bottom: "pool2" 
  top: "conv3" 
  param { 
 	  name: "conv3_w" 
@@ -253,7 +253,7 @@ layer {
 layer { 
  name: "conv2_p" 
  type: "Convolution" 
- bottom: "norm1_p" 
+ bottom: "pool1_p" 
  top: "conv2_p" 
  param { 
 	  name: "conv2_w" 
@@ -299,7 +299,7 @@ layer {
 layer { 
  name: "conv3_p" 
  type: "Convolution" 
- bottom: "norm2_p" 
+ bottom: "pool2_p" 
  top: "conv3_p" 
  param { 
 	  name: "conv3_w" 
@@ -410,10 +410,17 @@ layer {
 	  stride: 2 
  } 
 } 
+layer {
+  name: "concat_pool5"
+  type: "Concat"
+  bottom: "pool5"
+  bottom: "pool5_p"
+  top: "concat_pool5"
+}
 layer { 
  name: "common_fc" 
  type: "InnerProduct" 
- bottom: "pool5" 
+ bottom: "concat_pool5" 
  top: "common_fc" 
  param { 
 	  lr_mult: 1 
