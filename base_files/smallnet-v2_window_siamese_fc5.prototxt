@@ -189,6 +189,39 @@ layer {
   }
 }
 layer {
+  name: "fc5"
+  type: "InnerProduct"
+  bottom: "pool4"
+  top: "fc5"
+  param {
+		name: "fc5_w"
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+		name: "fc_b"
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 512
+    weight_filler {
+      type: "gaussian"
+      std: 0.005
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+layer {
+  name: "relu5"
+  type: "ReLU"
+  bottom: "fc5"
+  top: "fc5"
+}
+layer {
   name: "conv1_p"
   type: "Convolution"
   bottom: "data_p"
@@ -368,6 +401,12 @@ layer {
   }
 }
 layer {
+  name: "relu4_p"
+  type: "ReLU"
+  bottom: "conv4_p"
+  top: "conv4_p"
+}
+layer {
   name: "pool4_p"
   type: "Pooling"
   bottom: "conv4_p"
@@ -379,16 +418,49 @@ layer {
   }
 }
 layer {
-  name: "concat_pool4"
-  type: "Concat"
-  bottom: "pool4"
+  name: "fc5_p"
+  type: "InnerProduct"
   bottom: "pool4_p"
-  top: "concat_pool4"
+  top: "fc5_p"
+  param {
+		name: "fc5_w"
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+		name: "fc_b"
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 512
+    weight_filler {
+      type: "gaussian"
+      std: 0.005
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+layer {
+  name: "relu5_p"
+  type: "ReLU"
+  bottom: "fc5_p"
+  top: "fc5_p"
+}
+layer {
+  name: "concat_fc5"
+  type: "Concat"
+  bottom: "fc5"
+  bottom: "fc5_p"
+  top: "concat_fc5"
 }
 layer {
   name: "common_fc"
   type: "InnerProduct"
-  bottom: "concat_pool4"
+  bottom: "concat_fc5"
   top: "common_fc"
   param {
 		name: "common_fc_w"
