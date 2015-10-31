@@ -2,6 +2,7 @@
 h5py/*
 h5py*
 docs/*
+test-files/*
 
 # Compiled Object files
 *.slo
