@@ -1,0 +1,106 @@
+layer {
+  name: "slice_pose_label"
+  type: "Slice"
+  bottom: "pose_label"
+  top: "yaw_label"
+  top: "pitch_label"
+  slice_param {
+    slice_dim: 1
+    slice_point: 1
+  }
+}
+layer {
+  name: "pitch_fc"
+  type: "InnerProduct"
+  bottom: "common_fc"
+  top: "pitch_fc"
+  param {
+		name: "pitch_fc_w"
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+		name: "pitch_fc_b"
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 20
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+layer {
+  name: "yaw_fc"
+  type: "InnerProduct"
+  bottom: "common_fc"
+  top: "yaw_fc"
+  param {
+		name: "yaw_fc_w"
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+		name: "yaw_fc_b"
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 20
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+layer {
+  name: "pitch_loss"
+  type: "SoftmaxWithLoss"
+  bottom: "pitch_fc"
+  bottom: "pitch_label"
+  top: "pitch_loss"
+	loss_weight: 1.0
+	loss_param {	
+		ignore_label: 20
+	}
+}
+layer {
+  name: "accuracy"
+  type: "Accuracy"
+  bottom: "pitch_fc"
+  bottom: "pitch_label"
+  top: "accuracy"
+	accuracy_param {	
+		ignore_label: 20
+	}
+}
+layer {
+  name: "yaw_loss"
+  type: "SoftmaxWithLoss"
+  bottom: "yaw_fc"
+  bottom: "yaw_label"
+  top: "yaw_loss"
+	loss_weight: 1.0
+	loss_param {	
+		ignore_label: 20
+	}
+}
+layer {
+  name: "accuracy"
+  type: "Accuracy"
+  bottom: "yaw_fc"
+  bottom: "yaw_label"
+  top: "accuracy"
+	accuracy_param {	
+		ignore_label: 20
+	}
+}
+
