@@ -16,8 +16,7 @@ layer {
   inner_product_param {
     num_output: 256
     weight_filler {
-      type: "gaussian"
-      std: 0.005
+      type: "msra"
     }
     bias_filler {
       type: "constant"
@@ -27,7 +26,7 @@ layer {
 }
 layer {
   name: "relu_pose_stream"
-  type: "ReLU"
+  type: "PReLU"
   bottom: "pose_stream_fc"
   top: "pose_stream_fc"
 }
@@ -49,8 +48,7 @@ layer {
   inner_product_param {
     num_output: 4
     weight_filler {
-      type: "gaussian"
-      std: 0.005
+      type: "msra"
     }
     bias_filler {
       type: "constant"
@@ -59,10 +57,40 @@ layer {
   }
 }
 layer {
+  name: "sigmoid_pose"
+  type: "Sigmoid"
+  bottom: "pose_fc"
+  top: "sigmoid_pose"
+}
+layer {
+  name: "slice_pose_label"
+  type: "Slice"
+  bottom: "pose_label"
+  top: "pose_label_val"
+  top: "pose_label_flag"
+  slice_param {
+    slice_dim: 1
+    slice_point: 2
+  }
+}
+layer {
+  name: "sigmoid_pose_label"
+  type: "Sigmoid"
+  bottom: "pose_label_val"
+  top: "sigmoid_pose_label"
+}
+layer {
+  name: "concat_pose_label"
+  type: "Concat"
+  bottom: "sigmoid_pose_label"
+  bottom: "pose_label_flag"
+  top: "concat_pose_label"
+}
+layer {
   name: "pose_loss"
   type: "EuclideanLossWithIgnore"
-  bottom: "pose_fc"
-  bottom: "pose_label"
+  bottom: "sigmoid_pose"
+  bottom: "concat_pose_label"
   top: "pose_loss"
 	loss_weight: 1.0
 }
@@ -84,8 +112,7 @@ layer {
   inner_product_param {
     num_output: 256
     weight_filler {
-      type: "gaussian"
-      std: 0.005
+      type: "msra"
     }
     bias_filler {
       type: "constant"
@@ -95,7 +122,7 @@ layer {
 }
 layer {
   name: "relu_ptch_stream"
-  type: "ReLU"
+  type: "PReLU"
   bottom: "ptch_stream_fc"
   top: "ptch_stream_fc"
 }
@@ -119,8 +146,7 @@ layer {
   inner_product_param {
     num_output: 2
     weight_filler {
-      type: "gaussian"
-      std: 0.005
+      type: "msra"
     }
     bias_filler {
       type: "constant"
