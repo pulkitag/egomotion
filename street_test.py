@@ -167,7 +167,7 @@ def get_ptch_test_results_conv4():
 def get_ptch_test_results_fc5():
 	numFc5    = [128, 256, 384, 512]
 	runNum    = [0, 1, 0, 0]
-	modelIter = 26000
+	modelIter = 24000
 	fpr       = []
 	for n,r in zip(numFc5, runNum):
 		if n < 512:
