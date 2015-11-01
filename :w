@@ -76,16 +76,6 @@ def get_street_ptch_proto(prms, cPrms):
 						'"%s"' % paramStr, phase='TEST')
 	netDef.set_layer_property('window_data', ['python_param', 'param_str'], 
 						'"%s"' % paramStr)
-	#If pose loss is present
-	lNames = netDef.get_all_layernames()
-	if 'pose_loss' in lNames:
-		netDef.del_layer('pose_loss')
-		netDef.del_layer('pose_fc')
-		netDef.del_layer('slice_label')
-		netDef.set_layer_property('window_data', 'top',
-							'"%s"' % 'ptch_label', phase='TEST', propNum=1)
-		netDef.set_layer_property('window_data', 'top',
-							'"%s"' % 'ptch_label', propNum=1)
 	defFile = 'test-files/ptch_street_test.prototxt'
 	netDef.write(defFile)
 	return defFile
@@ -192,12 +182,17 @@ def get_ptch_test_results_fc5():
 def get_pose_ptch_results():
 	fpr = []
 	modelIter = 22000
+	#Get Patch srcPrms
+	srcPrms, srcCPrms = mev2.smallnetv2_pool4_ptch_crp192_rawImSz256 
+
 	#With Conv4
 	prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v6_pool4_exp1(numConv4=32)
-	gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
+	exp         = se.setup_experiment()
+	modelFile   = exp.get_snapshot_name(modelIter)
+	gtLabel, pdScore = test_ptch(prms, cPrms, modelFile, isLiberty=False)
 	fpr.append(get_fpr(0.95, pdScore, gtLabel))
 	#With Fc5 
-	#prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v5_fc5_exp1(numFc5=512)
-	#gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
-	#fpr.append(get_fpr(0.95, pdScore, gtLabel))
+	prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v5_fc5_exp1(numFc5=512)
+	gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
+	fpr.append(get_fpr(0.95, pdScore, gtLabel))
 	return fpr
