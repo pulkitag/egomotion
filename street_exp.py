@@ -28,11 +28,42 @@ def get_nw_prms(**kwargs):
 	dArgs.isGray           = False
 	dArgs.isPythonLayer    = False
 	dArgs.extraFc          = None
+	dArgs.numFc5           = None
+	dArgs.numConv4         = None
+	dArgs.numCommonFc      = None
 	dArgs = mpu.get_defaults(kwargs, dArgs)
+	if dArgs.numFc5 is not None:
+		assert(dArgs.concatLayer=='fc5')
 	expStr = 'net-%s_cnct-%s_cnctDrp%d_contPad%d_imSz%d_imgntMean%d_jit%d'\
 						%(dArgs.netName, dArgs.concatLayer, dArgs.concatDrop, 
 							dArgs.contextPad,
 							dArgs.imSz, dArgs.imgntMean, dArgs.maxJitter)
+	if dArgs.numFc5 is not None:
+		expStr = '%s_numFc5-%d' % (expStr, dArgs.numFc5)
+	if dArgs.numConv4 is not None:
+		expStr = '%s_numConv4-%d' % (expStr, dArgs.numConv4)
+	if dArgs.numCommonFc is not None:
+		expStr = '%s_numCommonFc-%d' % (expStr, dArgs.numCommonFc)
+	if dArgs.randCrop:
+		expStr = '%s_randCrp%d' % (expStr, dArgs.randCrop)
+	if not(dArgs.lossWeight==1.0):
+		expStr = '%s_lw%.1f' % (expStr, dArgs.lossWeight)
+	if dArgs.multiLossProto is not None:
+		expStr = '%s_mlpr%s-posn%d-ptsn%d' % (expStr,
+							dArgs.multiLossProto, dArgs.poseStreamNum, dArgs.ptchStreamNum)
+	if dArgs.isGray:
+		expStr = '%s_grayIm' % expStr
+	if dArgs.isPythonLayer:
+		expStr = '%s_pylayers' % expStr
+	if dArgs.extraFc is not None:
+		expStr = '%s_extraFc%d' % (expStr, dArgs.extraFc)
+	dArgs.expStr = expStr 
+	return dArgs 
+
+##
+# Parameters that specify the learning
+def get_lr_prms(**kwargs):	
+	dArgs = edict()
 	if dArgs.randCrop:
 		expStr = '%s_randCrp%d' % (expStr, dArgs.randCrop)
 	if not(dArgs.lossWeight==1.0):
@@ -301,6 +332,22 @@ def make_net_proto(prms, cPrms):
 		reLayer = mpu.get_layerdef_for_proto('ReLU', 'relu_common', eName, **{'top': eName})
 		netDef.add_layer(eName, fcLayer)
 		netDef.add_layer('relu_common', reLayer)
+
+	if cPrms.nwPrms.numFc5 is not None:
+		netDef.set_layer_property('fc5', ['inner_product_param', 'num_output'], 
+								'%d' % cPrms.nwPrms.numFc5)
+		netDef.set_layer_property('fc5_p', ['inner_product_param', 'num_output'], 
+								'%d' % cPrms.nwPrms.numFc5)
+	
+	if cPrms.nwPrms.numConv4 is not None:
+		netDef.set_layer_property('conv4', ['convolution_param', 'num_output'], 
+								'%d' % cPrms.nwPrms.numConv4)
+		netDef.set_layer_property('conv4_p', ['convolution_param', 'num_output'], 
+								'%d' % cPrms.nwPrms.numConv4)
+
+	if cPrms.nwPrms.numCommonFc is not None:
+		netDef.set_layer_property('common_fc', ['inner_product_param', 'num_output'], 
+								'%d' % cPrms.nwPrms.numCommonFc)
 
 	if cPrms.nwPrms.concatDrop:
 		dropLayer = mpu.get_layerdef_for_proto('Dropout', 'drop-%s' % 'common_fc', 'common_fc',

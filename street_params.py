@@ -150,6 +150,7 @@ def get_paths():
 	paths.res    = edict()
 	paths.res.dr = osp.join(paths.dataDr, 'res')
 	_mkdir(paths.res.dr)
+	paths.resFile = osp.join(paths.res.dr, '%s.pkl')
 	paths.res.testImVisDr = osp.join(paths.res.dr, 'test-imvis')
 	_mkdir(paths.res.testImVisDr)
 	#paths.res.testImVis   = osp.join(paths.res.testImVisDr, 'im%05d.jpg')   
