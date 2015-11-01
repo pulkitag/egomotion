@@ -64,7 +64,7 @@ def get_liberty_ptch_proto(prms, cPrms):
 	netDef.write(defFile)
 	return defFile
 
-def get_street_ptch_proto(prms, cPrms):
+def get_street_ptch_proto(prms, cPrms)
 	exp       = se.setup_experiment(prms, cPrms)
 	wFile     = 'test-files/test_ptch_equal-pos-neg_geo-dc-v2_spDist100_imSz256.txt'
 	netDef    = mpu.ProtoDef(exp.files_['netdef'])
@@ -84,16 +84,14 @@ def test_ptch(prms, cPrms, modelIter, isLiberty=True):
 	exp       = se.setup_experiment(prms, cPrms)
 	if isLiberty:
 		defFile   = get_liberty_ptch_proto(prms, cPrms)
-		numIter   = 900
 	else:
 		defFile   = get_street_ptch_proto(prms, cPrms)
-		numIter   = 100
 	modelFile = exp.get_snapshot_name(modelIter)
 	caffe.set_mode_gpu()
 	net = caffe.Net(defFile, modelFile, caffe.TEST)
 
 	gtLabel, pdScore, acc = [], [], []
-	for i in range(numIter):
+	for i in range(10):
 		data = net.forward(['ptch_label','ptch_fc', 'accuracy'])
 		print (sum(data['ptch_label'].squeeze()==1))
 		gtLabel.append(copy.deepcopy(data['ptch_label'].squeeze()))
@@ -104,7 +102,7 @@ def test_ptch(prms, cPrms, modelIter, isLiberty=True):
 	gtLabel = np.concatenate(gtLabel)
 	pdScore = np.concatenate(pdScore)
 	fpr     = get_fpr(0.95, pdScore, gtLabel)
-	print 'FPR at 0.95 Recall is: %f' % fpr
+	print 'FPR at 95% Recall is: %f' % fpr
 	return gtLabel, pdScore
 
 
