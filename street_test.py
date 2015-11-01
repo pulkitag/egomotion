@@ -152,3 +152,29 @@ def make_pascal3d_generic_window():
 				cl     = int(cl)
 				imLine = [[fName, [ch, h, w], [x1, y1, x2, y2]]]
 				oFid.write([az, el, cl], *imLine)
+
+
+def get_ptch_test_results_conv4():
+	numConv4  = [8, 16, 32]
+	modelIter = 26000
+	fpr       = []
+	for n in numConv4:
+	 	prms, cPrms = mept.smallnetv6_pool4_ptch_crp192_rawImSz256(numConv4=n)
+		gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
+		fpr.append(get_fpr(0.95, pdScore, gtLabel))
+	return fpr
+ 
+def get_ptch_test_results_fc5():
+	numFc5    = [128, 256, 384, 512]
+	runNum    = [0, 1, 0, 0]
+	modelIter = 26000
+	fpr       = []
+	for n,r in zip(numFc5, runNum):
+		if n < 512:
+			prms, cPrms = mept.smallnetv2_fc5_ptch_crp192_rawImSz256(numFc5=n, runNum=r)
+		else:
+			prms, cPrms = mept.smallnetv5_fc5_ptch_crp192_rawImSz256(numFc5=n, runNum=r)
+		gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
+		fpr.append(get_fpr(0.95, pdScore, gtLabel))
+	return fpr
+ 
