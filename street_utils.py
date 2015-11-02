@@ -453,12 +453,6 @@ def get_label_pose(prms, groups, numSamples, randSeed=1003):
 	np.random.set_state(oldState)		
 	return lbs, prefix
 
-
-##
-#Save all labels pose
-def save_all_pose_pairs(prms, folderName):
-	pass	
-
 ##
 #Get labels for ptch
 def get_label_ptch(prms, groups, numSamples, randSeed=1005):
