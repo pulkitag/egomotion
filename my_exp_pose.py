@@ -21,7 +21,7 @@ def smallnetv2_pool4_pose_crp192_rawImSz256(isRun=False, isGray=False, numTrain=
 
 def smallnetv5_pool4_pose_crp192_fc5_rawImSz256(isRun=False, isGray=False, numTrain=1e+7,
 								deviceId=[0], isPythonLayer=True, runNum=0, extraFc=None,
-								numFc5=None):
+								numFc5=None, lrAbove=None):
 	prms  = sp.get_prms_pose(geoFence='dc-v2', crpSz=192,
 													 rawImSz=256, splitDist=100,
 													 numTrain=numTrain)
@@ -29,7 +29,8 @@ def smallnetv5_pool4_pose_crp192_fc5_rawImSz256(isRun=False, isGray=False, numTr
 							 concatLayer='fc5', lossWeight=10.0,
 								randCrop=False, concatDrop=False,
 								isGray=isGray, isPythonLayer=isPythonLayer,
-								numFc5=numFc5, extraFc=extraFc )
+								numFc5=numFc5, extraFc=extraFc,
+								lrAbove=lrAbove)
 	lPrms = se.get_lr_prms(batchsize=256, stepsize=10000, clip_gradients=1.0)
 	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId, runNum=runNum)
 	if isRun:

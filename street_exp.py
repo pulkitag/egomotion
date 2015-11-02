@@ -59,7 +59,7 @@ def get_nw_prms(**kwargs):
 	if dArgs.extraFc is not None:
 		expStr = '%s_extraFc%d' % (expStr, dArgs.extraFc)
 	if dArgs.lrAbove is not None:
-		expStr = '%s_lrAbove-%s' dArgs.lrAbove
+		expStr = '%s_lrAbove-%s' % (expStr, dArgs.lrAbove)
 	dArgs.expStr = expStr 
 	return dArgs 
 
@@ -469,6 +469,8 @@ def setup_experiment(prms, cPrms):
 	lossDef  = make_loss_proto(prms, cPrms)
 	#Merge all defs
 	protoDef = _merge_defs([dataDef, netDef, lossDef])
+	if cPrms.nwPrms.lrAbove is not None:
+		protoDef.set_no_learning_until(cPrms.nwPrms.lrAbove)
 	#Get the solver definition file
 	solDef   = cPrms['solver']
 	#Experiment Object	
