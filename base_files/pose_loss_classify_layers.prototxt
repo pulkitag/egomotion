@@ -73,11 +73,11 @@ layer {
 	}
 }
 layer {
-  name: "accuracy"
+  name: "pitch_accuracy"
   type: "Accuracy"
   bottom: "pitch_fc"
   bottom: "pitch_label"
-  top: "accuracy"
+  top: "pitch_accuracy"
 	accuracy_param {	
 		ignore_label: 20
 	}
@@ -94,11 +94,11 @@ layer {
 	}
 }
 layer {
-  name: "accuracy"
+  name: "yaw_accuracy"
   type: "Accuracy"
   bottom: "yaw_fc"
   bottom: "yaw_label"
-  top: "accuracy"
+  top: "yaw_accuracy"
 	accuracy_param {	
 		ignore_label: 20
 	}
