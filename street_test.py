@@ -264,16 +264,11 @@ def get_ptch_test_results_fc5():
 
 def get_pose_ptch_results():
 	fpr = []
-<<<<<<< HEAD
 	modelIter = 36000
-=======
-	modelIter = 4000
->>>>>>> 97b1ab15d11096cc6b77551628c03a9380ada034
 	#With Conv4
 	#prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v6_pool4_exp1(numConv4=32)
 	#gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
 	#fpr.append(get_fpr(0.95, pdScore, gtLabel))
-<<<<<<< HEAD
 
 	#With Fc5 
 	numFc = [128, 256, 384, 1024]
@@ -281,10 +276,4 @@ def get_pose_ptch_results():
 		prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v5_fc5_exp1(numFc5=n)
 		gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
 		fpr.append(get_fpr(0.95, pdScore, gtLabel))
-=======
-	#With Fc5 
-	prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v5_fc5_exp1(numFc5=512)
-	gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
-	fpr.append(get_fpr(0.95, pdScore, gtLabel))
->>>>>>> 97b1ab15d11096cc6b77551628c03a9380ada034
 	return fpr
