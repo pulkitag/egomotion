@@ -20,7 +20,7 @@ def train_ptch_using_pose(isRun=False, deviceId=[0]):
 
 def train_pose_using_ptch(isRun=False, deviceId=[0]):
 	poPrms, poCPrms = mepo.smallnetv5_fc5_pose_euler_mx90_crp192_rawImSz256(numFc5=512, 
-																							lrAbove='common_fc', isPythonLayer=True)
+												lrAbove='common_fc', isPythonLayer=True, deviceId=deviceId)
 	ptPrms, ptCPrms = mept.smallnetv5_fc5_ptch_crp192_rawImSz256(numFc5=512,
 																 isPythonLayer=True)
 	exp, modelFile = se.setup_experiment_from_previous(ptPrms, ptCPrms,
