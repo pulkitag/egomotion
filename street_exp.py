@@ -429,14 +429,13 @@ def make_loss_proto(prms, cPrms):
 		lbDefs.append(lbDef)
 	if 'pose' in prms.labelNames:
 		idx     = prms.labelNames.index('pose')
-		lb      = prms.labels[idx]
+		lbInfo  = prms.labels[idx]
 		if lbInfo.loss_ in ['l2', 'l1']:
 			defFile = osp.join(baseFilePath, 'pose_loss_layers.prototxt')
 			lbDef   = mpu.ProtoDef(defFile)
 			lbDef.set_layer_property('pose_fc', ['inner_product_param', 'num_output'],
-							 '%d' % lb.lbSz_)
+							 '%d' % lbInfo.lbSz_)
 			lbDef.set_layer_property('pose_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
-			lbDefs.append(lbDef)
 		elif lbInfo.loss_ in ['classify']:
 			defFile = osp.join(baseFilePath, 'pose_loss_classify_layers.prototxt')
 			lbDef   = mpu.ProtoDef(defFile)
@@ -451,6 +450,7 @@ def make_loss_proto(prms, cPrms):
 						 '%d' % lbInfo.numBins_)
 		else:
 			raise Exception ('Loss Type %s not recognized' % lbInfo.loss_)
+		lbDefs.append(lbDef)
 	lbDef = _merge_defs(lbDefs)
 	#Replace the EuclideanLoss with EuclideanLossWithIgnore 
 	l2Layers = lbDef.get_layernames_from_type('EuclideanLoss')
