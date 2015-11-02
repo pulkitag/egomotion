@@ -118,6 +118,76 @@ def test_ptch(prms, cPrms, modelIter, isLiberty=True):
 	print 'FPR at 0.95 Recall is: %f' % fpr
 	return gtLabel, pdScore
 
+##
+#Get the proto for pose regression	
+def get_street_pose_proto(prms, cPrms):
+	exp       = se.setup_experiment(prms, cPrms)
+	wFile     = 'test-files/test_pose_euler_mx90_geo-dc-v2_spDist100_imSz256.txt'
+	netDef    = mpu.ProtoDef(exp.files_['netdef'])
+	paramStr  = netDef.get_layer_property('window_data', 'param_str')[1:-1]
+	paramStr  = modify_params(paramStr, 'source', wFile)
+	paramStr  = modify_params(paramStr, 'batch_size', 100)
+	netDef.set_layer_property('window_data', ['python_param', 'param_str'], 
+						'"%s"' % paramStr, phase='TEST')
+	netDef.set_layer_property('window_data', ['python_param', 'param_str'], 
+						'"%s"' % paramStr)
+	#If ptch loss is present
+	lNames = netDef.get_all_layernames()
+	if 'pose_loss' in lNames:
+		netDef.del_layer('ptch_loss')
+		netDef.del_layer('ptch_fc')
+		netDef.del_layer('slice_label')
+		netDef.del_layer('accuracy')
+		netDef.set_layer_property('window_data', 'top',
+							'"%s"' % 'pose_label', phase='TEST', propNum=1)
+		netDef.set_layer_property('window_data', 'top',
+							'"%s"' % 'pose_label', propNum=1)
+	defFile = 'test-files/pose_street_test.prototxt'
+	netDef.write(defFile)
+	return defFile
+
+##
+#Convert the predictions to degrees
+def to_degrees(lbl, angleType='euler', nrmlz=6.0/180.0):
+	if angleType =='euler':
+		lbl = lbl/nrmlz
+	return lbl
+
+##
+#Get the distribution of errors
+def get_binned_angle_errs(errs, angs):
+	bins  = np.linspace(-180,180,20)
+	mdErr = np.zeros((len(bins)-1,))
+	for i,bn in enumerate(bins[0:-1]):
+		stVal = bn
+		enVal = bins[i+1]
+		print (stVal, enVal)
+		#idx   = (angs >= stVal) & (angs < enVal)
+		idx   = angs < enVal
+		if np.sum(idx)>0:
+			mdErr[i] = np.median(errs[idx]) 	
+	return mdErr
+
+##
+#Test the pose net
+def test_pose(prms, cPrms, modelIter):
+	exp       = se.setup_experiment(prms, cPrms)
+	defFile   = get_street_pose_proto(prms, cPrms)
+	numIter   = 100
+	modelFile = exp.get_snapshot_name(modelIter)
+	caffe.set_mode_gpu()
+	net = caffe.Net(defFile, modelFile, caffe.TEST)
+	gtLabel, pdLabel = [], []
+	for i in range(numIter):
+		data = net.forward(['pose_label','pose_fc'])
+		gtLabel.append(copy.deepcopy(data['pose_label'][:,0:2].squeeze()))
+		pdLabel.append(copy.deepcopy(data['pose_fc']))
+	gtLabel = to_degrees(np.concatenate(gtLabel))
+	pdLabel = to_degrees(np.concatenate(pdLabel))
+	err     = np.abs(gtLabel - pdLabel)
+	medErr  = np.median(err, 0)
+	muErr   = np.mean(err,0)
+	return gtLabel, pdLabel, err
 
 def vis_liberty_ptch():
 	libPrms   = rlp.get_prms()
