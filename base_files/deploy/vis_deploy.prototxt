@@ -1,0 +1,35 @@
+name: "StreetNet"
+input: "data"
+input_dim: 10
+input_dim: 3
+input_dim: 101
+input_dim: 101
+layer { 
+ name: "conv1" 
+ type: "Convolution" 
+ bottom: "data" 
+ top: "conv1" 
+ param { 
+	  name: "conv1_w" 
+	  lr_mult: 1 
+	  decay_mult: 1 
+ } 
+ param { 
+	  name: "conv1_b" 
+	  lr_mult: 2 
+	  decay_mult: 0 
+ } 
+ convolution_param { 
+	  num_output: 96 
+	  kernel_size: 7 
+	  stride: 3 
+	  weight_filler { 
+	 	  type: "gaussian" 
+	 	  std: 0.01 
+	  } 
+	  bias_filler { 
+	 	  type: "constant" 
+	 	  value: 0 
+	  } 
+ } 
+} 

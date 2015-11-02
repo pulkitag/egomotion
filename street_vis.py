@@ -17,6 +17,8 @@ import vis_utils as vu
 import setup_data as sd
 import street_exp as se
 import street_utils as su
+import my_pycaffe as mp
+import my_pycaffe_utils as mpu
 
 #Polygon should be of type mplPath	
 def show_images(prms, folderId):
@@ -144,3 +146,19 @@ def vis_window_file(prms, setName='test', isSave=False,
 		count = count + 1
 		if count >= maxCount:
 			runFlag = False
+
+
+def vis_weights(prms, cPrms, numIter, titleName='Streetview Weights'):
+	deployDir = osp.join(prms.paths.code.dr, 'base_files', 'deploy')
+	ax1  = plt.subplot(1,1,1)
+	exp         = se.setup_experiment(prms, cPrms)
+	modelFile   = exp.get_snapshot_name(numIter=numIter)
+	defFile     = exp.files_['netdef']
+	imSz        = cPrms.nwPrms.imSz
+	visDef      = mpu.ProtoDef.visproto_from_proto(defFile, imSz=[[3, imSz, imSz]])
+	deployFile  = osp.join(deployDir, 'vis_deploy.prototxt')
+	visDef.del_layer('slice_pair')
+	visDef.del_layer('slice_label')
+	visDef.write(deployFile)
+	net         = mp.MyNet(deployFile, modelFile)
+	net.vis_weights('conv1', ax=ax1, titleName='Streetview Weights')

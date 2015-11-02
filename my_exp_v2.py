@@ -91,7 +91,8 @@ def smallnetv2_pool4_pose_classify_euler_mx45_crp192_rawImSz256(isRun=False, num
 	return prms, cPrms	
 
 
-
+##
+#NRMLS
 def smallnetv2_pool4_nrml_crp192_rawImSz256(isRun=False, isGray=False,
 																			 numTrain=1e+7, deviceId=[0],
 																			 makeNrmlUni=0.002, isPythonLayer=True):
@@ -361,5 +362,37 @@ def ptch_pose_euler_mx45_exp2(isRun=False, deviceId=[1], numPoseStream=256,
 		exp.run()
 	else:
 		return prms, cPrms	
+
+
+def ptch_pose_euler_mx90_smallnet_v7_fc5_exp2(isRun=False, deviceId=[1],
+						 numTrain=1e+7, batchsize=256, extraFc=None, isPythonLayer=True,
+					   numFc5=None, numCommonFc=None, numPoseStream=256,
+						 numPatchStream=256):
+
+	#Experiment prms
+	prms  = sp.get_prms(geoFence='dc-v2', labels=['pose', 'ptch'], 
+											labelType=['euler', 'wngtv'],
+											lossType=['l2', 'classify'], labelFrac=[0.5,0.5],
+											rawImSz=256, crpSz=192, splitDist=100,
+											numTrain=numTrain, maxEulerRot=90,
+											nBins=[None, None], binTypes=[None, None])
+
+	#Network architectures
+	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v7',
+					 concatLayer='fc5', lossWeight=10.0,
+							 multiLossProto='v1', extraFc=extraFc,
+							 isPythonLayer=isPythonLayer, numFc5=numFc5,
+							 numCommonFc=numCommonFc, poseStreamNum=numPoseStream,
+							 ptchStreamNum=numPatchStream)
+	
+	#Learning rate info
+	lPrms = se.get_lr_prms(batchsize=batchsize, stepsize=20000,
+								 clip_gradients=10.0, debug_info=True)
+	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId)
+	if isRun:
+		exp   = se.make_experiment(prms, cPrms)
+		exp.run()
+	return prms, cPrms	
+
 
 

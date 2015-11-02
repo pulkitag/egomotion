@@ -8,3 +8,8 @@ smallnet-v5:
 xavier initialization of common_fc and fc layers in siamese tower.
 Use of Prelu units for the fc layers. 
 
+smallnet-v7:
+msra initialization of common_fc and fc layers in siamese tower.
+Use of Prelu units for the fc layers. 
+conv4 has 256 filters and kernel size = 3
+
