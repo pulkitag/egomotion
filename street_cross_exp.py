@@ -18,11 +18,17 @@ def train_ptch_using_pose(isRun=False, deviceId=[0]):
 		exp.run()
 	return exp
 
-def train_pose_using_ptch():
+def train_pose_using_ptch(isRun=False, deviceId=[0]):
 	poPrms, poCPrms = mepo.smallnetv5_fc5_pose_euler_mx90_crp192_rawImSz256(numFc5=512, 
-																							lrAbove='common_fc')
-	ptPrms, ptCPrms = mept.smallnetv5_fc5_ptch_crp192_rawImSz256(numFc5=512)
-	exp = se.setup_experiment_from_previous(poPrms, poCPrms, ptPrms, ptCPrms, srcModelIter=60000)
+																							lrAbove='common_fc', isPythonLayer=True)
+	ptPrms, ptCPrms = mept.smallnetv5_fc5_ptch_crp192_rawImSz256(numFc5=512,
+																 isPythonLayer=True)
+	exp, modelFile = se.setup_experiment_from_previous(ptPrms, ptCPrms,
+																 poPrms, poCPrms, srcModelIter=60000)
+	#Rename common_fc so that it is initialized randomly
+	exp.expFile_.netDef_.rename_layer('common_fc', 'common_fc_new') 
+	if isRun:
+		exp.make(modelFile=modelFile)
+		exp.run()
 	return exp
-	#Rename common_fc so that it is initialized randomly 
 
