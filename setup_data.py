@@ -486,6 +486,12 @@ def _write_im_v2_p(args):
 #Save the images by folderid
 def save_crop_images_by_folderid(prms, folderId,
 							 isForceWrite=False, isParallel=False):
+	
+	keyFile = prms.paths.proc.im.folder.keyFile % folderId
+	if osp.exists(keyFile):
+		print ('%s exists, skipping' % keyFile)
+		return
+
 	#Get the groups
 	grps = su.get_groups(prms, folderId, setName=None)
 	if grps == []:
@@ -533,7 +539,6 @@ def save_crop_images_by_folderid(prms, folderId,
 		inArgs.append([prms, inList, outList, crpList, isForceWrite])
 	else:	
 		_write_im_v2(prms, inList, outList, crpList, isForceWrite)
-	keyFile = prms.paths.proc.im.folder.keyFile % folderId
 	if isParallel:
 		pool = Pool(processes=10)
 		jobs = pool.map_async(_write_im_v2_p, inArgs)	
@@ -723,6 +728,7 @@ def save_train_test_splits(prms, isForceWrite=False):
 		#Save the data		
 		pickle.dump({'splits': splits}, open(fName, 'w'))
 
+	return
 	#Ensure that train and test groups are far away
 	for trf in trFolderKeys:
 		fName = prms.paths.proc.splitsFile % trf

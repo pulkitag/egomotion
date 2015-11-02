@@ -260,7 +260,7 @@ def read_geo_groups(prms, folderId):
 ##
 #Get geo folderids
 def get_geo_folderids(prms):
-	if prms.geoFence in ['dc-v2']:
+	if prms.geoFence in ['dc-v2', 'cities-v1']:
 		keys = []
 		with open(prms.paths.geoFile,'r') as fid:
 			lines = fid.readlines()
@@ -278,7 +278,7 @@ def get_groups(prms, folderId, setName='train'):
 		Labels for a particular split
 	'''
 	grpList   = []
-	if prms.geoFence == 'dc-v2':
+	if prms.geoFence in ['dc-v2', 'cities-v1']:
 		keys = get_geo_folderids(prms)
 		if folderId not in keys:
 			return grpList
@@ -658,7 +658,7 @@ def prefix2imname_geo(prms, prefixes):
 				imNames.append([imKeys[f1][p1], imKeys[f2][p2]])
 			else:
 				imNames.append([imKeys[f1][p1], None])
-	elif prms.geoFence == 'dc-v2':
+	elif prms.geoFence in ['dc-v2', 'cities-v1']:
 		raise Exception('Doesnot work for %s', prms.geoFence)
 	return imNames
 			
@@ -940,8 +940,9 @@ def fetch_window_file_scp(prms):
 
 
 #Send the window file to a host
-def send_window_file_scp(prms):
-	setNames = ['train', 'test']
+def send_window_file_scp(prms, setNames=None):
+	if setNames is None:
+		setNames = ['train', 'test']
 	hostName = 'pulkitag@psi.millennium.berkeley.edu:/work5/pulkitag/data_sets/streetview/'
 	for s in setNames:
 		wName      = prms['paths']['windowFile'][s]
