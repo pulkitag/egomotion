@@ -226,6 +226,8 @@ layer {
   type: "PReLU"
 	param {
 		name: "prelu5_a"
+		lr_mult: 1
+		decay_mult: 1
 	}
   bottom: "fc5"
   top: "fc5"
@@ -458,6 +460,8 @@ layer {
   type: "PReLU"
 	param {
 		name: "prelu5_a"
+		lr_mult: 1
+		decay_mult: 1
 	}
   bottom: "fc5_p"
   top: "fc5_p"

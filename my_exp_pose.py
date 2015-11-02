@@ -86,7 +86,7 @@ def smallnetv5_fc5_pose_euler_mx90_crp192_rawImSz256(isRun=False, numTrain=1e+7,
 											lossType=['l2'], maxEulerRot=90, rawImSz=256,
 											splitDist=100, numTrain=numTrain, crpSz=192)
 	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v2',
-							 concatLayer='pool4', lossWeight=10.0,
+							 concatLayer='fc5', lossWeight=10.0,
 								randCrop=False, concatDrop=False,
 								isGray=isGray, isPythonLayer=isPythonLayer,
 								extraFc=extraFc, numFc5=numFc5, lrAbove=lrAbove)
