@@ -4,7 +4,7 @@ import street_exp as se
 
 def smallnetv2_pool4_ptch_crp192_rawImSz256(isRun=False, isGray=False, numTrain=1e+7,
 					isPythonLayer=False, deviceId=[2], batchsize=256,
-					resumeIter=0, extraFc=None):
+					resumeIter=0, extraFc=None, lrAbove=None):
 	prms  = sp.get_prms_ptch(geoFence='dc-v2', crpSz=192,
 													 rawImSz=256, splitDist=100,
 													 numTrain=numTrain)
@@ -12,7 +12,7 @@ def smallnetv2_pool4_ptch_crp192_rawImSz256(isRun=False, isGray=False, numTrain=
 							 concatLayer='pool4', lossWeight=10.0,
 								randCrop=False, concatDrop=False,
 								isGray=isGray, isPythonLayer=isPythonLayer,
-								extraFc=extraFc)
+								extraFc=extraFc, lrAbove=lrAbove)
 	lPrms = se.get_lr_prms(batchsize=batchsize, stepsize=10000, clip_gradients=10.0)
 	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId,
 								resumeIter=resumeIter)
