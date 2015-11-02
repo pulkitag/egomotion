@@ -80,7 +80,7 @@ def smallnetv2_pool4_pose_euler_mx90_crp192_rawImSz256(isRun=False, numTrain=1e+
 
 #Maximum 90 degree rotation
 def smallnetv5_fc5_pose_euler_mx90_crp192_rawImSz256(isRun=False, numTrain=1e+7, 
-										deviceId=[0], isPythonLayer=False, isGray=False, 
+										deviceId=[0], isPythonLayer=True, isGray=False, 
 										extraFc=None, lrAbove=None, numFc5=None):
 	prms  = sp.get_prms(geoFence='dc-v2', labels=['pose'], labelType=['euler'],
 											lossType=['l2'], maxEulerRot=90, rawImSz=256,
