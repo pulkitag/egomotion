@@ -229,7 +229,8 @@ def ptch_pose_euler_mx90_smallnet_v2_fc5_exp1(isRun=False, deviceId=[1],
 							 multiLossProto=None, extraFc=extraFc,
 							 isPythonLayer=isPythonLayer, numFc5=numFc5,
 							 numCommonFc=numCommonFc)
-	lPrms = se.get_lr_prms(batchsize=batchsize, stepsize=20000, clip_gradients=10.0)
+	lPrms = se.get_lr_prms(batchsize=batchsize, stepsize=20000, clip_gradients=10.0,
+													debug_info=True)
 	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId)
 	if isRun:
 		exp   = se.make_experiment(prms, cPrms)
@@ -273,7 +274,8 @@ def ptch_pose_euler_mx90_smallnet_v5_fc5_exp1(isRun=False, deviceId=[1],
 							 multiLossProto=None, extraFc=extraFc,
 							 isPythonLayer=isPythonLayer, numFc5=numFc5,
 							 numCommonFc=numCommonFc)
-	lPrms = se.get_lr_prms(batchsize=batchsize, stepsize=20000, clip_gradients=10.0)
+	lPrms = se.get_lr_prms(batchsize=batchsize, stepsize=20000, clip_gradients=10.0,
+								debug_info=True)
 	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId)
 	if isRun:
 		exp   = se.make_experiment(prms, cPrms)

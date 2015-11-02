@@ -84,7 +84,6 @@ def smallnetv6_pool4_ptch_crp192_rawImSz256(isRun=False, isGray=False, numTrain=
 	return prms, cPrms	
 
 
-
 def matchnet_ptch_crp192_imSz64_rawImSz256(isRun=False, isGray=False, numTrain=1e+7,
 					isPythonLayer=True, deviceId=[2], batchsize=256,
 					resumeIter=0, extraFc=None):

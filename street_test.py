@@ -176,28 +176,34 @@ def get_ptch_test_results_conv4():
 	return fpr
  
 def get_ptch_test_results_fc5():
-	numFc5    = [128, 256, 384, 512]
-	runNum    = [0, 1, 0, 0]
-	modelIter = 24000
-	fpr       = []
+	numFc5    = [32, 64, 128, 256, 384, 512, 1024]
+	runNum    = [0, 0, 0, 1, 0, 0, 0]
+	modelIter = 60000
+	fpr       = {}
 	for n,r in zip(numFc5, runNum):
-		if n < 512:
-			prms, cPrms = mept.smallnetv2_fc5_ptch_crp192_rawImSz256(numFc5=n, runNum=r)
-		else:
-			prms, cPrms = mept.smallnetv5_fc5_ptch_crp192_rawImSz256(numFc5=n, runNum=r)
-		gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
-		fpr.append(get_fpr(0.95, pdScore, gtLabel))
+		try:
+			if n in [128, 256, 384]:
+				prms, cPrms = mept.smallnetv2_fc5_ptch_crp192_rawImSz256(numFc5=n, runNum=r)
+			else:
+				prms, cPrms = mept.smallnetv5_fc5_ptch_crp192_rawImSz256(numFc5=n, runNum=r)
+			gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
+			fpr['num-%d' % n] = get_fpr(0.95, pdScore, gtLabel)
+		except:
+			print ('Not found for %d' % n)
 	return fpr
 
 def get_pose_ptch_results():
 	fpr = []
-	modelIter = 22000
+	modelIter = 36000
 	#With Conv4
-	prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v6_pool4_exp1(numConv4=32)
-	gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
-	fpr.append(get_fpr(0.95, pdScore, gtLabel))
-	#With Fc5 
-	#prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v5_fc5_exp1(numFc5=512)
+	#prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v6_pool4_exp1(numConv4=32)
 	#gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
 	#fpr.append(get_fpr(0.95, pdScore, gtLabel))
+
+	#With Fc5 
+	numFc = [128, 256, 384, 1024]
+	for n in numFc:
+		prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v5_fc5_exp1(numFc5=n)
+		gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
+		fpr.append(get_fpr(0.95, pdScore, gtLabel))
 	return fpr
