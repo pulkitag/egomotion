@@ -46,10 +46,10 @@ def smallnetv2_fc5_ptch_crp192_rawImSz256(isRun=False, isGray=False, numTrain=1e
 def smallnetv5_fc5_ptch_crp192_rawImSz256(isRun=False, isGray=False, numTrain=1e+7,
 					isPythonLayer=True, deviceId=[2], batchsize=256,
 					resumeIter=0, extraFc=None, numFc5=512, runNum=0,
-					lrAbove=None):
-	prms  = sp.get_prms_ptch(geoFence='dc-v2', crpSz=192,
+					lrAbove=None, geoFence='dc-v2', numTest=1e+4):
+	prms  = sp.get_prms_ptch(geoFence=geoFence, crpSz=192,
 													 rawImSz=256, splitDist=100,
-													 numTrain=numTrain)
+													 numTrain=numTrain, numTest=numTest)
 	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v5',
 							 concatLayer='fc5', lossWeight=10.0,
 								randCrop=False, concatDrop=False,

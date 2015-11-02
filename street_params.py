@@ -272,6 +272,17 @@ def get_train_test_defs(geoFence, ver='v1', setName=None):
 				keys.append(key)	
 			testFolderKeys = ['0008']
 			trainFolderKeys = [k for k in keys if k not in testFolderKeys]
+	elif geoFence == 'cities-v1':
+		geoFile = 'geofence/cities-v1.txt'
+		keys = []
+		with open(geoFile,'r') as fid:
+			lines = fid.readlines()
+			for l in lines:
+				key, _ = l.strip().split()
+				keys.append(key)	
+			testFolderKeys = ['0070']
+			ignoreKeys     = ['0008'] + testFolderKeys
+			trainFolderKeys = [k for k in keys if k not in ignoreKeys]
 	else:
 		raise Exception('%s not recognized' % geoFence)
 	if setName == 'train':
