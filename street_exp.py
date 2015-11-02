@@ -31,6 +31,7 @@ def get_nw_prms(**kwargs):
 	dArgs.numFc5           = None
 	dArgs.numConv4         = None
 	dArgs.numCommonFc      = None
+	dArgs.lrAbove          = None
 	dArgs = mpu.get_defaults(kwargs, dArgs)
 	if dArgs.numFc5 is not None:
 		assert(dArgs.concatLayer=='fc5')
@@ -57,6 +58,8 @@ def get_nw_prms(**kwargs):
 		expStr = '%s_pylayers' % expStr
 	if dArgs.extraFc is not None:
 		expStr = '%s_extraFc%d' % (expStr, dArgs.extraFc)
+	if dArgs.lrAbove is not None:
+		expStr = '%s_lrAbove-%s' dArgs.lrAbove
 	dArgs.expStr = expStr 
 	return dArgs 
 
@@ -514,10 +517,8 @@ def make_experiment(prms, cPrms, isFine=False,
 	return caffeExp	
 
 ##
-#Make an experiment by initializaing from a previos experiment
-def make_experiment_from_previous(srcPrms, srcCPrms, prms, cPrms,
-													 srcModelIter):
-
+#Setup experiment from previous
+def setup_experiment_from_previous(srcPrms, srcCPrms, prms, cPrms, srcModelIter):
 	#For resuming the training
 	resumeIter = cPrms.resumeIter
 	if resumeIter == 0:
@@ -532,6 +533,16 @@ def make_experiment_from_previous(srcPrms, srcCPrms, prms, cPrms,
 	prms['expName'] = 'fine-FROM/%s/%s_srcModelIter%dK/fine-TO/'\
 							 % (srcPrms['expName'], cPrms['expStr'], int(srcModelIter/1000))
 	exp = setup_experiment(prms, cPrms)
+	return
+
+
+##
+#Make an experiment by initializaing from a previos experiment
+def make_experiment_from_previous(srcPrms, srcCPrms, prms, cPrms,
+													 srcModelIter):
+
+	exp = setup_experiment_from_previous(srcPrms, srcCPrms, prms, cPrms, 
+													srcModelIter)
 	exp.make(modelFile=modelFile)
 	return exp	
 
