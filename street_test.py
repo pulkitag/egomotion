@@ -67,7 +67,8 @@ def get_liberty_ptch_proto(prms, cPrms):
 
 def get_street_ptch_proto(prms, cPrms):
 	exp       = se.setup_experiment(prms, cPrms)
-	wFile     = 'test-files/test_ptch_equal-pos-neg_geo-dc-v2_spDist100_imSz256.txt'
+	#wFile     = 'test-files/test_ptch_equal-pos-neg_geo-dc-v2_spDist100_imSz256.txt'
+	wFile     = 'test-files/test_ptch_mxRot90_equal-pos-neg_geo-dc-v2_spDist100_imSz256.txt'
 	netDef    = mpu.ProtoDef(exp.files_['netdef'])
 	paramStr  = netDef.get_layer_property('window_data', 'param_str')[1:-1]
 	paramStr  = modify_params(paramStr, 'source', wFile)
@@ -248,7 +249,9 @@ def get_ptch_test_results_conv4():
 def get_ptch_test_results_fc5():
 	numFc5    = [32, 64, 128, 256, 384, 512, 1024]
 	runNum    = [0, 0, 0, 1, 0, 0, 0]
-	modelIter = 60000
+	#numFc5    = [4, 16]
+	#runNum    = [0, 0, 0, 1, 0, 0, 0]
+	modelIter = 72000
 	fpr       = {}
 	for n,r in zip(numFc5, runNum):
 		try:
@@ -263,8 +266,8 @@ def get_ptch_test_results_fc5():
 	return fpr
 
 def get_pose_ptch_results():
-	fpr = []
-	modelIter = 36000
+	fpr = {}
+	modelIter = 72000
 	#With Conv4
 	#prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v6_pool4_exp1(numConv4=32)
 	#gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
@@ -272,8 +275,9 @@ def get_pose_ptch_results():
 
 	#With Fc5 
 	numFc = [128, 256, 384, 1024]
+	#numFc = [32, 64]
 	for n in numFc:
 		prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v5_fc5_exp1(numFc5=n)
 		gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
-		fpr.append(get_fpr(0.95, pdScore, gtLabel))
+		fpr['num-%d' % n] = get_fpr(0.95, pdScore, gtLabel)
 	return fpr
