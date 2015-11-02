@@ -971,6 +971,18 @@ def process_normals_proto(prms, setName='test'):
 		binned.append(np.histogram(lbls[:,n], 100))
 	return binned
 		 
+##
+#Convert a pose patch window file into a window file for patch matching only
+def convert_pose_ptch_2_ptch(inFile, outFile):
+	inFid  = mpio.GenericWindowReader(inFile)
+	outFid = mpio.GenericWindowWriter(outFile, inFid.num_, 2, 1)
+	while not inFid.is_eof():
+		imData, lb = inFid.read_next()
+		lbls = [[lb[0][2]]]	
+		outFid.write(lbls[0], *imData)
+	inFid.close()
+	outFid.close()
+
 
 '''
 ##

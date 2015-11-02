@@ -59,7 +59,7 @@ def get_nw_prms(**kwargs):
 	if dArgs.extraFc is not None:
 		expStr = '%s_extraFc%d' % (expStr, dArgs.extraFc)
 	if dArgs.lrAbove is not None:
-		expStr = '%s_lrAbove-%s' dArgs.lrAbove
+		expStr = '%s_lrAbove-%s' % (expStr, dArgs.lrAbove)
 	dArgs.expStr = expStr 
 	return dArgs 
 
@@ -469,6 +469,9 @@ def setup_experiment(prms, cPrms):
 	lossDef  = make_loss_proto(prms, cPrms)
 	#Merge all defs
 	protoDef = _merge_defs([dataDef, netDef, lossDef])
+	if cPrms.nwPrms.lrAbove is not None:
+		protoDef.set_no_learning_until(cPrms.nwPrms.lrAbove)
+		print ('Setting no learning until %s' % cPrms.nwPrms.lrAbove)
 	#Get the solver definition file
 	solDef   = cPrms['solver']
 	#Experiment Object	
@@ -533,7 +536,7 @@ def setup_experiment_from_previous(srcPrms, srcCPrms, prms, cPrms, srcModelIter)
 	prms['expName'] = 'fine-FROM/%s/%s_srcModelIter%dK/fine-TO/'\
 							 % (srcPrms['expName'], cPrms['expStr'], int(srcModelIter/1000))
 	exp = setup_experiment(prms, cPrms)
-	return
+	return exp, modelFile
 
 
 ##
@@ -541,7 +544,7 @@ def setup_experiment_from_previous(srcPrms, srcCPrms, prms, cPrms, srcModelIter)
 def make_experiment_from_previous(srcPrms, srcCPrms, prms, cPrms,
 													 srcModelIter):
 
-	exp = setup_experiment_from_previous(srcPrms, srcCPrms, prms, cPrms, 
+	exp, modelFile = setup_experiment_from_previous(srcPrms, srcCPrms, prms, cPrms, 
 													srcModelIter)
 	exp.make(modelFile=modelFile)
 	return exp	

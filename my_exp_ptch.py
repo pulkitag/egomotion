@@ -4,7 +4,7 @@ import street_exp as se
 
 def smallnetv2_pool4_ptch_crp192_rawImSz256(isRun=False, isGray=False, numTrain=1e+7,
 					isPythonLayer=False, deviceId=[2], batchsize=256,
-					resumeIter=0, extraFc=None):
+					resumeIter=0, extraFc=None, lrAbove=None):
 	prms  = sp.get_prms_ptch(geoFence='dc-v2', crpSz=192,
 													 rawImSz=256, splitDist=100,
 													 numTrain=numTrain)
@@ -12,7 +12,7 @@ def smallnetv2_pool4_ptch_crp192_rawImSz256(isRun=False, isGray=False, numTrain=
 							 concatLayer='pool4', lossWeight=10.0,
 								randCrop=False, concatDrop=False,
 								isGray=isGray, isPythonLayer=isPythonLayer,
-								extraFc=extraFc)
+								extraFc=extraFc, lrAbove=lrAbove)
 	lPrms = se.get_lr_prms(batchsize=batchsize, stepsize=10000, clip_gradients=10.0)
 	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId,
 								resumeIter=resumeIter)
@@ -45,7 +45,8 @@ def smallnetv2_fc5_ptch_crp192_rawImSz256(isRun=False, isGray=False, numTrain=1e
 
 def smallnetv5_fc5_ptch_crp192_rawImSz256(isRun=False, isGray=False, numTrain=1e+7,
 					isPythonLayer=True, deviceId=[2], batchsize=256,
-					resumeIter=0, extraFc=None, numFc5=512, runNum=0):
+					resumeIter=0, extraFc=None, numFc5=512, runNum=0,
+					lrAbove=None):
 	prms  = sp.get_prms_ptch(geoFence='dc-v2', crpSz=192,
 													 rawImSz=256, splitDist=100,
 													 numTrain=numTrain)
@@ -53,7 +54,7 @@ def smallnetv5_fc5_ptch_crp192_rawImSz256(isRun=False, isGray=False, numTrain=1e
 							 concatLayer='fc5', lossWeight=10.0,
 								randCrop=False, concatDrop=False,
 								isGray=isGray, isPythonLayer=isPythonLayer,
-								extraFc=extraFc, numFc5=numFc5)
+								extraFc=extraFc, numFc5=numFc5, lrAbove=lrAbove)
 	lPrms = se.get_lr_prms(batchsize=batchsize, stepsize=10000, 
 											clip_gradients=10.0, debug_info=True)
 	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId,
@@ -82,7 +83,6 @@ def smallnetv6_pool4_ptch_crp192_rawImSz256(isRun=False, isGray=False, numTrain=
 		exp   = se.make_experiment(prms, cPrms)
 		exp.run()
 	return prms, cPrms	
-
 
 
 def matchnet_ptch_crp192_imSz64_rawImSz256(isRun=False, isGray=False, numTrain=1e+7,
