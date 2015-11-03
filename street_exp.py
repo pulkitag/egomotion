@@ -48,9 +48,9 @@ def get_nw_prms(**kwargs):
 	if dArgs.randCrop:
 		expStr = '%s_randCrp%d' % (expStr, dArgs.randCrop)
 	if not(dArgs.lossWeight==1.0):
-		if type(lossWeight)== list:
+		if type(dArgs.lossWeight)== list:
 			lStr = ''
-			for i,l in enumerate(lossWeight):
+			for i,l in enumerate(dArgs.lossWeight):
 				lStr = lStr + 'lw%d-%.1f_' % (i,l)
 			lStr = lStr[0:-1]
 			print lStr
