@@ -354,6 +354,8 @@ def make_loss_proto(prms, cPrms):
 	lbDefs = []
 	if not(type(cPrms.nwPrms.lossWeight) == list):
 		lossWeight = [cPrms.nwPrms.lossWeight] * len(prms.label)
+	else:
+		lossWeight = cPrms.nwPrms.lossWeight
 	if cPrms.nwPrms.multiLossProto is not None:
 		assert(prms.isMultiLabel)
 		fName = '%s_%s_loss_layers.prototxt' % (prms.labelNameStr, 
