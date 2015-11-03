@@ -550,9 +550,11 @@ def make_experiment_from_previous(srcPrms, srcCPrms, prms, cPrms,
 	return exp	
 
 
-def get_experiment_accuracy(prms, cPrms, lossName=None):
-	#This will contain the log file name
-	exp     = setup_experiment(prms, cPrms)
+def get_experiment_accuracy(prms, cPrms=None, lossName=None):
+	if cPrms is None:
+		exp = prms
+	else:
+		exp     = setup_experiment(prms, cPrms)
 	logFile = exp.expFile_.logTrain_	
 	#For getting the names of losses	
 	lossDef  = make_loss_proto(prms, cPrms)
@@ -564,7 +566,7 @@ def get_experiment_accuracy(prms, cPrms, lossName=None):
 	#print (lossNames)
 	return log2loss(logFile, lossNames)
 
-def plot_experiment_accuracy(prms, cPrms, svFile=None,
+def plot_experiment_accuracy(prms, cPrms=None, svFile=None,
 								isTrainOnly=False, isTestOnly=False, ax=None,
 								lossName=None):
 	testData, trainData = get_experiment_accuracy(prms, cPrms)
