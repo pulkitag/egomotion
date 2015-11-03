@@ -19,7 +19,7 @@ def smallnetv2_pool4_pose_crp192_rawImSz256(isRun=False, isGray=False, numTrain=
 	else:
 		return prms, cPrms	
 
-def smallnetv5_pool4_pose_crp192_fc5_rawImSz256(isRun=False, isGray=False, numTrain=1e+7,
+def smallnetv5_pose_crp192_fc5_rawImSz256(isRun=False, isGray=False, numTrain=1e+7,
 								deviceId=[0], isPythonLayer=True, runNum=0, extraFc=None,
 								numFc5=None, lrAbove=None):
 	prms  = sp.get_prms_pose(geoFence='dc-v2', crpSz=192,

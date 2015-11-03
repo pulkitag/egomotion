@@ -125,8 +125,13 @@ def test_ptch(prms, cPrms=None, modelIter=None, isLiberty=False):
 
 ##
 #Get the proto for pose regression	
-def get_street_pose_proto(exp):
-	wFile     = 'test-files/test_pose_euler_mx90_geo-dc-v2_spDist100_imSz256.txt'
+def get_street_pose_proto(exp, protoType='mx90'):
+	if protoType == 'mx90':
+		wFile     = 'test-files/test_pose_euler_mx90_geo-dc-v2_spDist100_imSz256.txt'
+		numIter   = 100
+	elif protoType == 'all':
+		wFile     = 'test-files/test_pose_euler_spDist100_geodc-v2_100K.txt'
+		numIter   = 1000
 	netDef    = mpu.ProtoDef(exp.files_['netdef'])
 	paramStr  = netDef.get_layer_property('window_data', 'param_str')[1:-1]
 	paramStr  = modify_params(paramStr, 'source', wFile)
@@ -148,7 +153,7 @@ def get_street_pose_proto(exp):
 							'"%s"' % 'pose_label', propNum=1)
 	defFile = 'test-files/pose_street_test.prototxt'
 	netDef.write(defFile)
-	return defFile
+	return defFile, numIter
 
 ##
 #Convert the predictions to degrees
@@ -160,27 +165,28 @@ def to_degrees(lbl, angleType='euler', nrmlz=6.0/180.0):
 ##
 #Get the distribution of errors
 def get_binned_angle_errs(errs, angs):
-	bins  = np.linspace(-180,180,20)
-	mdErr = np.zeros((len(bins)-1,))
+	bins   = np.linspace(-180,180,20)
+	mdErr  = np.zeros((len(bins)-1,))
+	counts = np.zeros((len(bins)-1,))
 	for i,bn in enumerate(bins[0:-1]):
 		stVal = bn
 		enVal = bins[i+1]
 		print (stVal, enVal)
-		#idx   = (angs >= stVal) & (angs < enVal)
-		idx   = angs < enVal
+		idx   = (angs >= stVal) & (angs < enVal)
+		counts[i] = np.sum(idx)
+		#idx   = angs < enVal
 		if np.sum(idx)>0:
 			mdErr[i] = np.median(errs[idx]) 	
-	return mdErr
+	return mdErr, counts
 
 ##
 #Test the pose net
-def test_pose(prms, cPrms=None,  modelIter=None):
+def test_pose(prms, cPrms=None,  modelIter=None, protoType='mx90'):
 	if cPrms is None:
 		exp = prms
 	else:
 		exp       = se.setup_experiment(prms, cPrms)
-	defFile   = get_street_pose_proto(exp)
-	numIter   = 100
+	defFile, numIter =  get_street_pose_proto(exp, protoType=protoType)
 	modelFile = exp.get_snapshot_name(modelIter)
 	caffe.set_mode_gpu()
 	net = caffe.Net(defFile, modelFile, caffe.TEST)
@@ -280,8 +286,8 @@ def get_multiloss_on_ptch_results():
 	#fpr.append(get_fpr(0.95, pdScore, gtLabel))
 
 	#With Fc5 
-	numFc = [128, 256, 384, 1024]
-	#numFc = [32, 64]
+	#numFc = [128, 256, 384, 1024]
+	numFc = [512]
 	for n in numFc:
 		prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v5_fc5_exp1(numFc5=n)
 		gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)

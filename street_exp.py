@@ -48,7 +48,16 @@ def get_nw_prms(**kwargs):
 	if dArgs.randCrop:
 		expStr = '%s_randCrp%d' % (expStr, dArgs.randCrop)
 	if not(dArgs.lossWeight==1.0):
-		expStr = '%s_lw%.1f' % (expStr, dArgs.lossWeight)
+		if type(dArgs.lossWeight)== list:
+			lStr = ''
+			for i,l in enumerate(dArgs.lossWeight):
+				lStr = lStr + 'lw%d-%.1f_' % (i,l)
+			lStr = lStr[0:-1]
+			print lStr
+			expStr = '%s_%s' % (expStr, lStr)
+		else:
+			assert isinstance(dArgs.lossWeight, (int, long, float))
+			expStr = '%s_lw%.1f' % (expStr, dArgs.lossWeight)
 	if dArgs.multiLossProto is not None:
 		expStr = '%s_mlpr%s-posn%d-ptsn%d' % (expStr,
 							dArgs.multiLossProto, dArgs.poseStreamNum, dArgs.ptchStreamNum)
@@ -60,26 +69,6 @@ def get_nw_prms(**kwargs):
 		expStr = '%s_extraFc%d' % (expStr, dArgs.extraFc)
 	if dArgs.lrAbove is not None:
 		expStr = '%s_lrAbove-%s' % (expStr, dArgs.lrAbove)
-	dArgs.expStr = expStr 
-	return dArgs 
-
-##
-# Parameters that specify the learning
-def get_lr_prms(**kwargs):	
-	dArgs = edict()
-	if dArgs.randCrop:
-		expStr = '%s_randCrp%d' % (expStr, dArgs.randCrop)
-	if not(dArgs.lossWeight==1.0):
-		expStr = '%s_lw%.1f' % (expStr, dArgs.lossWeight)
-	if dArgs.multiLossProto is not None:
-		expStr = '%s_mlpr%s-posn%d-ptsn%d' % (expStr,
-							dArgs.multiLossProto, dArgs.poseStreamNum, dArgs.ptchStreamNum)
-	if dArgs.isGray:
-		expStr = '%s_grayIm' % expStr
-	if dArgs.isPythonLayer:
-		expStr = '%s_pylayers' % expStr
-	if dArgs.extraFc is not None:
-		expStr = '%s_extraFc%d' % (expStr, dArgs.extraFc)
 	dArgs.expStr = expStr 
 	return dArgs 
 
@@ -363,6 +352,8 @@ def make_net_proto(prms, cPrms):
 def make_loss_proto(prms, cPrms):
 	baseFilePath = prms.paths.baseNetsDr
 	lbDefs = []
+	if not(type(cPrms.nwPrms.lossWeight) == list):
+		lossWeight = [cPrms.nwPrms.lossWeight] * len(prms.label)
 	if cPrms.nwPrms.multiLossProto is not None:
 		assert(prms.isMultiLabel)
 		fName = '%s_%s_loss_layers.prototxt' % (prms.labelNameStr, 
@@ -371,18 +362,20 @@ def make_loss_proto(prms, cPrms):
 		lbDef  = mpu.ProtoDef(fName)
 		#Modify pose parameters
 		poseLb = prms.labels[prms.labelNames.index('pose')]
+		poseIdx    = prms.labelNames.index('pose')
 		lbDef.set_layer_property('pose_fc', ['inner_product_param', 'num_output'],
 						 '%d' % poseLb.lbSz_)
 		lbDef.set_layer_property('pose_stream_fc', ['inner_product_param', 'num_output'],
 						 '%d' % cPrms.nwPrms.poseStreamNum)
-		lbDef.set_layer_property('pose_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
+		lbDef.set_layer_property('pose_loss', 'loss_weight', '%f' % lossWeight[poseIdx])
 		#Modify ptch parameters
-		ptchLb = prms.labels[prms.labelNames.index('ptch')]
+		ptchLb  = prms.labels[prms.labelNames.index('ptch')]
+		ptchIdx = prms.labelNames.index('ptch')
 		lbDef.set_layer_property('ptch_fc', ['inner_product_param', 'num_output'],
 						 '%d' % ptchLb.lbSz_)
 		lbDef.set_layer_property('ptch_stream_fc', ['inner_product_param', 'num_output'],
 						 '%d' % cPrms.nwPrms.ptchStreamNum)
-		lbDef.set_layer_property('ptch_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
+		lbDef.set_layer_property('ptch_loss', 'loss_weight', '%f' % lossWeight[ptchIdx])
 		return lbDef
 
 	if prms.isSiamese and 'nrml' in prms.labelNames:
@@ -403,7 +396,7 @@ def make_loss_proto(prms, cPrms):
 		if not(lbInfo.loss_ == 'classify'):
 			defFile = osp.join(baseFilePath, 'nrml_loss_layers.prototxt')
 			lbDef   = mpu.ProtoDef(defFile)
-			lbDef.set_layer_property('nrml_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
+			lbDef.set_layer_property('nrml_loss', 'loss_weight', '%f' % lossWeight[idx])
 		else:
 			defFile = osp.join(baseFilePath, 'nrml_loss_classify_layers.prototxt')
 			lbDef   = mpu.ProtoDef(defFile)
@@ -411,8 +404,8 @@ def make_loss_proto(prms, cPrms):
 						 '%d' % lbInfo.numBins_)
 			lbDef.set_layer_property('nrml_fc_2',['inner_product_param', 'num_output'],
 						 '%d' % lbInfo.numBins_)
-			lbDef.set_layer_property('nrml_loss_1', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
-			lbDef.set_layer_property('nrml_loss_2', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
+			lbDef.set_layer_property('nrml_loss_1', 'loss_weight', '%f' % lossWeight[idx])
+			lbDef.set_layer_property('nrml_loss_2', 'loss_weight', '%f' % lossWeight[idx])
 			lbDef.set_layer_property('nrml_loss_1', ['loss_param', 'ignore_label'], 
 						 '%d' % lbInfo.numBins_)
 			lbDef.set_layer_property('nrml_loss_2', ['loss_param', 'ignore_label'], 
@@ -423,9 +416,10 @@ def make_loss_proto(prms, cPrms):
 						 '%d' % lbInfo.numBins_)
 		lbDefs.append(lbDef)
 	if 'ptch' in prms.labelNames:
+		idx     = prms.labelNames.index('ptch')
 		defFile = osp.join(baseFilePath, 'ptch_loss_layers.prototxt')
 		lbDef   = mpu.ProtoDef(defFile)
-		lbDef.set_layer_property('ptch_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
+		lbDef.set_layer_property('ptch_loss', 'loss_weight', '%f' % lossWeight[idx])
 		lbDefs.append(lbDef)
 	if 'pose' in prms.labelNames:
 		idx     = prms.labelNames.index('pose')
@@ -435,7 +429,7 @@ def make_loss_proto(prms, cPrms):
 			lbDef   = mpu.ProtoDef(defFile)
 			lbDef.set_layer_property('pose_fc', ['inner_product_param', 'num_output'],
 							 '%d' % lbInfo.lbSz_)
-			lbDef.set_layer_property('pose_loss', 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
+			lbDef.set_layer_property('pose_loss', 'loss_weight', '%f' % lossWeight[idx])
 		elif lbInfo.loss_ in ['classify']:
 			defFile = osp.join(baseFilePath, 'pose_loss_classify_layers.prototxt')
 			lbDef   = mpu.ProtoDef(defFile)
@@ -443,7 +437,7 @@ def make_loss_proto(prms, cPrms):
 			for fc in fcNames:
 				lbDef.set_layer_property('%s_fc' % fc,['inner_product_param', 'num_output'],
 							 '%d' % lbInfo.numBins_)
-				lbDef.set_layer_property('%s_loss' % fc, 'loss_weight', '%f' % cPrms.nwPrms.lossWeight)
+				lbDef.set_layer_property('%s_loss' % fc, 'loss_weight', '%f' % lossWeight[idx])
 				lbDef.set_layer_property('%s_loss' % fc, ['loss_param', 'ignore_label'], 
 						 '%d' % lbInfo.numBins_)
 				lbDef.set_layer_property('%s_accuracy' % fc, ['accuracy_param', 'ignore_label'], 
