@@ -12,6 +12,8 @@ import caffe
 import copy
 from os import path as osp
 import cv2
+import my_exp_pose as mepo	
+import street_cross_exp as sce
 
 def modify_params(paramStr, key, val):
 	params = paramStr.strip().split('--')
@@ -47,8 +49,7 @@ def get_fpr(recall, pdScore, gtLabel):
 	fpr       = err/float(threshIdx)
 	return fpr
 	
-def get_liberty_ptch_proto(prms, cPrms):
-	exp       = se.setup_experiment(prms, cPrms)
+def get_liberty_ptch_proto(exp):
 	libPrms   = rlp.get_prms()
 	wFile     = libPrms.paths.wFile
 
@@ -65,10 +66,10 @@ def get_liberty_ptch_proto(prms, cPrms):
 	netDef.write(defFile)
 	return defFile
 
-def get_street_ptch_proto(prms, cPrms):
-	exp       = se.setup_experiment(prms, cPrms)
-	#wFile     = 'test-files/test_ptch_equal-pos-neg_geo-dc-v2_spDist100_imSz256.txt'
-	wFile     = 'test-files/test_ptch_mxRot90_equal-pos-neg_geo-dc-v2_spDist100_imSz256.txt'
+def get_street_ptch_proto(exp):
+	wFile     = 'test-files/test_ptch_equal-pos-neg_geo-dc-v2_spDist100_imSz256.txt'
+	#wFile     = 'test-files/test_ptch_mxRot90_equal-pos-neg_geo-dc-v2_spDist100_imSz256.txt'
+	#wFile     = 'test-files/test_ptch_newcities.txt'
 	netDef    = mpu.ProtoDef(exp.files_['netdef'])
 	paramStr  = netDef.get_layer_property('window_data', 'param_str')[1:-1]
 	paramStr  = modify_params(paramStr, 'source', wFile)
@@ -92,13 +93,16 @@ def get_street_ptch_proto(prms, cPrms):
 	return defFile
 
 
-def test_ptch(prms, cPrms, modelIter, isLiberty=True):
-	exp       = se.setup_experiment(prms, cPrms)
+def test_ptch(prms, cPrms=None, modelIter=None, isLiberty=False):
+	if cPrms is None:
+		exp = prms
+	else:
+		exp       = se.setup_experiment(prms, cPrms)
 	if isLiberty:
-		defFile   = get_liberty_ptch_proto(prms, cPrms)
+		defFile   = get_liberty_ptch_proto(exp)
 		numIter   = 900
 	else:
-		defFile   = get_street_ptch_proto(prms, cPrms)
+		defFile   = get_street_ptch_proto(exp)
 		numIter   = 100
 	modelFile = exp.get_snapshot_name(modelIter)
 	caffe.set_mode_gpu()
@@ -115,15 +119,19 @@ def test_ptch(prms, cPrms, modelIter, isLiberty=True):
 		acc.append(copy.deepcopy(data['accuracy']))
 	gtLabel = np.concatenate(gtLabel)
 	pdScore = np.concatenate(pdScore)
-	fpr     = get_fpr(0.95, pdScore, gtLabel)
+	fpr     = get_fpr(0.95, copy.deepcopy(pdScore), copy.deepcopy(gtLabel))
 	print 'FPR at 0.95 Recall is: %f' % fpr
 	return gtLabel, pdScore
 
 ##
 #Get the proto for pose regression	
-def get_street_pose_proto(prms, cPrms):
-	exp       = se.setup_experiment(prms, cPrms)
-	wFile     = 'test-files/test_pose_euler_mx90_geo-dc-v2_spDist100_imSz256.txt'
+def get_street_pose_proto(exp, protoType='mx90'):
+	if protoType == 'mx90':
+		wFile     = 'test-files/test_pose_euler_mx90_geo-dc-v2_spDist100_imSz256.txt'
+		numIter   = 100
+	elif protoType == 'all':
+		wFile     = 'test-files/test_pose_euler_spDist100_geodc-v2_100K.txt'
+		numIter   = 1000
 	netDef    = mpu.ProtoDef(exp.files_['netdef'])
 	paramStr  = netDef.get_layer_property('window_data', 'param_str')[1:-1]
 	paramStr  = modify_params(paramStr, 'source', wFile)
@@ -145,7 +153,7 @@ def get_street_pose_proto(prms, cPrms):
 							'"%s"' % 'pose_label', propNum=1)
 	defFile = 'test-files/pose_street_test.prototxt'
 	netDef.write(defFile)
-	return defFile
+	return defFile, numIter
 
 ##
 #Convert the predictions to degrees
@@ -157,24 +165,28 @@ def to_degrees(lbl, angleType='euler', nrmlz=6.0/180.0):
 ##
 #Get the distribution of errors
 def get_binned_angle_errs(errs, angs):
-	bins  = np.linspace(-180,180,20)
-	mdErr = np.zeros((len(bins)-1,))
+	bins   = np.linspace(-180,180,20)
+	mdErr  = np.zeros((len(bins)-1,))
+	counts = np.zeros((len(bins)-1,))
 	for i,bn in enumerate(bins[0:-1]):
 		stVal = bn
 		enVal = bins[i+1]
 		print (stVal, enVal)
-		#idx   = (angs >= stVal) & (angs < enVal)
-		idx   = angs < enVal
+		idx   = (angs >= stVal) & (angs < enVal)
+		counts[i] = np.sum(idx)
+		#idx   = angs < enVal
 		if np.sum(idx)>0:
 			mdErr[i] = np.median(errs[idx]) 	
-	return mdErr
+	return mdErr, counts
 
 ##
 #Test the pose net
-def test_pose(prms, cPrms, modelIter):
-	exp       = se.setup_experiment(prms, cPrms)
-	defFile   = get_street_pose_proto(prms, cPrms)
-	numIter   = 100
+def test_pose(prms, cPrms=None,  modelIter=None, protoType='mx90'):
+	if cPrms is None:
+		exp = prms
+	else:
+		exp       = se.setup_experiment(prms, cPrms)
+	defFile, numIter =  get_street_pose_proto(exp, protoType=protoType)
 	modelFile = exp.get_snapshot_name(modelIter)
 	caffe.set_mode_gpu()
 	net = caffe.Net(defFile, modelFile, caffe.TEST)
@@ -265,9 +277,55 @@ def get_ptch_test_results_fc5():
 			print ('Not found for %d' % n)
 	return fpr
 
-def get_pose_ptch_results():
+def get_multiloss_on_ptch_results():
 	fpr = {}
 	modelIter = 72000
+	#With Conv4
+	#prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v6_pool4_exp1(numConv4=32)
+	#gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
+	#fpr.append(get_fpr(0.95, pdScore, gtLabel))
+
+	#With Fc5 
+	#numFc = [128, 256, 384, 1024]
+	numFc = [512]
+	for n in numFc:
+		prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v5_fc5_exp1(numFc5=n)
+		gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
+		fpr['num-%d' % n] = get_fpr(0.95, pdScore, gtLabel)
+	return fpr
+
+def get_pose_on_pose_results():
+	medErr = {}
+	modelIter = 40000
+
+	#With Fc5 
+	numFc = [128, 384, 512, 1024]
+	#numFc = [32, 64]
+	for n in numFc:
+		try:
+			prms, cPrms = mepo.smallnetv5_fc5_pose_euler_mx90_crp192_rawImSz256(numFc5=n)
+			_, _, err   = test_pose(prms, cPrms, modelIter)
+			medErr['num-%d' % n] = np.median(err,0)
+		except:
+			print ('NOT FOUND: %d' % n)
+	return medErr
+
+def test_linear_pose_from_ptch():
+	exp = sce.train_pose_using_ptch()
+	modelIter=50000		
+	_, _, err   = test_pose(exp, None, modelIter)
+	return np.median(err,0)
+
+def test_linear_ptch_from_pose():
+	exp = sce.train_ptch_using_pose()
+	modelIter=72000		
+	gt, pd   = test_ptch(exp, None, modelIter)
+	return get_fpr(0.95, pd, gt)
+
+
+def get_multiloss_on_pose_results():
+	medErr = {}
+	modelIter = 40000
 	#With Conv4
 	#prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v6_pool4_exp1(numConv4=32)
 	#gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
@@ -278,6 +336,6 @@ def get_pose_ptch_results():
 	#numFc = [32, 64]
 	for n in numFc:
 		prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v5_fc5_exp1(numFc5=n)
-		gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
-		fpr['num-%d' % n] = get_fpr(0.95, pdScore, gtLabel)
-	return fpr
+		_, _, err   = test_pose(prms, cPrms, modelIter)
+		medErr['num-%d' % n] = np.median(err,0)
+	return medErr
