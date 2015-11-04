@@ -33,7 +33,8 @@ layer {
   top: "pose_loss"
 	python_param{
 		module: "python_loss_layers"
-		layer: "L1LossLayer"
-		param_str: "--loss_weight 1.0"
+		layer: "L1LossWithIgnoreLayer"
+		param_str: "--loss_weight 10.0"
 	}
+	loss_weight: 1
 }

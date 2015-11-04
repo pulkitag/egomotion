@@ -212,7 +212,7 @@ class LabelNLoss(object):
 		self.isMultiLabel = isMultiLabel
 		self.numBins_ = numBins
 		self.binType_ = binType
-		assert self.loss_ in ['l2', 'classify'], self.loss_
+		assert self.loss_ in ['l2', 'classify', 'l1'], self.loss_
 		#augLbSz_ - augmented labelSz to include the ignore label option
 		self.augLbSz_, self.lbSz_  = self.get_label_sz()
 		self.lbStr_       = '%s-%s' % (self.label_, self.labelType_)
@@ -472,6 +472,15 @@ def get_prms(isAligned=True,
 	prms['poseStats'] = {}
 	#prms['poseStats']['mu'], prms['poseStats']['sd'], prms['poseStats']['scale'] =\
 	#					get_pose_stats(prms)
+	ltStr = ''
+	ltFlag = False
+	for lt in lossType:
+		if lt == 'l1':
+			ltFlag = True
+			ltStr = 'loss-l1'
+	if ltFlag:
+		prms['expName'] = '%s_%s' % (prms['expName'], ltStr)
+
 	return prms
 
 ##

@@ -353,7 +353,7 @@ def make_loss_proto(prms, cPrms):
 	baseFilePath = prms.paths.baseNetsDr
 	lbDefs = []
 	if not(type(cPrms.nwPrms.lossWeight) == list):
-		lossWeight = [cPrms.nwPrms.lossWeight] * len(prms.label)
+		lossWeight = [cPrms.nwPrms.lossWeight] * len(prms.labels)
 	else:
 		lossWeight = cPrms.nwPrms.lossWeight
 	if cPrms.nwPrms.multiLossProto is not None:
@@ -427,11 +427,17 @@ def make_loss_proto(prms, cPrms):
 		idx     = prms.labelNames.index('pose')
 		lbInfo  = prms.labels[idx]
 		if lbInfo.loss_ in ['l2', 'l1']:
-			defFile = osp.join(baseFilePath, 'pose_loss_layers.prototxt')
+			if lbInfo.loss_ in ['l2']:
+				defFile = osp.join(baseFilePath, 'pose_loss_layers.prototxt')
+			else:
+				defFile = osp.join(baseFilePath, 'pose_loss_l1_layers.prototxt')
 			lbDef   = mpu.ProtoDef(defFile)
 			lbDef.set_layer_property('pose_fc', ['inner_product_param', 'num_output'],
 							 '%d' % lbInfo.lbSz_)
-			lbDef.set_layer_property('pose_loss', 'loss_weight', '%f' % lossWeight[idx])
+			if lbInfo.loss_ in ['l2']:
+				lbDef.set_layer_property('pose_loss', 'loss_weight', '%f' % lossWeight[idx])
+			else:
+				print ('FOR L1 LOSS, LOSS WEIFHT DOESNT WORK')
 		elif lbInfo.loss_ in ['classify']:
 			defFile = osp.join(baseFilePath, 'pose_loss_classify_layers.prototxt')
 			lbDef   = mpu.ProtoDef(defFile)
