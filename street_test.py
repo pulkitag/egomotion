@@ -158,8 +158,7 @@ def get_street_pose_proto(exp, protoType='mx90'):
 ##
 #Convert the predictions to degrees
 def to_degrees(lbl, angleType='euler', nrmlz=6.0/180.0):
-	if angleType =='euler':
-		lbl = lbl/nrmlz
+	lbl = lbl/nrmlz
 	return lbl
 
 ##
@@ -190,17 +189,18 @@ def test_pose(prms, cPrms=None,  modelIter=None, protoType='mx90'):
 	modelFile = exp.get_snapshot_name(modelIter)
 	caffe.set_mode_gpu()
 	net = caffe.Net(defFile, modelFile, caffe.TEST)
-	gtLabel, pdLabel = [], []
+	gtLabel, pdLabel, loss = [], [], []
 	for i in range(numIter):
-		data = net.forward(['pose_label','pose_fc'])
+		data = net.forward(['pose_label','pose_fc', 'pose_loss'])
 		gtLabel.append(copy.deepcopy(data['pose_label'][:,0:2].squeeze()))
 		pdLabel.append(copy.deepcopy(data['pose_fc']))
+		loss.append(copy.deepcopy(data['pose_loss']))
 	gtLabel = to_degrees(np.concatenate(gtLabel))
 	pdLabel = to_degrees(np.concatenate(pdLabel))
 	err     = np.abs(gtLabel - pdLabel)
 	medErr  = np.median(err, 0)
 	muErr   = np.mean(err,0)
-	return gtLabel, pdLabel, err
+	return gtLabel, pdLabel, err,loss
 
 def vis_liberty_ptch():
 	libPrms   = rlp.get_prms()
