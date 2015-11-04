@@ -101,10 +101,11 @@ def smallnetv5_fc5_pose_euler_mx90_crp192_rawImSz256(isRun=False, numTrain=1e+7,
 #NO Maximum EULER ANGLE rotation
 def smallnetv5_fc5_pose_euler_crp192_rawImSz256(isRun=False, numTrain=1e+7, 
 										deviceId=[0], isPythonLayer=True, isGray=False, 
-										extraFc=None, lrAbove=None, numFc5=None):
+										extraFc=None, lrAbove=None, numFc5=None, numTest=1e+4):
 	prms  = sp.get_prms(geoFence='dc-v2', labels=['pose'], labelType=['euler'],
 											lossType=['l2'], maxEulerRot=None, rawImSz=256,
-											splitDist=100, numTrain=numTrain, crpSz=192)
+											splitDist=100, numTrain=numTrain, crpSz=192,
+											numTest=numTest)
 	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v5',
 							 concatLayer='fc5', lossWeight=10.0,
 								randCrop=False, concatDrop=False,
