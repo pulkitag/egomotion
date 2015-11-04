@@ -1,0 +1,7 @@
+0071 	 /data0/pulkitag/data_sets/streetview/raw/vegas/0026
+0072 	 /data0/pulkitag/data_sets/streetview/raw/vegas/0025
+0073 	 /data0/pulkitag/data_sets/streetview/raw/vegas/0027
+0074 	 /data0/pulkitag/data_sets/streetview/raw/vegas/LasVegasFinalRaw/0028
+0075 	 /data0/pulkitag/data_sets/streetview/raw/vegas/LasVegasFinalRaw/0029
+0077 	 /data0/pulkitag/data_sets/streetview/raw/vegas/LasVegasFinalRaw/0031
+0078 	 /data0/pulkitag/data_sets/streetview/raw/vegas/LasVegasFinalRaw/0032

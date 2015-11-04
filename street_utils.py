@@ -260,7 +260,7 @@ def read_geo_groups(prms, folderId):
 ##
 #Get geo folderids
 def get_geo_folderids(prms):
-	if prms.geoFence in ['dc-v2', 'cities-v1']:
+	if prms.geoFence in ['dc-v2', 'cities-v1', 'vegas-v1']:
 		keys = []
 		with open(prms.paths.geoFile,'r') as fid:
 			lines = fid.readlines()
@@ -278,7 +278,7 @@ def get_groups(prms, folderId, setName='train'):
 		Labels for a particular split
 	'''
 	grpList   = []
-	if prms.geoFence in ['dc-v2', 'cities-v1']:
+	if prms.geoFence in ['dc-v2', 'cities-v1', 'vegas-v1']:
 		keys = get_geo_folderids(prms)
 		if folderId not in keys:
 			return grpList
