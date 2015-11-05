@@ -701,7 +701,7 @@ def make_window_file(prms, setNames=['test', 'train']):
 		gen.close()
 
 
-def get_label_by_folderid(prms, folderId):
+def get_label_by_folderid(prms, folderId, maxGroups=None):
 	grpDict = get_groups(prms, folderId, setName=None)
 	#Filter the ids if required
 	if prms.splits.ver in ['v1']:
@@ -722,6 +722,11 @@ def get_label_by_folderid(prms, folderId):
 			grps.append(grpDict[gk]) 
 	else:		
 		grps    = [g for (gk,g) in grpDict.iteritems()] 
+
+	if maxGroups is not None and maxGroups < len(grps):
+		perm = np.random.permutation(len(grps))
+		perm = perm[0:maxGroups]
+		grps = [grps[p] for p in perm]		
 
 	#Form the Labels
 	lbNums = []
@@ -756,7 +761,7 @@ def get_label_by_folderid(prms, folderId):
 
 ##
 #Make a windown file per folder
-def make_window_file_by_folderid(prms, folderId):
+def make_window_file_by_folderid(prms, folderId, maxGroups=None):
 	if len(prms.labelNames)==1 and prms.labelNames[0] == 'nrml':
 		numImPerExample = 1
 	else:
@@ -772,7 +777,7 @@ def make_window_file_by_folderid(prms, folderId):
 	maxW = min(w, wCenter + cr)  
 
 	#Get the im-label data
-	lb, prefix = get_label_by_folderid(prms, folderId)
+	lb, prefix = get_label_by_folderid(prms, folderId, maxGroups=maxGroups)
 	#For the imNames
 	imNames1 = []
 	print('Window file for %s' % folderId)
@@ -808,7 +813,7 @@ def _make_window_file_by_folderid(args):
 
 ##
 #Make window files for multiple folders
-def make_window_files_geo_folders(prms, isForceWrite=False):
+def make_window_files_geo_folders(prms, isForceWrite=False, maxGroups=None):
 	keys   = get_geo_folderids(prms)
 	print keys
 	inArgs = []
@@ -818,7 +823,7 @@ def make_window_files_geo_folders(prms, isForceWrite=False):
 			if osp.exists(wFile):
 				print ('Window file for %s exists, skipping rewriting' % wFile)
 				continue
-		inArgs.append([prms, k])
+		inArgs.append([prms, k, maxGroups])
 	pool = Pool(processes=6)
 	jobs = pool.map_async(_make_window_file_by_folderid, inArgs)
 	res  = jobs.get()
