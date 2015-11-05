@@ -282,7 +282,8 @@ def _save_group_by_id(args):
 ##
 # Save the groups
 def save_groups(prms, isForceCompute=False):
-	keys,_ = su.get_folder_keys_all(prms)	
+	#keys,_ = su.get_folder_keys_all(prms)	
+	keys = su.get_geo_folderids(prms)	
 	inArgs = []
 	pool = Pool(processes=32)
 	for k in keys:
@@ -561,7 +562,8 @@ def save_cropped_images(prms, isForceWrite=False):
 		print ('Image Cropping is only defined for cropped parts')
 		return
 	#Get all the keys
-	folderKeys = su.get_folder_keys(prms)
+	#folderKeys = su.get_folder_keys(prms)
+	folderKeys = su.get_geo_folderids(prms)
 	inArgs = []
 	for k in folderKeys:
 		inArgs.append([prms, k, isForceWrite])
@@ -576,9 +578,13 @@ def tar_crop_images_by_folderid(args):
 	prms, folderId = args
 	drName = prms.paths.proc.im.folder.dr % folderId
 	trFile = prms.paths.proc.im.folder.tarFile % folderId
-	print ('Making %s' % trFile)
-	subprocess.check_call(['tar -cf %s %s' % (trFile, drName)],shell=True)
-	return True
+	if not osp.exists(trFile):
+		print ('Making %s' % trFile)
+		subprocess.check_call(['tar -cf %s %s' % (trFile, drName)],shell=True)
+		return True
+	else:
+		print ('Already exists %s' % trFile)
+		return False
 
 ##
 #Tar the crop images
