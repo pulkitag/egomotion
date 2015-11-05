@@ -353,7 +353,7 @@ def make_loss_proto(prms, cPrms):
 	baseFilePath = prms.paths.baseNetsDr
 	lbDefs = []
 	if not(type(cPrms.nwPrms.lossWeight) == list):
-		lossWeight = [cPrms.nwPrms.lossWeight] * len(prms.label)
+		lossWeight = [cPrms.nwPrms.lossWeight] * len(prms.labels)
 	else:
 		lossWeight = cPrms.nwPrms.lossWeight
 	if cPrms.nwPrms.multiLossProto is not None:
