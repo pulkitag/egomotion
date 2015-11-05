@@ -469,6 +469,12 @@ def get_label_ptch(prms, groups, numSamples, randSeed=1005):
 	lbIdx   = prms.labelNames.index('ptch')
 	lbInfo  = prms.labels[lbIdx]
 	st,en   = prms.labelSzList[lbIdx], prms.labelSzList[lbIdx+1]
+	#Is sometimes needed
+	poseLb = edict()
+	lbInfo.mxRot_ = prms.mxPtchRot
+	lbInfo.labelType_ = 'euler'
+	lbInfo.loss_ = 'l2'
+	lbInfo.lbSz_ = 2
 	for p1, p2 in zip(perm1, perm2):
 		lb  = np.zeros((prms.labelSz,)).astype(np.float32)
 		prob   = randState.rand()
@@ -478,6 +484,11 @@ def get_label_ptch(prms, groups, numSamples, randSeed=1005):
 			gp  = groups[p1]
 			n1  = randState.permutation(gp.num)[0]
 			n2  = randState.permutation(gp.num)[0]
+			if prms.mxPtchRot is not None:
+				rotLbs     = get_rots_label(poseLb, gp.data[n1].rots, 
+													 gp.data[n2].rots)
+				if rotLbs is None:
+					lb[st] = 2	
 			prefix.append((gp.folderId, gp.prefix[n1].strip(),
 										 gp.folderId, gp.prefix[n2].strip()))
 		else:
@@ -532,7 +543,14 @@ def get_label_pose_ptch(prms, groups, numSamples, randSeed=1005, randSeedAdd=0):
 			if rotLbs is None:
 				continue
 			lb[poseSt:poseEn] = rotLbs
-			lb[poseEn] = 1.0
+			mxAbs = max(np.abs(lb[poseSt:poseEn]))
+			if prms.mxPtchRot is None:
+				lb[ptchSt] = 1
+			else:
+				if prms.mxPtchRot >= mxAbs * 30:
+					lb[ptchSt] = 1
+				else:
+					lb[ptchSt] = 2
 			prefix.append((gp.folderId, gp.prefix[n1].strip(),
 										 gp.folderId, gp.prefix[n2].strip()))
 			poseIdx.append(idxCount)
