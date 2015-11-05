@@ -159,7 +159,6 @@ def get_default_caffe_prms(deviceId=1):
 	cPrms  = get_caffe_prms(nwPrms, lrPrms, deviceId=deviceId)
 	return cPrms
 
-
 ##
 #Merge the definition of multiple layers
 def _merge_defs(defs): 
@@ -191,8 +190,11 @@ def get_windowfile_rootdir(prms):
 ##
 #Adapt the ProtoDef for the data layers
 #Helper function for setup_experiment
-def _adapt_data_proto(protoDef, prms, cPrms):
-	rootDir = get_windowfile_rootdir(prms)
+def _adapt_data_proto(protoDef, prms, cPrms, finePrms=None):
+	if finePrms is not None:
+		rootDir = finePrms['paths']['imRootDir']
+	else:
+		rootDir = get_windowfile_rootdir(prms)
 	#Set the mean file
 	mainDataDr = cfg.STREETVIEW_DATA_MAIN
 	if cPrms.nwPrms.imgntMean:
@@ -244,14 +246,21 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 		else:
 			grayStr = 'no-is_gray'
 		
-		paramStr = '"--source %s --root_folder %s --crop_size %d\
-							  --batch_size %d --%s --mean_file %s --resume_iter %d"'
 		for p in ['TRAIN', 'TEST']:
+			paramStr = '"--source %s --root_folder %s --crop_size %d\
+							  --batch_size %d --%s --mean_file %s --resume_iter %d"'
 			if p == 'TRAIN':
 				batchSz = cPrms.lrPrms.batchsize
+				if finePrms is not None:
+					paramStr = '"%s --jitter_amt %d --jitter_pct %f"'\
+											 % (paramStr[1:-1], finePrms.jitter_amt, finePrms.jitter_pct) 
 			else:
 				batchSz = 50
-			params = paramStr % (prms['paths']['windowFile'][p.lower()],
+			if finePrms is not None:
+				winFile = finePrms['paths']['windowFile'][p.lower()]
+			else:
+				winFile = prms['paths']['windowFile'][p.lower()]
+			params = paramStr % (winFile,
 								rootDir, cPrms.nwPrms.imSz, batchSz, 
 								grayStr, fName, cPrms.resumeIter)
 			protoDef.set_layer_property('window_data', ['python_param', 'param_str'],
@@ -263,48 +272,58 @@ def _adapt_data_proto(protoDef, prms, cPrms):
 	
 ##
 #The proto definitions for the data
-def make_data_proto(prms, cPrms):
+def make_data_proto(prms, cPrms, finePrms=None):
 	baseFilePath = prms.paths.baseNetsDr
 	if cPrms.nwPrms.isPythonLayer:
 		dataFile     = osp.join(baseFilePath, 'data_layers_python.prototxt')
 	else:
 		dataFile     = osp.join(baseFilePath, 'data_layers.prototxt')
 	dataDef      = mpu.ProtoDef(dataFile)
-	appendFlag   = True
-	if len(prms.labelNames)==1:
+	sliceFlag   = True
+	fineSiamFlag    = False
+	if len(prms.labelNames)==1 and prms.labelNames[0]=='nrml':
+		sliceFlag = False
+	if finePrms is not None and not finePrms.isSiamese:
+		sliceFlag = False
+		fineSiamFlag = True
+
+	if len(prms.labelNames)==1 or fineSiamFlag:
 		lbName = '"%s_label"' % prms.labelNames[0]
 		top2 = mpu.make_key('top', ['top'])
 		for ph in ['TRAIN', 'TEST']:
 			dataDef.set_layer_property('window_data', top2, lbName, phase=ph)
-			if prms.labelNames[0] == 'nrml':
+			if not sliceFlag:
 				dataDef.set_layer_property('window_data', 'top', 
 																		'"data"', phase=ph)
-				appendFlag = False
-			else:
-				appendFlag = True
-	
-	if appendFlag:
+	if sliceFlag:
 		#Add slicing of labels	
 		sliceFile = '%s_layers.prototxt' % prms.labelNameStr
 		sliceDef  = mpu.ProtoDef(osp.join(baseFilePath, sliceFile))
 		dataDef   = _merge_defs([dataDef, sliceDef])
 
 	#Set to the new window files
-	_adapt_data_proto(dataDef, prms, cPrms)
+	_adapt_data_proto(dataDef, prms, cPrms, finePrms=finePrms)
 	return dataDef
 
 ##
 #Make the proto for the computations
-def make_net_proto(prms, cPrms):
+def make_net_proto(prms, cPrms, finePrms=None):
 	baseFilePath = prms.paths.baseNetsDr
+	isSiamese = False
 	if prms.isSiamese:
+		isSiamese = True
+	if finePrms is not None and not finePrms.isSiamese:
+		isSiamese = False
+	if isSiamese:
 		netFileStr = '%s_window_siamese_%s.prototxt'
 	else:
 		netFileStr = '%s_window_%s.prototxt'
+
 	netFile = netFileStr % (cPrms.nwPrms.netName,
 												 cPrms.nwPrms.concatLayer) 
 	netFile = osp.join(baseFilePath, netFile)
 	netDef  = mpu.ProtoDef(netFile)
+
 	if cPrms.nwPrms.extraFc is not None:
 		#Changethe name of the existing common_fc to common_fc_prev
 		netDef.rename_layer('common_fc', 'common_fc_prev')
@@ -345,6 +364,10 @@ def make_net_proto(prms, cPrms):
 		dropLayer = mpu.get_layerdef_for_proto('Dropout', 'drop-%s' % 'common_fc', 'common_fc',
                             **{'top': 'common_fc', 'dropout_ratio': 0.5})
 		netDef.add_layer('drop-%s' % 'common_fc', dropLayer, 'TRAIN')
+
+	if finePrms is not None:
+		netDef.rename_layer('common_fc', 'common_fc_fine')
+
 	return netDef
 
 ##
@@ -427,11 +450,17 @@ def make_loss_proto(prms, cPrms):
 		idx     = prms.labelNames.index('pose')
 		lbInfo  = prms.labels[idx]
 		if lbInfo.loss_ in ['l2', 'l1']:
-			defFile = osp.join(baseFilePath, 'pose_loss_layers.prototxt')
+			if lbInfo.loss_ in ['l2']:
+				defFile = osp.join(baseFilePath, 'pose_loss_layers.prototxt')
+			else:
+				defFile = osp.join(baseFilePath, 'pose_loss_l1_layers.prototxt')
 			lbDef   = mpu.ProtoDef(defFile)
 			lbDef.set_layer_property('pose_fc', ['inner_product_param', 'num_output'],
 							 '%d' % lbInfo.lbSz_)
-			lbDef.set_layer_property('pose_loss', 'loss_weight', '%f' % lossWeight[idx])
+			if lbInfo.loss_ in ['l2']:
+				lbDef.set_layer_property('pose_loss', 'loss_weight', '%f' % lossWeight[idx])
+			else:
+				print ('FOR L1 LOSS, LOSS WEIFHT DOESNT WORK')
 		elif lbInfo.loss_ in ['classify']:
 			defFile = osp.join(baseFilePath, 'pose_loss_classify_layers.prototxt')
 			lbDef   = mpu.ProtoDef(defFile)
@@ -456,20 +485,26 @@ def make_loss_proto(prms, cPrms):
 
 ##
 #Setup the experiment
-def setup_experiment(prms, cPrms):
+def setup_experiment(prms, cPrms, finePrms=None):
 	#Get the protodef for the n/w architecture
-	netDef   = make_net_proto(prms, cPrms)
+	netDef   = make_net_proto(prms, cPrms, finePrms=finePrms)
 	#Data protodef
-	dataDef  = make_data_proto(prms, cPrms)
+	dataDef  = make_data_proto(prms, cPrms, finePrms=finePrms)
 	#Loss protodef
 	lossDef  = make_loss_proto(prms, cPrms)
 	#Merge all defs
 	protoDef = _merge_defs([dataDef, netDef, lossDef])
-	if cPrms.nwPrms.lrAbove is not None:
-		protoDef.set_no_learning_until(cPrms.nwPrms.lrAbove)
-		print ('Setting no learning until %s' % cPrms.nwPrms.lrAbove)
-	#Get the solver definition file
-	solDef   = cPrms['solver']
+	if finePrms is None:
+		if cPrms.nwPrms.lrAbove is not None:
+			protoDef.set_no_learning_until(cPrms.nwPrms.lrAbove)
+			print ('Setting no learning until %s' % cPrms.nwPrms.lrAbove)
+		#Get the solver definition file
+		solDef   = cPrms['solver']
+	else:
+		if finePrms.lrAbove is not None:
+			protoDef.set_no_learning_until(finePrms.lrAbove)
+			print ('Setting no learning until %s' % finePrms.lrAbove)
+		solDef   = finePrms['solver']
 	#Experiment Object	
 	caffeExp = get_experiment_object(prms, cPrms)
 	caffeExp.init_from_external(solDef, protoDef)
@@ -545,6 +580,31 @@ def make_experiment_from_previous(srcPrms, srcCPrms, prms, cPrms,
 	exp.make(modelFile=modelFile)
 	return exp	
 
+##
+#Setup experiment for finetuning
+def setup_experiment_for_finetune(srcPrms, srcCPrms, finePrms, srcModelIter):
+	srcPrms = copy.deepcopy(srcPrms)
+	srcCPrms = copy.deepcopy(srcCPrms)
+	finePrms = copy.deepcopy(finePrms)
+	#Get the srcExperiment Model File
+	srcExp    = setup_experiment(srcPrms, srcCPrms)
+	modelFile = srcExp.get_snapshot_name(srcModelIter)
+	if not osp.exists(modelFile):
+		print modelFile
+		raise Exception('MODEL FILE DOESNOT EXIST')
+
+	#Name the target experiment appropriately  
+	srcPrms['expName'] = 'fine-FROM/%s/%s_srcModelIter%dK/fine-TO/%s'\
+							 % (srcPrms['expName'], srcCPrms['expStr'], int(srcModelIter/1000),
+			            finePrms['expName'])
+	exp = setup_experiment(srcPrms, srcCPrms, finePrms)
+	return exp, modelFile
+
+def make_experiment_for_finetune(srcPrms, srcCPrms, finePrms, srcModelIter):
+	exp, modelFile = setup_experiment_for_finetune(srcPrms, srcCPrms, finePrms, 
+													srcModelIter)
+	exp.make(modelFile=modelFile)
+	return exp	
 
 def get_experiment_accuracy(prms, cPrms=None, lossName=None):
 	if cPrms is None:
@@ -552,20 +612,23 @@ def get_experiment_accuracy(prms, cPrms=None, lossName=None):
 	else:
 		exp     = setup_experiment(prms, cPrms)
 	logFile = exp.expFile_.logTrain_	
-	#For getting the names of losses	
-	lossDef  = make_loss_proto(prms, cPrms)
-	lNames    = lossDef.get_all_layernames()
-	lossNames = [l for l in lNames if 'loss' in l or 'acc' in l]
-	if lossName is not None:
-		assert lossName in lossNames
-		lossNames = [lossName]
+	#For getting the names of losses
+	if cPrms is not None:	
+		lossDef  = make_loss_proto(prms, cPrms)
+		lNames    = lossDef.get_all_layernames()
+		lossNames = [l for l in lNames if 'loss' in l or 'acc' in l]
+		if lossName is not None:
+			assert lossName in lossNames
+			lossNames = [lossName]
+	else:
+		lossNames = lossName
 	#print (lossNames)
 	return log2loss(logFile, lossNames)
 
 def plot_experiment_accuracy(prms, cPrms=None, svFile=None,
 								isTrainOnly=False, isTestOnly=False, ax=None,
 								lossName=None):
-	testData, trainData = get_experiment_accuracy(prms, cPrms)
+	testData, trainData = get_experiment_accuracy(prms, cPrms, lossName=lossName)
 	if ax is None:
 		plt.figure()
 		ax = plt.subplot(111)

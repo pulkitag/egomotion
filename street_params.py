@@ -212,7 +212,7 @@ class LabelNLoss(object):
 		self.isMultiLabel = isMultiLabel
 		self.numBins_ = numBins
 		self.binType_ = binType
-		assert self.loss_ in ['l2', 'classify'], self.loss_
+		assert self.loss_ in ['l2', 'classify', 'l1'], self.loss_
 		#augLbSz_ - augmented labelSz to include the ignore label option
 		self.augLbSz_, self.lbSz_  = self.get_label_sz()
 		self.lbStr_       = '%s-%s' % (self.label_, self.labelType_)
@@ -283,6 +283,16 @@ def get_train_test_defs(geoFence, ver='v1', setName=None):
 			testFolderKeys = ['0070']
 			ignoreKeys     = ['0008'] + testFolderKeys
 			trainFolderKeys = [k for k in keys if k not in ignoreKeys]
+	elif geoFence == 'vegas-v1':
+		geoFile = 'geofence/vegas-v1.txt'
+		keys = []
+		with open(geoFile,'r') as fid:
+			lines = fid.readlines()
+			for l in lines:
+				key, _ = l.strip().split()
+				keys.append(key)	
+			testFolderKeys = keys
+			trainFolderKeys = []
 	else:
 		raise Exception('%s not recognized' % geoFence)
 	if setName == 'train':
@@ -472,6 +482,15 @@ def get_prms(isAligned=True,
 	prms['poseStats'] = {}
 	#prms['poseStats']['mu'], prms['poseStats']['sd'], prms['poseStats']['scale'] =\
 	#					get_pose_stats(prms)
+	ltStr = ''
+	ltFlag = False
+	for lt in lossType:
+		if lt == 'l1':
+			ltFlag = True
+			ltStr = 'loss-l1'
+	if ltFlag:
+		prms['expName'] = '%s_%s' % (prms['expName'], ltStr)
+
 	return prms
 
 ##
@@ -487,3 +506,8 @@ def get_prms_pose(**kwargs):
 
 def get_prms_pose_euler(**kwargs):
 	return get_prms(labels=['pose'], labelType=['euler'], lossType=['l2'], **kwargs)
+
+def get_prms_vegas_ptch():
+	prms = get_prms(labels=['ptch'], labelType=['wngtv'], rawImSz=256, numTest=100000, isAligned=False,
+									splitDist=100, geoFence='vegas-v1', crpSz=192)
+	return prms
