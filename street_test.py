@@ -275,7 +275,7 @@ def get_ptch_test_results_fc5():
 				prms, cPrms = mept.smallnetv2_fc5_ptch_crp192_rawImSz256(numFc5=n, runNum=r)
 			else:
 				prms, cPrms = mept.smallnetv5_fc5_ptch_crp192_rawImSz256(numFc5=n, runNum=r)
-			gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
+			gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False, protoType='vegas')
 			fpr['num-%d' % n] = get_fpr(0.95, pdScore, gtLabel)
 		except:
 			print ('Not found for %d' % n)
@@ -302,24 +302,22 @@ def get_ptch_test_results_fc5_mxRot90():
 			print ('Not found for %d' % n)
 	return fpr
 
-
-
 def get_multiloss_on_ptch_results():
 	fpr = {}
-	modelIter = 100000
+	modelIter = 72000
 	#With Conv4
 	#prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v6_pool4_exp1(numConv4=32)
 	#gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
 	#fpr.append(get_fpr(0.95, pdScore, gtLabel))
 
 	#With Fc5 
-	#numFc = [128, 256, 384, 1024]
-	numFc = [384, 1024]
+	numFc = [128, 256, 384, 512, 1024]
+	#numFc = [384, 1024]
 	#numFc = [512]
 	for n in numFc:
 		prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v5_fc5_exp1(numFc5=n)
 		try:
-			gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
+			gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False, protoType='vegas')
 			fpr['num-%d' % n] = get_fpr(0.95, pdScore, gtLabel)
 		except:
 			print ('Not found for %d' % n)

@@ -943,6 +943,15 @@ def fetch_window_file_scp(prms):
 		localName = prms['paths']['windowFile'][s]
 		subprocess.check_call(['%s %s %s' % (scpCmd, remoteName, localName)],shell=True) 
 
+def fetch_cropim_tar_by_folderid(args):
+	prms, folderId = args
+	hostName = 'ubuntu@54.173.41.3:/data0/pulkitag/data_sets/streetview/proc/resize-im/im256/'
+	trFile = prms.paths.proc.im.folder.tarFile % folderId
+	remoteName = hostName + '%s.tar' % folderId
+	scpCmd = 'scp -i "pulkit-key.pem" '
+	localName = trFile
+	subprocess.check_call(['%s %s %s' % (scpCmd, remoteName, localName)],shell=True) 
+
 
 #Send the window file to a host
 def send_window_file_scp(prms, setNames=None):

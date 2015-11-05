@@ -43,3 +43,16 @@ def make_window_files_many():
 	print ('Pose Patch Files')
 	prms, cPrms = mev2.ptch_pose_euler_mx45_exp2()	
 	make_window_files(prms)
+
+
+def reform_window_file(fName = 'test-files/vegas_ptch_test.txt'):
+	fid = mpio.GenericWindowReader(fName)
+	oid = mpio.GenericWindowWriter('vegas.txt', fid.num_, 2, 1)
+	readFlag = True
+	while readFlag:
+		ims, lbs = fid.read_next()
+		lb = [lbs[0][0]]
+		oid.write(lb, *ims)
+		if fid.is_eof():
+			readFlag=False
+
