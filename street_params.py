@@ -316,7 +316,7 @@ def get_prms(isAligned=True,
 						 ptchPosFrac=0.5, maxEulerRot=None, 
 						 geoFence='dc-v1', rawImSz=640,
 						 splitDist=None, splitVer='v1',
-						 nrmlMakeUni=0.002):
+						 nrmlMakeUni=0.002, mxPtchRot=None):
 	'''
 		labels    : What labels to use - make it a list for multiple
 								kind of labels
@@ -448,6 +448,10 @@ def get_prms(isAligned=True,
 		imStr = '_rawImSz%d' % rawImSz
 	else:
 		imStr = ''
+	prms.mxPtchRot = mxPtchRot
+	if mxPtchRot is not None:
+		expStr = expStr + ('_mxPtchRot-%d' % mxPtchRot) 
+
 	expName   = '%s_crpSz%d_nTr-%.2e%s' % (expStr, crpSz, numTrain, imStr)
 	teExpName = '%s_crpSz%d_nTe-%.2e%s' % (expStr, crpSz, numTest, imStr)
 	expName2  = '%s_crpSz%d%s' % (expStr, crpSz, imStr) 

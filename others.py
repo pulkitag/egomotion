@@ -6,6 +6,8 @@ from os import path as osp
 import time
 import street_utils as su
 import my_exp_v2 as mev2
+import street_params as sp
+import numpy as np
 
 def benchmark_reads(prms, setName='train'):
 	wFile = prms.paths.windowFile[setName]
@@ -56,3 +58,25 @@ def reform_window_file(fName = 'test-files/vegas_ptch_test.txt'):
 		if fid.is_eof():
 			readFlag=False
 
+def hack_window_file():
+	targetDir = '/data0/pulkitag/hack'
+	inDir     = '/data0/pulkitag/data_sets/streetview/proc/resize-im/im256/'
+	prms = sp.get_prms_vegas_ptch()
+	wFile = mpio.GenericWindowReader(prms.paths['windowFile']['test'])
+	readFlag = True
+	count    = 0
+	while readFlag:
+		if np.mod(count,1000)==0:
+			print (count)
+		count += 1
+		ims, lb = wFile.read_next()
+		for im in ims:
+			fName = im.strip().split()[0]
+			inName  = osp.join(inDir, fName)
+			inDat   = scm.imread(inName)
+			outName = osp.join(targetDir, fName)
+			dirName, _ = osp.split(outName)
+			sp._mkdir(dirName)
+			scm.imsave(outName, inDat) 
+		if wFile.is_eof():
+			readFlag = False	
