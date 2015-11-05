@@ -66,10 +66,15 @@ def get_liberty_ptch_proto(exp):
 	netDef.write(defFile)
 	return defFile
 
-def get_street_ptch_proto(exp):
-	wFile     = 'test-files/test_ptch_equal-pos-neg_geo-dc-v2_spDist100_imSz256.txt'
-	#wFile     = 'test-files/test_ptch_mxRot90_equal-pos-neg_geo-dc-v2_spDist100_imSz256.txt'
-	#wFile     = 'test-files/test_ptch_newcities.txt'
+def get_street_ptch_proto(exp, protoType='vegas'):
+	if protoType == 'vegas':
+		wFile     = 'test-files/vegas_ptch_test.txt'
+		numIter   = 1000
+	else:
+		wFile    = 'test-files/test_ptch_equal-pos-neg_geo-dc-v2_spDist100_imSz256.txt'
+		#wFile   = 'test-files/test_ptch_mxRot90_equal-pos-neg_geo-dc-v2_spDist100_imSz256.txt'
+		#wFile   = 'test-files/test_ptch_newcities.txt'
+		numIter  = 100
 	netDef    = mpu.ProtoDef(exp.files_['netdef'])
 	paramStr  = netDef.get_layer_property('window_data', 'param_str')[1:-1]
 	paramStr  = modify_params(paramStr, 'source', wFile)
@@ -90,10 +95,10 @@ def get_street_ptch_proto(exp):
 							'"%s"' % 'ptch_label', propNum=1)
 	defFile = 'test-files/ptch_street_test.prototxt'
 	netDef.write(defFile)
-	return defFile
+	return defFile, numIter
 
 
-def test_ptch(prms, cPrms=None, modelIter=None, isLiberty=False):
+def test_ptch(prms, cPrms=None, modelIter=None, isLiberty=False, protoType='vegas'):
 	if cPrms is None:
 		exp = prms
 	else:
@@ -102,8 +107,7 @@ def test_ptch(prms, cPrms=None, modelIter=None, isLiberty=False):
 		defFile   = get_liberty_ptch_proto(exp)
 		numIter   = 900
 	else:
-		defFile   = get_street_ptch_proto(exp)
-		numIter   = 100
+		defFile, numIter = get_street_ptch_proto(exp, protoType=protoType)
 	modelFile = exp.get_snapshot_name(modelIter)
 	caffe.set_mode_gpu()
 	net = caffe.Net(defFile, modelFile, caffe.TEST)

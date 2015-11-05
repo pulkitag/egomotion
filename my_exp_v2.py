@@ -284,12 +284,12 @@ def ptch_pose_euler_mx90_smallnet_v5_fc5_exp1(isRun=False, deviceId=[1],
 	else:
 		return prms, cPrms	
 
-def ptch_pose_euler_smallnet_v5_fc5_exp1(isRun=False, deviceId=[1],
+def ptch_pose_euler_smallnet_v5_fc5_exp1_lossl1(isRun=False, deviceId=[1],
 						 numTrain=1e+7, batchsize=256, extraFc=None, isPythonLayer=True,
 					   numFc5=None, numCommonFc=None):
 	prms  = sp.get_prms(geoFence='dc-v2', labels=['pose', 'ptch'], 
 											labelType=['euler', 'wngtv'],
-											lossType=['l2', 'classify'], labelFrac=[0.5,0.5],
+											lossType=['l1', 'classify'], labelFrac=[0.5,0.5],
 											rawImSz=256, crpSz=192, splitDist=100,
 											numTrain=numTrain, maxEulerRot=None,
 											nBins=[None, None], binTypes=[None, None])
@@ -298,7 +298,7 @@ def ptch_pose_euler_smallnet_v5_fc5_exp1(isRun=False, deviceId=[1],
 							 multiLossProto=None, extraFc=extraFc,
 							 isPythonLayer=isPythonLayer, numFc5=numFc5,
 							 numCommonFc=numCommonFc)
-	lPrms = se.get_lr_prms(batchsize=batchsize, stepsize=20000, clip_gradients=10.0,
+	lPrms = se.get_lr_prms(batchsize=batchsize, stepsize=25000, clip_gradients=10.0,
 								debug_info=True)
 	cPrms = se.get_caffe_prms(nPrms, lPrms, deviceId=deviceId)
 	if isRun:
