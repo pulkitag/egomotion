@@ -51,12 +51,13 @@ def create_window_file():
 def setup_experiment(isRun=False):
 	#Get my best multiloss net
 	prms, cPrms = mev2.ptch_pose_euler_smallnet_v5_fc5_exp1_lossl1()
-	lrPrms      = se.get_lr_prms()
+	#lrPrms      = se.get_lr_prms()
+	lrPrms       = cPrms.lrPrms
 	finePrms    = edict() 
 	
 	codeDir = '/work4/pulkitag-code/code/projStreetView'	
 	finePrms.isSiamese = False
-	finePrms['solver'] = cPrms.lrPrms['solver'] 
+	finePrms['solver'] = lrPrms['solver'] 
 	finePrms.paths = edict()
 	finePrms.paths.imRootDir  = '/data0/pulkitag/data_sets/pascal_3d-my-copy/PASCAL3D+_release1.1/Images/'
 	finePrms.paths.windowFile = edict()
@@ -64,6 +65,9 @@ def setup_experiment(isRun=False):
 	finePrms.paths.windowFile.test  = osp.join(codeDir, 'pose-files/euler_test_pascal3d.txt')
 	#How many layers to finetune
 	finePrms.lrAbove = None
+	#Jittering
+	finePrms.jitter_pct = 0.1
+	finePrms.jitter_amt = 0
 	#Name of the experiment
 	finePrms.expName = 'pascal3d_euler_%s' % lrPrms.expStr 
 	exp,modelFile = se.setup_experiment_for_finetune(prms, cPrms, finePrms, 60000) 

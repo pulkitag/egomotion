@@ -79,9 +79,13 @@ def show_image_groups(prms, folderId):
 			axl[c].cla()
 
 def vis_window_file(prms, setName='test', isSave=False,
-										labelType='pose_ptch', isEuler=True):
+										labelType='pose_ptch', isEuler=True,
+										wFileName=None):
 	rootDir = se.get_windowfile_rootdir(prms)
-	wFile   = prms.paths.windowFile[setName]
+	if wFileName is None:
+		wFile = prms.paths.windowFile[setName]
+	else:
+		wFile = wFileName 
 	wDat    = mpio.GenericWindowReader(wFile)
 	runFlag = True
 	if labelType == 'pose_ptch':

@@ -184,7 +184,9 @@ def get_windowfile_rootdir(prms):
 			rootDir = osp.join(mainDataDr, 
 									'pulkitag/data_sets/streetview/raw/ssd105/Amir/WashingtonAligned/')
 	else:
-		raise Exception('rootDir is not defined')
+			rootDir = osp.join(mainDataDr,
+									 'pulkitag/data_sets/streetview/proc/resize-im/im%d/' % prms.rawImSz)
+		#raise Exception('rootDir is not defined')
 	return rootDir
 
 ##

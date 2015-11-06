@@ -68,4 +68,34 @@ def hack_window_file():
 			sp._mkdir(dirName)
 			scm.imsave(outName, inDat) 
 		if wFile.is_eof():
-			readFlag = False	
+			readFlag = False
+
+
+def window_file_ptch_gt_euler_5():
+	prms, cPrms = mev2.ptch_pose_euler_smallnet_v5_fc5_exp1_lossl1()
+	wTest = prms.paths['windowFile']['test']
+	wFid  = mpio.GenericWindowReader(wTest)
+	oName = 'ptch_test_euler-gt5.txt'
+	readFlag = True
+	count    = 0
+	imDat, lbDat = [], []
+	while readFlag:
+		ims, lb = wFid.read_next()
+		if lb is None:
+			readFlag = False
+			continue
+		poseLb  = lb[0][0:2]
+		mxTheta = 30 * max(np.abs(poseLb))
+		if mxTheta < 5 and not(lb[0][3]==0):
+			continue
+		count += 1
+		imDat.append(ims)
+		lbDat.append([lb[0][3]])
+		if wFid.is_eof():
+			readFlag = False
+	wFid.close()
+	#Outside id
+	oFid = mpio.GenericWindowWriter(oName, count, 2, 1)
+	for c in range(count):
+		oFid.write(lbDat[c], *imDat[c])
+	oFid.close()

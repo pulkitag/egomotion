@@ -14,6 +14,7 @@ from os import path as osp
 import cv2
 import my_exp_pose as mepo	
 import street_cross_exp as sce
+import rot_utils as ru
 
 def modify_params(paramStr, key, val):
 	params = paramStr.strip().split('--')
@@ -146,7 +147,7 @@ def get_street_pose_proto(exp, protoType='mx90'):
 						'"%s"' % paramStr)
 	#If ptch loss is present
 	lNames = netDef.get_all_layernames()
-	if 'pose_loss' in lNames:
+	if 'ptch_loss' in lNames:
 		netDef.del_layer('ptch_loss')
 		netDef.del_layer('ptch_fc')
 		netDef.del_layer('slice_label')
@@ -159,12 +160,33 @@ def get_street_pose_proto(exp, protoType='mx90'):
 	netDef.write(defFile)
 	return defFile, numIter
 
+
 ##
 #Convert the predictions to degrees
 def to_degrees(lbl, angleType='euler', nrmlz=6.0/180.0):
 	lbl = lbl/nrmlz
 	return lbl
 
+##
+#
+def get_rot_diff(gtLbl, pdLbl, angleType='euler', nrmlz=6.0/180.0):
+	pdLbl = copy.deepcopy(pdLbl)
+	gtLbl = copy.deepcopy(gtLbl)
+	pdy = max(-180, pdLbl[0]/nrmlz)
+	pdx = min(180, pdLbl[1]/nrmlz)
+	mat1 = ru.euler2mat(0, gtLbl[0]/nrmlz, gtLbl[1]/nrmlz, isRadian=False)	
+	mat2 = ru.euler2mat(0, pdy, pdx, isRadian=False)	
+	rotDiff = np.dot(mat1,np.transpose(mat2))	
+	theta, v = ru.rotmat_to_angle_axis(rotDiff)
+	return (theta*180)/np.pi
+
+##
+def get_rot_diff_list(gtLbl, pdLbl, nrmlz=6.0/180.0):
+	theta = []
+	for (gt, pd) in zip(gtLbl, pdLbl):
+		theta.append(get_rot_diff(gt, pd, nrmlz=nrmlz))
+	return theta
+	
 ##
 #Get the distribution of errors
 def get_binned_angle_errs(errs, angs):
@@ -189,7 +211,10 @@ def test_pose(prms, cPrms=None,  modelIter=None, protoType='mx90'):
 		exp = prms
 	else:
 		exp       = se.setup_experiment(prms, cPrms)
-	defFile, numIter =  get_street_pose_proto(exp, protoType=protoType)
+	if protoType == 'pascal3d':
+		defFile, numIter =  get_street_pose_proto(exp, protoType=protoType)
+	else:
+		defFile, numIter =  get_street_pose_proto(exp, protoType=protoType)
 	modelFile = exp.get_snapshot_name(modelIter)
 	caffe.set_mode_gpu()
 	net = caffe.Net(defFile, modelFile, caffe.TEST)
@@ -204,7 +229,7 @@ def test_pose(prms, cPrms=None,  modelIter=None, protoType='mx90'):
 	err     = np.abs(gtLabel - pdLabel)
 	medErr  = np.median(err, 0)
 	muErr   = np.mean(err,0)
-	return gtLabel, pdLabel, err,loss
+	return gtLabel, pdLabel, err
 
 def vis_liberty_ptch():
 	libPrms   = rlp.get_prms()
