@@ -47,6 +47,17 @@ def make_window_files_many():
 	make_window_files(prms)
 
 
+def reform_window_file(fName = 'test-files/vegas_ptch_test.txt'):
+	fid = mpio.GenericWindowReader(fName)
+	oid = mpio.GenericWindowWriter('vegas.txt', fid.num_, 2, 1)
+	readFlag = True
+	while readFlag:
+		ims, lbs = fid.read_next()
+		lb = [lbs[0][0]]
+		oid.write(lb, *ims)
+		if fid.is_eof():
+			readFlag=False
+
 def hack_window_file():
 	targetDir = '/data0/pulkitag/hack'
 	inDir     = '/data0/pulkitag/data_sets/streetview/proc/resize-im/im256/'

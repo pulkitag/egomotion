@@ -886,7 +886,7 @@ def make_combined_window_file(prms, setName='train'):
 			idx = prms.labelNames.index('nrml')
 			lbInfo = prms.labels[idx]
 			nrmlPrune = True
-			if lbInfo.loss_ == 'l2':
+			if lbInfo.loss_ in ['l2', 'l1']:
 				nrmlBins  = np.linspace(-1,1,101)
 				binCounts = np.zeros((2,101))
 			elif lbInfo.loss_ == 'classify':
@@ -961,6 +961,15 @@ def fetch_window_file_scp(prms):
 		scpCmd = 'scp -i "pulkit-key.pem" '
 		localName = prms['paths']['windowFile'][s]
 		subprocess.check_call(['%s %s %s' % (scpCmd, remoteName, localName)],shell=True) 
+
+def fetch_cropim_tar_by_folderid(args):
+	prms, folderId = args
+	hostName = 'ubuntu@54.173.41.3:/data0/pulkitag/data_sets/streetview/proc/resize-im/im256/'
+	trFile = prms.paths.proc.im.folder.tarFile % folderId
+	remoteName = hostName + '%s.tar' % folderId
+	scpCmd = 'scp -i "pulkit-key.pem" '
+	localName = trFile
+	subprocess.check_call(['%s %s %s' % (scpCmd, remoteName, localName)],shell=True) 
 
 
 #Send the window file to a host

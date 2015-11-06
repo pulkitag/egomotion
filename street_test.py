@@ -63,6 +63,16 @@ def get_liberty_ptch_proto(exp):
 						'"%s"' % paramStr, phase='TEST')
 	netDef.set_layer_property('window_data', ['python_param', 'param_str'], 
 						'"%s"' % paramStr)
+	#If pose loss is present
+	lNames = netDef.get_all_layernames()
+	if 'pose_loss' in lNames:
+		netDef.del_layer('pose_loss')
+		netDef.del_layer('pose_fc')
+		netDef.del_layer('slice_label')
+		netDef.set_layer_property('window_data', 'top',
+							'"%s"' % 'ptch_label', phase='TEST', propNum=1)
+		netDef.set_layer_property('window_data', 'top',
+							'"%s"' % 'ptch_label', propNum=1)
 	defFile = 'test-files/ptch_liberty_test.prototxt'
 	netDef.write(defFile)
 	return defFile
@@ -71,11 +81,20 @@ def get_street_ptch_proto(exp, protoType='vegas'):
 	if protoType == 'vegas':
 		wFile     = 'test-files/vegas_ptch_test.txt'
 		numIter   = 1000
-	else:
-		wFile    = 'test-files/test_ptch_equal-pos-neg_geo-dc-v2_spDist100_imSz256.txt'
-		#wFile   = 'test-files/test_ptch_mxRot90_equal-pos-neg_geo-dc-v2_spDist100_imSz256.txt'
-		#wFile   = 'test-files/test_ptch_newcities.txt'
+	elif protoType == 'gt5':
+		wFile     = 'test-files/ptch_test_euler-gt5.txt'
+		numIter   = 90
+	elif protoType == 'mxRot90':
+		wFile   = 'test-files/test_ptch_mxRot90_equal-pos-neg_geo-dc-v2_spDist100_imSz256.txt'
 		numIter  = 100
+	elif protoType == 'newCity':
+		wFile   = 'test-files/test_ptch_newcities.txt'
+		numIter  = 100
+	elif protoType == 'allRot':
+		wFile    = 'test-files/test_ptch_equal-pos-neg_geo-dc-v2_spDist100_imSz256.txt'
+		numIter  = 100
+	else:
+		raise Exception('%s not recognized' % protoType)
 	netDef    = mpu.ProtoDef(exp.files_['netdef'])
 	paramStr  = netDef.get_layer_property('window_data', 'param_str')[1:-1]
 	paramStr  = modify_params(paramStr, 'source', wFile)
@@ -99,12 +118,12 @@ def get_street_ptch_proto(exp, protoType='vegas'):
 	return defFile, numIter
 
 
-def test_ptch(prms, cPrms=None, modelIter=None, isLiberty=False, protoType='vegas'):
+def test_ptch(prms, cPrms=None, modelIter=None, protoType='vegas'):
 	if cPrms is None:
 		exp = prms
 	else:
 		exp       = se.setup_experiment(prms, cPrms)
-	if isLiberty:
+	if protoType == 'liberty':
 		defFile   = get_liberty_ptch_proto(exp)
 		numIter   = 900
 	else:
@@ -287,11 +306,13 @@ def get_ptch_test_results_conv4():
 		fpr.append(get_fpr(0.95, pdScore, gtLabel))
 	return fpr
  
-def get_ptch_test_results_fc5():
-	numFc5    = [32, 64, 128, 256, 384, 512, 1024]
-	runNum    = [0, 0, 0, 1, 0, 0, 0]
-	#numFc5    = [4, 16]
+def get_ptch_test_results_fc5(protoType='gt5'):
+	#numFc5    = [32, 64, 128, 256, 384, 512, 1024]
 	#runNum    = [0, 0, 0, 1, 0, 0, 0]
+	numFc5    = [128, 256, 384, 512, 1024]
+	runNum    = [0, 1, 0, 0, 0]
+	#numFc5    = [512]
+	#runNum    = [0]
 	modelIter = 72000
 	fpr       = {}
 	for n,r in zip(numFc5, runNum):
@@ -300,7 +321,8 @@ def get_ptch_test_results_fc5():
 				prms, cPrms = mept.smallnetv2_fc5_ptch_crp192_rawImSz256(numFc5=n, runNum=r)
 			else:
 				prms, cPrms = mept.smallnetv5_fc5_ptch_crp192_rawImSz256(numFc5=n, runNum=r)
-			gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
+			gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, 
+																		protoType=protoType)
 			fpr['num-%d' % n] = get_fpr(0.95, pdScore, gtLabel)
 		except:
 			print ('Not found for %d' % n)
@@ -327,24 +349,23 @@ def get_ptch_test_results_fc5_mxRot90():
 			print ('Not found for %d' % n)
 	return fpr
 
-
-
-def get_multiloss_on_ptch_results():
+def get_multiloss_on_ptch_results(protoType='mx90'):
 	fpr = {}
-	modelIter = 100000
+	modelIter = 72000
 	#With Conv4
 	#prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v6_pool4_exp1(numConv4=32)
 	#gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
 	#fpr.append(get_fpr(0.95, pdScore, gtLabel))
 
 	#With Fc5 
-	#numFc = [128, 256, 384, 1024]
-	numFc = [384, 1024]
+	numFc = [128, 256, 384, 512, 1024]
+	#numFc = [384, 1024]
 	#numFc = [512]
 	for n in numFc:
 		prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v5_fc5_exp1(numFc5=n)
 		try:
-			gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
+			gtLabel, pdScore = test_ptch(prms, cPrms, modelIter,
+													protoType=protoType)
 			fpr['num-%d' % n] = get_fpr(0.95, pdScore, gtLabel)
 		except:
 			print ('Not found for %d' % n)
@@ -372,10 +393,10 @@ def test_linear_pose_from_ptch():
 	_, _, err   = test_pose(exp, None, modelIter)
 	return np.median(err,0)
 
-def test_linear_ptch_from_pose():
+def test_linear_ptch_from_pose(protoType='gt5'):
 	exp = sce.train_ptch_using_pose()
-	modelIter=72000		
-	gt, pd   = test_ptch(exp, None, modelIter)
+	modelIter=26000		
+	gt, pd   = test_ptch(exp, None, modelIter, protoType=protoType)
 	return get_fpr(0.95, pd, gt)
 
 
@@ -395,3 +416,55 @@ def get_multiloss_on_pose_results():
 		_, _, err   = test_pose(prms, cPrms, modelIter)
 		medErr['num-%d' % n] = np.median(err,0)
 	return medErr
+
+def test_ptch_lt_euler_5(protoType='gt5'):
+	numFc = [128, 512]
+	fpr = {}
+	modelIter = 36000
+	for n in numFc:
+		#prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v5_fc5_exp1(numFc5=n)
+		prms, cPrms = mept.smallnetv5_fc5_ptch_euler_mx5_crp192_rawImSz256(numFc5=n)
+		#exp = se.setup_experiment(prms,cPrms)
+		#modelFile = exp.get_snapshot_name(modelIter)
+		#print (osp.exists(modelFile))
+		#continue
+		try:
+			gtLabel, pdScore = test_ptch(prms, cPrms, modelIter,
+									 isLiberty=False, protoType=protoType)
+			fpr['num-%d' % n] = get_fpr(0.95, pdScore, gtLabel)
+		except:
+			print ('Not found for %d' % n)
+	return fpr
+
+def test_ptch_lt_euler_5_pose_all(protoType='gt5'):
+	numFc = [128, 512]
+	fpr = {}
+	modelIter = 36000
+	for n in numFc:
+		#prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v5_fc5_exp1(numFc5=n)
+		prms, cPrms = mev2.ptch_euler_mx5_pose_euler_smallnet_v5_fc5_exp1(numFc5=n)
+		#exp = se.setup_experiment(prms,cPrms)
+		#modelFile = exp.get_snapshot_name(modelIter)
+		#print (osp.exists(modelFile))
+		#continue
+		try:
+			gtLabel, pdScore = test_ptch(prms, cPrms, modelIter,
+											 isLiberty=False, protoType=protoType)
+			fpr['num-%d' % n] = get_fpr(0.95, pdScore, gtLabel)
+		except:
+			print ('Not found for %d' % n)
+	return fpr
+
+def test_linear_ptch_from_ptch_lt5(protoType='gt5'):
+	exp = sce.train_ptch_using_ptch_lt5()
+	modelIter=46000		
+	fpr  = test_ptch(exp, None, modelIter, protoType=protoType)
+	return fpr
+
+def test_linear_ptch_from_ptch_lt5_pose_all(protoType='gt5'):
+	exp = sce.train_ptch_using_ptch_lt5_pose_all()
+	modelIter=46000		
+	fpr  = test_ptch(exp, None, modelIter, protoType=protoType)
+	return fpr
+
+

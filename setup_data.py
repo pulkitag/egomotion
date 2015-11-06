@@ -614,6 +614,8 @@ def scp_cropim_tar_by_folderid(args):
 	print ('Transferring %s' % trFile)
 	subprocess.check_call(['scp %s %s' % (trFile, hostPath)],shell=True)
 
+
+
 ##
 #scp the tar files
 def scp_cropim_tars(prms, hostName='psi'):
