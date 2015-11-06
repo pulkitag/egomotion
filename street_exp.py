@@ -691,8 +691,8 @@ def log2loss(fName, lossNames):
 	testLines, testIter, trainLines, trainIter = read_log(fName)
 	N = len(lossNames)
 	#print N, len(testLines), testIter
-	assert(len(testLines)==N*len(testIter))
-	assert(len(trainLines)==N*len(trainIter))
+	#assert(len(testLines)==N*len(testIter), 'Error in test Lines')
+	#assert(len(trainLines)==N*len(trainIter), 'Error in train lines')
 		
 	testData, trainData = {}, {}
 	for t in lossNames:

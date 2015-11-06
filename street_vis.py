@@ -81,11 +81,18 @@ def show_image_groups(prms, folderId):
 def vis_window_file(prms, setName='test', isSave=False,
 										labelType='pose_ptch', isEuler=True,
 										wFileName=None):
-	rootDir = se.get_windowfile_rootdir(prms)
-	if wFileName is None:
-		wFile = prms.paths.windowFile[setName]
+	if prms == 'pascal3d':
+		rootDir = '/data0/pulkitag/data_sets/pascal_3d-my-copy/PASCAL3D+_release1.1/Images/'
+		wFile   = 'pose-files/euler_test_pascal3d.txt'
+		labelType = 'pose'
+		pascalFlag = True
 	else:
-		wFile = wFileName 
+		pascalFlag = False
+		rootDir = se.get_windowfile_rootdir(prms)
+		if wFileName is None:
+			wFile = prms.paths.windowFile[setName]
+		else:
+			wFile = wFileName 
 	wDat    = mpio.GenericWindowReader(wFile)
 	runFlag = True
 	if labelType == 'pose_ptch':
@@ -96,7 +103,10 @@ def vis_window_file(prms, setName='test', isSave=False,
 			lbStr   = 'roll: %.2f, yaw: %.2f, pitch: %.2f, isRot: %d'\
 								+ '\n patchMatch: %.2f'
 	elif labelType == 'pose':
-		lbStr   = 'roll: %.2f, yaw: %.2f, pitch: %.2f, isRot: %d'
+		if pascalFlag:
+			lbStr   = 'yaw: %.2f, pitch: %.2f'
+		else:
+			lbStr   = 'roll: %.2f, yaw: %.2f, pitch: %.2f, isRot: %d'
 	elif labelType == 'ptch':
 		lbStr   = 'IsMatch: %d'
 	else:
@@ -108,6 +118,9 @@ def vis_window_file(prms, setName='test', isSave=False,
 	maxCount = 100				
 	while runFlag:
 		imNames, lbs = wDat.read_next()
+		coords   = [n.strip().split()[4:8] for n in imNames]
+		print coords
+		coords   = [int(c) for c in coords[0]]
 		imNames  = [osp.join(rootDir, n.split()[0]) for n in imNames]
 		#pdb.set_trace()
 		if 'pose' in labelType:
@@ -115,7 +128,8 @@ def vis_window_file(prms, setName='test', isSave=False,
 				yaw, pitch = lbs[0][0:2]
 				yaw        = (yaw * 180./6.)
 				pitch      = (pitch * 180./6.)
-				isRot          = lbs[0][2]
+				if not pascalFlag:
+					isRot          = lbs[0][2]
 			else:
 				q1, q2, q3, q4 = lbs[0][0:4]
 				roll, yaw, pitch = ru.quat2euler([q1, q2, q3, q4])
@@ -132,14 +146,22 @@ def vis_window_file(prms, setName='test', isSave=False,
 				pMatch = lbs[0][5]
 				figTitle = lbStr % (roll, yaw, pitch, isRot, pMatch)
 		elif labelType == 'pose':
-			figTitle = lbStr % (roll, yaw, pitch, isRot)
+			if pascalFlag:
+				figTitle = lbStr % (yaw, pitch)
+			else:
+				figTitle = lbStr % (roll, yaw, pitch, isRot)
 		elif labelType == 'ptch':			
 			figTitle = lbStr % lbs[0][0]
 
 		print (figTitle, count)
 		im1      = plt.imread(imNames[0])
-		im2      = plt.imread(imNames[1])
-		vu.plot_pairs(im1, im2, fig=fig, figTitle=figTitle)	
+		if len(imNames) == 2:
+			im2      = plt.imread(imNames[1])
+			vu.plot_pairs(im1, im2, fig=fig, figTitle=figTitle)
+		else:
+			x1, y1, x2, y2 = coords
+			plt.imshow(im1[y1:y2, x1:x2,:])
+			plt.title(figTitle)	
 		if isSave:
 			outName = osp.join('debug-data', '%05d.jpg' % count)
 			plt.savefig(outName)

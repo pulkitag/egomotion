@@ -44,10 +44,13 @@ def get_fpr(recall, pdScore, gtLabel):
 	threshIdx = np.where((posCount > recall)==True)[0][0]
 	print (threshIdx, 'Thresh: %f' % pdScore[threshIdx])
 	pdLabel   = pdScore >= pdScore[threshIdx]
-	pdLabel   = pdLabel[0:threshIdx]
-	gtLabel   = gtLabel[0:threshIdx]
-	err       = len(pdLabel) - np.sum(pdLabel==gtLabel)
-	fpr       = err/float(threshIdx)
+	fp        = sum((pdLabel == 1) & (gtLabel == 0))
+	tn        = sum((pdLabel == 0) & (gtLabel == 0))
+	#pdLabel   = pdLabel[0:threshIdx]
+	#gtLabel   = gtLabel[0:threshIdx]
+	#err       = len(pdLabel) - np.sum(pdLabel==gtLabel)
+	#fpr       = err/float(threshIdx)
+	fpr        = float(fp)/float(fp + tn)
 	return fpr
 	
 def get_liberty_ptch_proto(exp):
@@ -231,7 +234,8 @@ def test_pose(prms, cPrms=None,  modelIter=None, protoType='mx90'):
 	else:
 		exp       = se.setup_experiment(prms, cPrms)
 	if protoType == 'pascal3d':
-		defFile, numIter =  get_street_pose_proto(exp, protoType=protoType)
+		defFile = exp.files_['netdef']
+		numIter = 100
 	else:
 		defFile, numIter =  get_street_pose_proto(exp, protoType=protoType)
 	modelFile = exp.get_snapshot_name(modelIter)
@@ -351,7 +355,7 @@ def get_ptch_test_results_fc5_mxRot90():
 
 def get_multiloss_on_ptch_results(protoType='mx90'):
 	fpr = {}
-	modelIter = 72000
+	modelIter = 40000
 	#With Conv4
 	#prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v6_pool4_exp1(numConv4=32)
 	#gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
@@ -360,15 +364,17 @@ def get_multiloss_on_ptch_results(protoType='mx90'):
 	#With Fc5 
 	numFc = [128, 256, 384, 512, 1024]
 	#numFc = [384, 1024]
-	#numFc = [512]
+	numFc = [512]
 	for n in numFc:
-		prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v5_fc5_exp1(numFc5=n)
-		try:
-			gtLabel, pdScore = test_ptch(prms, cPrms, modelIter,
-													protoType=protoType)
-			fpr['num-%d' % n] = get_fpr(0.95, pdScore, gtLabel)
-		except:
-			print ('Not found for %d' % n)
+		#prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v5_fc5_exp1(numFc5=n)
+		prms, cPrms = mev2.ptch_pose_euler_smallnet_v5_fc5_exp1_lossl1(numFc5=None)
+		#prms, cPrms = mev2.ptch_pose_euler_(numFc5=None)
+		#try:
+		gtLabel, pdScore = test_ptch(prms, cPrms, modelIter,
+												protoType=protoType)
+		fpr['num-%d' % n] = get_fpr(0.95, pdScore, gtLabel)
+		#except:
+		print ('Not found for %d' % n)
 	return fpr
 
 def get_pose_on_pose_results():
