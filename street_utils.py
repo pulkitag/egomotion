@@ -886,7 +886,7 @@ def make_combined_window_file(prms, setName='train'):
 			idx = prms.labelNames.index('nrml')
 			lbInfo = prms.labels[idx]
 			nrmlPrune = True
-			if lbInfo.loss_ == 'l2':
+			if lbInfo.loss_ in ['l2', 'l1']:
 				nrmlBins  = np.linspace(-1,1,101)
 				binCounts = np.zeros((2,101))
 			elif lbInfo.loss_ == 'classify':
