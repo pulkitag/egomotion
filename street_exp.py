@@ -347,13 +347,15 @@ def make_net_proto(prms, cPrms, finePrms=None):
 	if cPrms.nwPrms.numFc5 is not None:
 		netDef.set_layer_property('fc5', ['inner_product_param', 'num_output'], 
 								'%d' % cPrms.nwPrms.numFc5)
-		netDef.set_layer_property('fc5_p', ['inner_product_param', 'num_output'], 
-								'%d' % cPrms.nwPrms.numFc5)
+		if prms.isSiamese:
+			netDef.set_layer_property('fc5_p', ['inner_product_param', 'num_output'], 
+									'%d' % cPrms.nwPrms.numFc5)
 	
 	if cPrms.nwPrms.numConv4 is not None:
 		netDef.set_layer_property('conv4', ['convolution_param', 'num_output'], 
 								'%d' % cPrms.nwPrms.numConv4)
-		netDef.set_layer_property('conv4_p', ['convolution_param', 'num_output'], 
+		if prms.isSiamese:
+			netDef.set_layer_property('conv4_p', ['convolution_param', 'num_output'], 
 								'%d' % cPrms.nwPrms.numConv4)
 
 	if cPrms.nwPrms.numCommonFc is not None:

@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from multiprocessing import Pool
 import my_pycaffe_io as mpio
 import pdb
+from pycaffe_config import cfg
 
 def _mkdir(fName):
 	dirName, _ = osp.split(fName)
@@ -42,8 +43,10 @@ def get_prms():
 	prms.paths.pt2imHash = osp.join(dataDir, 'proc/liberty/ims/pt2im.pkl') 
 
 	#The imData Dir for saving pos-neg images
-	prms.paths.jpgDir = '/data0/pulkitag/data_sets/patch-match/liberty/proc/imJpgs/'
-	prms.paths.wFile  = '/data0/pulkitag/data_sets/patch-match/liberty/proc/window-file.txt'
+	prms.paths.jpgDir = osp.join(cfg.STREETVIEW_DATA_MAIN, 
+											'pulkitag/data_sets/patch-match/liberty/proc/imJpgs/')
+	prms.paths.wFile  = osp.join(cfg.STREETVIEW_DATA_MAIN, 
+											'pulkitag/data_sets/patch-match/liberty/proc/window-file.txt')
 	prms.paths.jpgPosKey = osp.join(prms.paths.jpgDir, 'jpg-pos-key.pkl')
 	prms.paths.jpgNegKey = osp.join(prms.paths.jpgDir, 'jpg-neg-key.pkl')
 	return prms
