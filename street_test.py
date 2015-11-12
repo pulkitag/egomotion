@@ -10,11 +10,15 @@ import vis_utils as vu
 import numpy as np
 import caffe
 import copy
+import os
 from os import path as osp
 import cv2
 import my_exp_pose as mepo	
 import street_cross_exp as sce
 import rot_utils as ru
+from pycaffe_config import cfg
+import scipy.misc as scm
+import pickle
 
 def modify_params(paramStr, key, val):
 	params = paramStr.strip().split('--')
@@ -355,7 +359,7 @@ def get_ptch_test_results_fc5_mxRot90():
 
 def get_multiloss_on_ptch_results(protoType='mx90'):
 	fpr = {}
-	modelIter = 40000
+	modelIter = 72000
 	#With Conv4
 	#prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v6_pool4_exp1(numConv4=32)
 	#gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
@@ -379,14 +383,15 @@ def get_multiloss_on_ptch_results(protoType='mx90'):
 
 def get_pose_on_pose_results():
 	medErr = {}
-	modelIter = 40000
+	modelIter = 72000
 
 	#With Fc5 
 	numFc = [128, 384, 512, 1024]
 	#numFc = [32, 64]
 	for n in numFc:
 		try:
-			prms, cPrms = mepo.smallnetv5_fc5_pose_euler_mx90_crp192_rawImSz256(numFc5=n)
+			#prms, cPrms = mepo.smallnetv5_fc5_pose_euler_mx90_crp192_rawImSz256(numFc5=n)
+			prms, cPrms = mepo.smallnetv5_fc5_pose_euler_crp192_rawImSz256(numFc5=n)
 			_, _, err   = test_pose(prms, cPrms, modelIter)
 			medErr['num-%d' % n] = np.median(err,0)
 		except:
@@ -403,6 +408,12 @@ def test_linear_ptch_from_pose(protoType='gt5'):
 	exp = sce.train_ptch_using_pose()
 	modelIter=26000		
 	gt, pd   = test_ptch(exp, None, modelIter, protoType=protoType)
+	return get_fpr(0.95, pd, gt)
+
+def test_linear_ptch_from_pose_all(protoType='gt5'):
+	exp       = sce.train_ptch_using_pose_fc5()
+	modelIter = 60000		
+	gt, pd    = test_ptch(exp, None, modelIter, protoType=protoType)
 	return get_fpr(0.95, pd, gt)
 
 
@@ -473,4 +484,42 @@ def test_linear_ptch_from_ptch_lt5_pose_all(protoType='gt5'):
 	fpr  = test_ptch(exp, None, modelIter, protoType=protoType)
 	return fpr
 
+##
+#Save the York features
+def save_york_feats(modelIter):
+	prms, cPrms = mepo.smallnetv5_fc5_pose_euler_crp192_rawImSz256(numFc5=512)
+	exp         = se.setup_experiment(prms, cPrms)
+	#Read the images
+	dirName = '/work5/pulkitag/data_sets/streetview/york/York_VP_imOnly'
+	outDir = '/work5/pulkitag/data_sets/streetview/york/feats/'
+	prefix = [f[0:-4] for f in os.listdir(dirName) if '.jpg' in f]
+	imFile  = [osp.join(dirName, p + '.jpg') for p in prefix]
+	outName = [osp.join(outDir,  p + '.pkl') for p in prefix]  
+
+	#Setup the Net
+	mainDataDr = cfg.STREETVIEW_DATA_MAIN
+	meanFile   = osp.join(mainDataDr, 'pulkitag/caffe_models/ilsvrc2012_mean.binaryproto')
+	batchSz    = 64
+	testNet = mpu.CaffeTest.from_caffe_exp(exp)
+	testNet.setup_network(opNames=['fc5'], imH=101, imW=101, cropH=101, cropW=101,
+								modelIterations=modelIter, delAbove='relu5', batchSz=batchSz,
+								isAccuracyTest=False, dataLayerNames=['window_data'], 
+								newDataLayerNames=['data'], delLayers=['slice_pair'],
+								meanFile =meanFile)
+	#Send images and get features
+	for st in range(0,len(imFile),batchSz):
+		en = min(len(imFile), st+ batchSz)
+		ims = []
+		for i in range(st,en):
+			im = scm.imread(imFile[i])
+			ims.append(im.reshape((1,) + im.shape))
+		ims = np.concatenate(ims)
+		print ims.shape
+		feats = testNet.net_.forward_all(blobs=['fc5'], **{'data': ims})
+		for i in range(st,en):	
+			pickle.dump({'feat': feats['fc5'][i-st]}, open(outName[i], 'w'))	
+		#return feats
+
+	#Save Features
+	
 
