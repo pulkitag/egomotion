@@ -486,12 +486,21 @@ def test_linear_ptch_from_ptch_lt5_pose_all(protoType='gt5'):
 
 ##
 #Save the York features
-def save_york_feats(modelIter):
-	prms, cPrms = mepo.smallnetv5_fc5_pose_euler_crp192_rawImSz256(numFc5=512)
+def save_york_feats(modelIter=20000, yorkType='york', lossType='l1'):
+	if lossType == 'l2':
+		prms, cPrms = mepo.smallnetv5_fc5_pose_euler_crp192_rawImSz256(numFc5=512)
+	elif lossType == 'l1':
+		prms, cPrms = mepo.smallnetv5_fc5_pose_euler_crp192_rawImSz256_lossl1()
 	exp         = se.setup_experiment(prms, cPrms)
 	#Read the images
-	dirName = '/work5/pulkitag/data_sets/streetview/york/York_VP_imOnly'
-	outDir = '/work5/pulkitag/data_sets/streetview/york/feats/'
+	if yorkType == 'york':
+		dirName = '/work5/pulkitag/data_sets/streetview/york/York_VP_imOnly'
+		outDir = '/work5/pulkitag/data_sets/streetview/york/feats/'
+	else:
+		dirName = '/work5/pulkitag/data_sets/streetview/york_and_others/tvp_pku_york_ims'
+		outDir = '/work5/pulkitag/data_sets/streetview/york_and_others/feats/'
+	if not osp.exists(outDir):
+		os.makedirs(outDir)	
 	prefix = [f[0:-4] for f in os.listdir(dirName) if '.jpg' in f]
 	imFile  = [osp.join(dirName, p + '.jpg') for p in prefix]
 	outName = [osp.join(outDir,  p + '.pkl') for p in prefix]  
@@ -512,14 +521,98 @@ def save_york_feats(modelIter):
 		ims = []
 		for i in range(st,en):
 			im = scm.imread(imFile[i])
+			im = scm.imresize(im, (192,192))
 			ims.append(im.reshape((1,) + im.shape))
 		ims = np.concatenate(ims)
 		print ims.shape
 		feats = testNet.net_.forward_all(blobs=['fc5'], **{'data': ims})
 		for i in range(st,en):	
 			pickle.dump({'feat': feats['fc5'][i-st]}, open(outName[i], 'w'))	
-		#return feats
 
-	#Save Features
-	
+
+##
+#Verify pose fc
+def verify_pose_results(modelIter):
+	#prms, cPrms = mepo.smallnetv5_fc5_pose_euler_crp192_rawImSz256(numFc5=512)
+	prms, cPrms = mepo.smallnetv5_fc5_pose_euler_crp192_rawImSz256_lossl1()
+	exp         = se.setup_experiment(prms, cPrms)
+	#Window File
+	wFileName   = 'test-files/test_pose_euler_mx90_geo-dc-v2_spDist100_imSz256.txt'
+	wFile       = mpio.GenericWindowReader(wFileName)
+	#Setup the Net
+	mainDataDr = cfg.STREETVIEW_DATA_MAIN
+	meanFile   = osp.join(mainDataDr,
+							 'pulkitag/caffe_models/ilsvrc2012_mean_for_siamese.binaryproto')
+	rootFolder = osp.join(mainDataDr,
+							 'pulkitag/data_sets/streetview/proc/resize-im/im256/')
+	batchSz    = 100
+	testNet = mpu.CaffeTest.from_caffe_exp(exp)
+	testNet.setup_network(opNames=['fc5'], imH=101, imW=101, cropH=101, cropW=101,
+								channels = 6, chSwap=(2,1,0,5,4,3), 
+								modelIterations=modelIter, delAbove='pose_fc', batchSz=batchSz,
+								isAccuracyTest=False, dataLayerNames=['window_data'],
+								newDataLayerNames = ['pair_data'],
+								meanFile =meanFile)
+	predFeat, gtFeat = [], []
+	#Send images and get features
+	for st in range(0,200,batchSz):
+		en = min(200, st+ batchSz)
+		ims = []
+		for i in range(st,en):
+			im, lbls = wFile.read_next_processed(rootFolder)	
+			im = np.concatenate(im, axis=2)
+			ims.append(im.reshape((1,) + im.shape))
+			gtFeat.append(lbls[0:2].reshape((1,) + lbls[0:2].shape))
+		ims = np.concatenate(ims)
+		print ims.shape
+		feats = testNet.net_.forward_all(blobs=['pose_fc'], **{'pair_data': ims})
+		predFeat.append(copy.deepcopy(feats['pose_fc']))
+	gtFeat = np.concatenate(gtFeat)
+	predFeat = np.concatenate(predFeat)
+	err = np.median((np.abs(gtFeat - predFeat) * 30),axis=0)
+	print (err)
+	return gtFeat, predFeat
+
+def save_alexnet_york_feats(yorkType='york'):
+	#Read the images
+	if yorkType == 'york':
+		dirName = '/work5/pulkitag/data_sets/streetview/york/York_VP_imOnly'
+		outDir = '/work5/pulkitag/data_sets/streetview/york/feats-alexnet/'
+	else:
+		dirName = '/work5/pulkitag/data_sets/streetview/york_and_others/tvp_pku_york_ims'
+		outDir = '/work5/pulkitag/data_sets/streetview/york_and_others/feats-alexnet/'
+	if not osp.exists(outDir):
+		os.makedirs(outDir)
+	prefix = [f[0:-4] for f in os.listdir(dirName) if '.jpg' in f]
+	imFile  = [osp.join(dirName, p + '.jpg') for p in prefix]
+	outName = [osp.join(outDir,  p + '.pkl') for p in prefix]  
+
+	#Setup the Net
+	mainDataDr = cfg.STREETVIEW_DATA_MAIN
+	meanFile   = osp.join(mainDataDr, 'pulkitag/caffe_models/ilsvrc2012_mean.binaryproto')
+	netFile    = osp.join(mainDataDr, 
+								'pulkitag/caffe_models/bvlc_reference/bvlc_reference_caffenet.caffemodel')
+	defFile    = osp.join(mainDataDr, 
+								'pulkitag/caffe_models/bvlc_reference/caffenet_full_deploy.prototxt')
+	batchSz    = 10
+	testNet    = mp.MyNet(defFile, netFile, caffe.TEST)
+	testNet.set_preprocess(ipName = 'data', isBlobFormat=False,
+				imageDims = (227, 227, 3),
+				cropDims  = (227, 227), chSwap=(2,1,0),
+				rawScale = None, meanDat = meanFile)
+
+	#Send images and get features
+	for st in range(0,len(imFile),batchSz):
+		en = min(len(imFile), st+ batchSz)
+		ims = []
+		for i in range(st,en):
+			im = scm.imread(imFile[i])
+			im = scm.imresize(im, (227,227))
+			ims.append(im.reshape((1,) + im.shape))
+		ims = np.concatenate(ims)
+		print ims.shape
+		feats = testNet.forward_all(blobs=['pool5', 'fc6', 'fc7'], **{'data': ims})
+		for i in range(st,en):	
+			pickle.dump({'pool5': feats['pool5'][i-st], 'fc6': feats['fc6'][i-st], 
+									 'fc7': feats['fc7'][i-st]}, open(outName[i], 'w'))	
 
