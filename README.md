@@ -21,7 +21,10 @@ import street_utils as su
 #Make the window files per folder
 #isForceWrite - set it to true if files need to be recreated
 #setName: 'train', 'val', 'test'
-prms = su.make_window_files_geo_folders(prms, isForceWrite=False, setName='train')
-
+su.make_window_files_geo_folders(prms, isForceWrite=False, setName='train')
+#Combine all the window files together
+su.make_combined_window_file(prms, setName='train')
 ```
+the window files are now ready for running the experiments! 
+
 
