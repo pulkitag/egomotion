@@ -320,7 +320,8 @@ def get_prms(isAligned=True,
 						 ptchPosFrac=0.5, maxEulerRot=None, 
 						 geoFence='dc-v1', rawImSz=640,
 						 splitDist=None, splitVer='v1',
-						 nrmlMakeUni=0.002, mxPtchRot=None):
+						 nrmlMakeUni=0.002, mxPtchRot=None,
+						 isV2=False):
 	'''
 		labels    : What labels to use - make it a list for multiple
 								kind of labels
@@ -348,7 +349,8 @@ def get_prms(isAligned=True,
 									if splitDist is specified teGap is overriden
 		ptchPosFrac : The fraction of the positive patches in the matching
 		nrmlMakeUni :	nrmls are highly skewed - so this tries to make the normals uniformly
-									distributed. 
+									distributed.
+		isV2        : The version from Feb16 which is free of errors in rotation computation 
 
 		NOTES
 		I have tried to form prms so that they have enough information to specify
@@ -499,6 +501,9 @@ def get_prms(isAligned=True,
 	if ltFlag:
 		prms['expName'] = '%s_%s' % (prms['expName'], ltStr)
 
+	prms.isV2 = isV2
+	if prms.isV2:
+		prms['expName'] = '%s_%s' % (prms['expName', 'V2')
 	return prms
 
 ##
