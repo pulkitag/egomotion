@@ -8,10 +8,13 @@ import copy
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from pycaffe_config import cfg
+import my_exp_config as mec
+import pdb
 
 ##
 # Parameters required to specify the n/w architecture
 def get_nw_prms(**kwargs):
+	#return mec.get_nw_prms(**kwargs)
 	dArgs = edict()
 	dArgs.netName     = 'alexnet'
 	dArgs.concatLayer = 'fc6'
@@ -75,6 +78,7 @@ def get_nw_prms(**kwargs):
 ##
 # Parameters that specify the learning
 def get_lr_prms(**kwargs):	
+	#return mec.get_lr_prms()
 	dArgs = edict()
 	dArgs.batchsize = 128
 	dArgs.stepsize  = 20000	
@@ -134,7 +138,8 @@ def get_finetune_prms(**kwargs):
 
 def get_caffe_prms(nwPrms, lrPrms, finePrms=None, 
 									 isScratch=True, deviceId=1,
-									 runNum=0, resumeIter=0): 
+									 runNum=0, resumeIter=0):
+	#return mec.get_caffe_prms() 
 	caffePrms = edict()
 	caffePrms.deviceId  = deviceId
 	caffePrms.isScratch = isScratch
@@ -154,6 +159,7 @@ def get_caffe_prms(nwPrms, lrPrms, finePrms=None,
 
 
 def get_default_caffe_prms(deviceId=1):
+	return mec.get_default_caffe_prms()
 	nwPrms = get_nw_prms()
 	lrPrms = get_lr_prms()
 	cPrms  = get_caffe_prms(nwPrms, lrPrms, deviceId=deviceId)
@@ -666,22 +672,25 @@ def read_log(fileName):
 	iterStart = False
 	#Read the test lines in the log
 	while True:
-		l = fid.readline()
-		if not l:
-			break
-		if 'Iteration' in l:
-			iterNum  = int(l.split()[5][0:-1])
-			iterStart = True
-		if 'Test' in l and ('loss' in l or 'acc' in l):
-			testLines.append(l)
-			if iterStart:
-				testIter.append(iterNum)
-				iterStart = False
-		if 'Train' in l and ('loss' in l or 'acc' in l):
-			trainLines.append(l)
-			if iterStart:
-				trainIter.append(iterNum)
-				iterStart = False
+		try:
+			l = fid.readline()
+			if not l:
+				break
+			if 'Iteration' in l:
+				iterNum  = int(l.split()[5][0:-1])
+				iterStart = True
+			if 'Test' in l and ('loss' in l or 'acc' in l):
+				testLines.append(l)
+				if iterStart:
+					testIter.append(iterNum)
+					iterStart = False
+			if 'Train' in l and ('loss' in l or 'acc' in l):
+				trainLines.append(l)
+				if iterStart:
+					trainIter.append(iterNum)
+					iterStart = False
+		except ValueError:
+			print 'Error in reading .. Skipping line %s ' % l
 	fid.close()
 	return testLines, testIter, trainLines, trainIter
 
@@ -702,7 +711,7 @@ def log2loss(fName, lossNames):
 			if t in l:
 				data = l.split()
 				#print data
-				assert data[8] == t
+				assert data[8] == t, data
 				idx = data.index('=')
 				testData[t].append(float(data[idx+1]))
 		#Parse the train data
