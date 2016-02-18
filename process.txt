@@ -57,3 +57,11 @@ Given a folder:
 (4) Resize and store the images in a suitable indexed order 
 (5) Make the window file for each folder. 
 
+
+##Groups contain the following information
+Group is a set of images that have the same target point. 
+prefix   - stores the prefix of image file names
+folderid - from which folder the data has been taken
+data     - the camera distance, rotation and other metadata
+num      - the number of images in the group
+folderId - 

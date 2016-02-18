@@ -20,6 +20,7 @@ import time
 import copy
 
 ##
+#Get the list of tar filenames
 def get_tar_files(prms):
 	with open(prms.paths.tar.fileList,'r') as f:
 		fNames = f.readlines()
@@ -27,6 +28,7 @@ def get_tar_files(prms):
 	return fNames
 
 ##
+#Download the tar files from the server
 def download_tar(prms):
 	fNames = get_tar_files(prms)
 	for f in fNames:
@@ -56,7 +58,7 @@ def untar_and_del(prms, isDel=False, fNames=None):
 	return fNames	
 
 ##
-# Helper function for get_foldernames
+#Helper function used by get_foldernames
 def _find_im_labels(folder):
 	fNames = os.listdir(folder)
 	fNames = [osp.join(folder, f.strip()) for f in fNames]
@@ -76,7 +78,8 @@ def _find_im_labels(folder):
 	return dirNames
 
 ##
-# Find the foldernames in which data is stored
+# When the files have been untarred, search for all folders in which
+# data has been stored. 
 def get_foldernames(prms):
 	'''
 		Search for the folder tree - till the time there are no more
@@ -109,8 +112,8 @@ def save_foldernames(prms):
 	subprocess.check_call(['chmod a-w %s' % prms.paths.proc.folders.key], shell=True) 
 
 ##
-#Reads the foldernames again and appends to the key store
-#any new files that are found
+#If new folders are added, instead of rehashing all folders to new ids, 
+#find the new folders and append them to the key store
 def append_foldernames(prms):
 	keyFile = prms.paths.proc.folders.key
 	#Read the Key and folders from the key file
@@ -144,7 +147,8 @@ def append_foldernames(prms):
 	return newFolders, keys, folder	
 
 ##
-# Save the keys of only the folders for which alignment data is available. 
+# Save a list of keys of folders for which aligned data
+# is available.  
 def save_aligned_keys(prms):
 	keys, names = su.get_folder_keys_all(prms)
 	with open(prms.paths.proc.folders.aKey,'w') as f:
@@ -153,7 +157,7 @@ def save_aligned_keys(prms):
 				f.write('%s\n' % k)
 
 ##
-#Save the non_aligned keys
+#Save keys of folders that donot contain aligned data
 def save_non_aligned_keys(prms):
 	keys, names = su.get_folder_keys_all(prms)
 	with open(prms.paths.proc.folders.naKey,'w') as f:
@@ -167,8 +171,10 @@ def save_non_aligned_keys(prms):
 				print n
 
 ##
-# Read names of all files in the folder
-# Ensure that .jpg and .txt match and save those prefixes
+# Each folder contains files as prefix.txt, prefix.jpg
+# the .txt file contains the metadata and .jpg the image
+# Save 'prefix' only when prefix.jpg and prefix.txt both
+# are present. 
 def read_prefixes_from_folder(dirName):
 	allNames = os.listdir(dirName)
 	#Extract the prefixes
@@ -184,7 +190,7 @@ def read_prefixes_from_folder(dirName):
 	return prefixStr
 
 ##
-#Save the folder prefixes by the id
+#Store prefix of folder with key "key" in file with name "name" 
 def save_folder_prefixes_by_id(prms, key, name, forceWrite=False):
 	print (key, name)
 	fName   = prms.paths.proc.folders.pre % key
@@ -200,7 +206,7 @@ def _save_folder_prefixes_by_id(args):
 	return save_folder_prefixes_by_id(*args)
 
 ##
-# Save prefixes for each folder
+# Save prefix of each folder in a seperate file
 def save_folder_prefixes(prms, forceWrite=False):
 	fid   = open(prms.paths.proc.folders.key, 'r')
 	lines = [l.strip() for l in fid.readlines()]
@@ -216,8 +222,8 @@ def save_folder_prefixes(prms, forceWrite=False):
 	del pool
 	
 ##
-# Store for each folder the number of prefixes
-# and number of groups. 	
+# For each folder find the number of prefixes
+# and the number of groups. 	
 def save_counts(prms):
 	keys,_ = su.get_folder_keys_all(prms)	
 	prefixCount = edict()
@@ -484,7 +490,7 @@ def _write_im_v2_p(args):
 	return True
 
 ##
-#Save the images by folderid
+#Crop and save all images in folder with id "folderId"
 def save_crop_images_by_folderid(prms, folderId,
 							 isForceWrite=False, isParallel=False):
 	
@@ -553,7 +559,7 @@ def _save_crop_images_by_folderid(args):
 	return True
 
 ##
-#Save cropped images
+# For every folder save cropped images
 def save_cropped_images(prms, isForceWrite=False):
 	if prms.geoFence == 'dc-v1':
 		save_cropped_images_dc_v1(prms)
@@ -573,7 +579,7 @@ def save_cropped_images(prms, isForceWrite=False):
 	del pool
 
 ##
-#Tar the crop images by folderid
+#tar the crop images by folderid
 def tar_crop_images_by_folderid(args):
 	prms, folderId = args
 	drName = prms.paths.proc.im.folder.dr % folderId
@@ -587,7 +593,8 @@ def tar_crop_images_by_folderid(args):
 		return False
 
 ##
-#Tar the crop images
+#Tar the crop images in all folders
+#Useful for transferring data across machines
 def tar_crop_images(prms):
 	folderKeys = su.get_geo_folderids(prms)
 	inArgs     = []
@@ -615,7 +622,6 @@ def scp_cropim_tar_by_folderid(args):
 	subprocess.check_call(['scp %s %s' % (trFile, hostPath)],shell=True)
 
 
-
 ##
 #scp the tar files
 def scp_cropim_tars(prms, hostName='psi'):
@@ -631,9 +637,6 @@ def scp_cropim_tars(prms, hostName='psi'):
 	jobs = pool.map_async(scp_cropim_tar_by_folderid, inArgs)	
 	res  = jobs.get()
 	del pool
-
-##
-#Untar the crop im files
 
 ##
 #Filter groups by distance
@@ -827,7 +830,6 @@ def save_train_test_splits_old(prms, isForceWrite=False):
 		#Save the data		
 		pickle.dump({'splits': splits}, open(fName, 'w'))
 
-	
 ##
 #Save the normal data
 def save_normals(prms):

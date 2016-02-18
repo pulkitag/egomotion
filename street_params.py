@@ -188,6 +188,10 @@ def get_label_size(labelClass, labelType):
 		elif labelType in ['euler']:
 			#One of the angles is always 0
 			lSz = 2
+		elif labelType in ['euler-5dof']:
+			lSz = 5
+		elif labelType in ['euler-6dof']:
+			lSz = 6
 		else:
 			raise Exception('%s,%s not recognized' % (labelClass, labelType))
 	else:
