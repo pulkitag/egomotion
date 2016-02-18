@@ -32,6 +32,10 @@ save_groups(prms)
 #Save the dat a for geolocalization
 save_geo_groups(prms)
 
+#Get the ids of folders that within the bounds of geofencing. Geofencing is done
+#to prevent data coming for say parts of the cities which have a lot of trees. 
+get_geo_folderids(prms)
+
 #Save resized images
 Create a hash table for each folder. 
 The hash table stores the prefix name and the hashed name of the file.
@@ -48,6 +52,18 @@ save_crop_images_by_folderid(prms, folderId)
 #Tar the cropped files so that they can be transported across machines
 #if needed
 
+#Save the training and testing splits
+save_train_test_splits(prms, isForceWrite=False)
+
+#Make the window file per folderid
+su.make_window_file_by_folderid(prms, folderId, maxGroups=None)
+
+#Iterator over making window file per folderid
+su.make_window_files_geo_folders(prms, isForceWrite=False, maxGroups=None)
+
+#Combine the window file of individual folders to get window files for testing
+#and training.
+su.make_combined_window_file(prms, setName='train') 
 
 ##For scalibility I am going to construct the following pipeline
 Given a folder:
@@ -56,7 +72,6 @@ Given a folder:
 (3) Save the label information for each group
 (4) Resize and store the images in a suitable indexed order 
 (5) Make the window file for each folder. 
-
 
 ##Groups contain the following information
 Group is a set of images that have the same target point. 

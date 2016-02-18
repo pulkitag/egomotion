@@ -884,7 +884,6 @@ def make_window_files_geo_folders(prms, isForceWrite=False, maxGroups=None):
 	res  = jobs.get()
 	del pool		
 
-
 ##
 #Combine the window files
 def make_combined_window_file(prms, setName='train'):
