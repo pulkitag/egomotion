@@ -928,7 +928,7 @@ def make_combined_window_file(prms, setName='train'):
 	wNum = wNum/sum(wNum)
 	pCum = np.cumsum(wNum)
 	print (pCum)
-	assert (pCum==1, 'Something is wrong')
+	assert pCum==1, 'Something is wrong'
 	randState = np.random.RandomState(31)
 	ignoreCount = 0
 	

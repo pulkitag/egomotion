@@ -411,6 +411,7 @@ def get_prms(isAligned=True,
 	prms['crpSz']   = crpSz
 	prms['trnSeq']  = trnSeq
 	prms.geoPoly    = None 	
+	prms.isV2 = isV2
 
 	prms.splits = edict()
 	if splitDist is not None:
@@ -462,6 +463,7 @@ def get_prms(isAligned=True,
 	teExpName = '%s_crpSz%d_nTe-%.2e%s' % (expStr, crpSz, numTest, imStr)
 	expName2  = '%s_crpSz%d%s' % (expStr, crpSz, imStr) 
 	prms['expName'] = expName
+	prms['expName'] = '%s_%s' % (prms['expName'], 'V2')
 
 	#Form the window files
 	paths['windowFile'] = {}
@@ -500,10 +502,6 @@ def get_prms(isAligned=True,
 			ltStr = 'loss-l1'
 	if ltFlag:
 		prms['expName'] = '%s_%s' % (prms['expName'], ltStr)
-
-	prms.isV2 = isV2
-	if prms.isV2:
-		prms['expName'] = '%s_%s' % (prms['expName', 'V2')
 	return prms
 
 ##
