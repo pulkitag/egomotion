@@ -111,7 +111,7 @@ def make_combined_window_file(prms, setName='train'):
 	wNum = wNum/sum(wNum)
 	pCum = np.cumsum(wNum)
 	print (pCum)
-	assert pCum==1, 'Something is wrong'
+	assert pCum[-1]==1, 'Something is wrong'
 	randState = np.random.RandomState(31)
 	ignoreCount = 0
 	
@@ -130,13 +130,17 @@ def make_combined_window_file(prms, setName='train'):
 			mxBinCount = int(prms.nrmlMakeUni * np.sum(wCount))
 			print ('mxBinCount :%d' % mxBinCount)
 
+	#Get the normalization data if required
+	if prms['lbNrmlz'] is not None:
+		nrmlzDat = get_label_stats(prms)
+
 	writeCount = 0
 	for i in range(N):
 		sampleFlag = True
 		idx  = None
 		while sampleFlag:
 			rand = randState.rand()
-			idx  = find_first_false(rand >= pCum)
+			idx  = su.find_first_false(rand >= pCum)
 			if not wObjs[idx].is_eof():
 				sampleFlag = False
 			else:
@@ -149,6 +153,15 @@ def make_combined_window_file(prms, setName='train'):
 	
 		wCount[idx] -= 1	
 		imNames, lbls = wObjs[idx].read_next()
+		if prms['lbNrmlz'] is not None:
+			if prms['lbNrmlz'] == 'zscore':
+				mu, sd = nrmlzDat
+			else:
+				raise Exception('lbNrmlz %s not recognized' % prms['lbNrmlz'])
+			assert len(prms.labels) == 1, 'This needs to be generalized for multi-labels'
+			for lbIdx in range(prms.labels[0].lbSz_):
+				lbls[0][lbIdx] = (lbls[0][lbIdx] - mu[lbIdx])/sd[lbIdx]
+
 		if nrmlPrune:
 			nrmlIdx   = randState.permutation(2)[0]
 			binIdx    = find_bin_index(nrmlBins,lbls[0][nrmlIdx])
@@ -163,6 +176,7 @@ def make_combined_window_file(prms, setName='train'):
 			pdb.set_trace()
 		writeCount += 1	
 	mainWFile.close()
+	#Only if nrml labels are being considered
 	#Get the count correct for nrmlPrune scenarios
 	if nrmlPrune:
 		imNames, lbls = [], []
