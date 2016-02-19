@@ -1,5 +1,10 @@
 # egomotion
 
+Dependencies
+-------------
+- [transforms3d](https://github.com/matthew-brett/transforms3d)
+- [pycaffe_utils](https://github.com/pulkitag/pycaffe-utils)
+
 Creating an Experiment
 ----------------------
 
@@ -17,12 +22,12 @@ prms, cPrms = mepo2.smallnetv5_fc5_pose_euler_crp192_rawImSz256_lossl1()
 
 If it is required to setup the training/testing data use:
 ```python
-import street_utils as su
+import street_labels_to_window as slw
 #Make the window files per folder
 #isForceWrite - set it to true if files need to be recreated
-#setName: 'train', 'val', 'test'
-su.make_window_files_geo_folders(prms, isForceWrite=False, setName='train')
+slw.make_window_files_geo_folders(prms, isForceWrite=False)
 #Combine all the window files together
+#setName: 'train', 'val', 'test'
 su.make_combined_window_file(prms, setName='train')
 ```
 the window files are now ready for running the experiments! 
