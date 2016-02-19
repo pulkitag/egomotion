@@ -462,12 +462,15 @@ def get_prms(isAligned=True,
 	prms.mxPtchRot = mxPtchRot
 	if mxPtchRot is not None:
 		expStr = expStr + ('_mxPtchRot-%d' % mxPtchRot) 
+	
+	#expName2 is used to influence folderwise window file, which should be
+	#unaffected by label normalization
+	expName2  = '%s_crpSz%d%s' % (expStr, crpSz, imStr)
 	if prms.lbNrmlz is not None:
 		expStr = expStr + '_lbNrmlz-%s' % prms.lbNrmlz
 
 	expName   = '%s_crpSz%d_nTr-%.2e%s' % (expStr, crpSz, numTrain, imStr)
 	teExpName = '%s_crpSz%d_nTe-%.2e%s' % (expStr, crpSz, numTest, imStr)
-	expName2  = '%s_crpSz%d%s' % (expStr, crpSz, imStr)
 	if prms.isV2:
 		expName  = '%s_%s' % (expName, 'exp-V2')
 		teExpName  = '%s_%s' % (teExpName, 'exp-V2')

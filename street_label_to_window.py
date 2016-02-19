@@ -205,7 +205,7 @@ def get_label_stats(prms, isForceCompute=False):
 		return None
 	fName = prms.paths.exp.window.nrmlz
 	if osp.exists(fName) and not isForceCompute:
-		dat = pickle.load(fName)
+		dat = pickle.load(open(fName, 'r'))
 		if prms['lbNrmlz'] == 'zscore':
 			return dat['mu'], dat['sd']
 		else:
@@ -215,7 +215,7 @@ def get_label_stats(prms, isForceCompute=False):
 	folderIds = sp.get_train_test_defs(prms.geoFence, setName='train')
 	print folderIds
 	allLbs    = []
-	for fid in folderIds[0:3]:
+	for fid in folderIds:
 		wFile = prms.paths.exp.window.folderFile % fid
 		wFid  = mpio.GenericWindowReader(wFile)
 		lbs   = np.array(wFid.get_all_labels())
@@ -226,9 +226,10 @@ def get_label_stats(prms, isForceCompute=False):
 	perm   = np.random.permutation(N)
 	perm   = perm[0:int(0.1*N)]
 	allLbs = allLbs[perm,:]
+	print (allLbs.shape)
 	if prms['lbNrmlz'] == 'zscore':
-		mu  = np.mean(allLbs,0)
-		sd  = np.std(allLbs, 0)
+		mu  = np.mean(allLbs, 0)
+		sd  = np.std(allLbs,  0)
 		dat = {'mu': mu, 'sd': sd} 
 	else:
 		raise Exception('lbNrmlz %s not recognized' % lbNrmlz)

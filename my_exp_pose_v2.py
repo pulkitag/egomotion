@@ -11,7 +11,8 @@ def smallnetv5_fc5_pose_euler_crp192_rawImSz256_lossl1(isRun=False, numTrain=1e+
 										extraFc=None, lrAbove=None, numFc5=None):
 	prms  = sp.get_prms(geoFence='dc-v2', labels=['pose'], labelType=['euler'],
 											lossType=['l1'], maxEulerRot=None, rawImSz=256,
-											splitDist=100, numTrain=numTrain, crpSz=192, isV2=True)
+											splitDist=100, numTrain=numTrain, crpSz=192, isV2=True,
+											labelNrmlz='zscore')
 	nPrms = se.get_nw_prms(imSz=101, netName='smallnet-v5',
 							 concatLayer='fc5', lossWeight=10.0,
 								randCrop=False, concatDrop=False,

@@ -210,7 +210,7 @@ def get_label_pose(prms, groups, numSamples, randSeed=1003):
 		n1, n2 = lPerm[0], lPerm[1]
 		rotLb  = get_rots_label(lbInfo, gp.data[n1].rots, 
 												gp.data[n2].rots,
-                gp.data[n1].camera, gp.data[n2].camera)
+                gp.data[n1].pts.camera, gp.data[n2].pts.camera)
 		if rotLb is None:
 			continue
 		lb[st:en]  = rotLb
