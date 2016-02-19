@@ -198,4 +198,13 @@ def get_binned_normals_from_window_file(prms, setName='test'):
 		binned.append(np.histogram(lbls[:,n], 100))
 	return binned
 		 
+##
+#Get the statistics of labels
+def get_label_stats(prms, isForceCompute):
+	#Get foldernames in the training et
 
+	#Find labels
+
+	#Sample 10% of the labels - compute mean and var
+
+	#Store the label info	

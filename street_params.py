@@ -132,6 +132,8 @@ def get_paths():
 	_mkdir(paths.exp.window.dr) 
 	paths.exp.window.tr = osp.join(paths.exp.window.dr, 'train-%s.txt')
 	paths.exp.window.te = osp.join(paths.exp.window.dr, 'test-%s.txt')
+	#Normalization data
+	paths.exp.window.nrmlz = osp.join(paths.exp.window.dr, 'nrmlz-%s.pkl')
 	#Folderwise window dir
 	paths.exp.window.folderDr   = osp.join(paths.exp.dr, 'folder-window-files')
 	_mkdir(paths.exp.window.folderDr)
@@ -458,6 +460,8 @@ def get_prms(isAligned=True,
 	prms.mxPtchRot = mxPtchRot
 	if mxPtchRot is not None:
 		expStr = expStr + ('_mxPtchRot-%d' % mxPtchRot) 
+	if prms.lbNrmlz is not None:
+		expStr = expStr + '_lbNrmlz-%s' % prms.lbNrmlz
 
 	expName   = '%s_crpSz%d_nTr-%.2e%s' % (expStr, crpSz, numTrain, imStr)
 	teExpName = '%s_crpSz%d_nTe-%.2e%s' % (expStr, crpSz, numTest, imStr)
@@ -493,10 +497,6 @@ def get_prms(isAligned=True,
 	paths.proc.im.folder.keyFile  = paths.proc.im.folder.keyFile % (rawImSz, '%s')
 
 	prms['paths'] = paths
-	#Get the pose stats
-	prms['poseStats'] = {}
-	#prms['poseStats']['mu'], prms['poseStats']['sd'], prms['poseStats']['scale'] =\
-	#					get_pose_stats(prms)
 	ltStr = ''
 	ltFlag = False
 	for lt in lossType:
