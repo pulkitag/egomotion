@@ -461,9 +461,12 @@ def get_prms(isAligned=True,
 
 	expName   = '%s_crpSz%d_nTr-%.2e%s' % (expStr, crpSz, numTrain, imStr)
 	teExpName = '%s_crpSz%d_nTe-%.2e%s' % (expStr, crpSz, numTest, imStr)
-	expName2  = '%s_crpSz%d%s' % (expStr, crpSz, imStr) 
+	expName2  = '%s_crpSz%d%s' % (expStr, crpSz, imStr)
+	if prms.isV2:
+		expName  = '%s_%s' % (expName, 'exp-V2')
+		teExpName  = '%s_%s' % (teExpName, 'exp-V2')
+		expName2 = '%s_%s' % (expName2, 'exp-V2')
 	prms['expName'] = expName
-	prms['expName'] = '%s_%s' % (prms['expName'], 'V2')
 
 	#Form the window files
 	paths['windowFile'] = {}
