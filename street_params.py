@@ -482,6 +482,7 @@ def get_prms(isAligned=True,
 	paths['windowFile']['train'] = osp.join(windowDir, 'train_%s.txt' % expName)
 	paths['windowFile']['test']  = osp.join(windowDir, 'test_%s.txt'  % teExpName)
 	paths.exp.window.folderFile  = paths.exp.window.folderFile  %  ('%s', expName2)
+	paths.exp.window.nrmlz   = paths.exp.window.nrmlz % expStr
 
 	#Files for saving the geolocalized groups
 	if prms.geoPoly is not None:

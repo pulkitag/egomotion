@@ -200,11 +200,27 @@ def get_binned_normals_from_window_file(prms, setName='test'):
 		 
 ##
 #Get the statistics of labels
-def get_label_stats(prms, isForceCompute):
-	#Get foldernames in the training et
-
-	#Find labels
-
+def get_label_stats(prms, isForceCompute=False):
+	if prms['lbNrmlz'] is None:
+		return None
+	fName = prms.paths.exp.window.nrmlz
+	if osp.exists(fName) and not isForceCompute:
+		dat = pickle.load(fName)
+		if prms['lbNrmlz'] == 'zscore':
+			return dat['mu'], dat['sd']
+		else:
+			raise Exception('lbNrmlz %s not recognized' % lbNrmlz)
+	#Get the folders in the training set
+	folderIds = sp.get_train_test_defs(prms.geoFence, setName='train')
+	print folderIds
+	allLbs    = []
+	for fid in folderIds:
+		wFile = prms.paths.exp.window.folderFile % fid
+		wFid  = mpio.GenericWindowReader(wFile)
+		lbs   = np.array(wFid.get_all_labels())
+		allLbs.append(lbls)
+	allLbs = np.concatenate(allLbs, axis=0)
+	return allLbs
 	#Sample 10% of the labels - compute mean and var
 
 	#Store the label info	
