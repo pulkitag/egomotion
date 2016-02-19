@@ -131,9 +131,9 @@ def get_rots_label(lbInfo, rot1, rot2, pt1=None, pt2=None):
 		pt1,  pt2 : the location of cameras expressed as (lat, long, height)
 		the output labels are provided in radians
 	'''
-	y1, x1, z1 = (lambda x: x*np.pi/180., rot1)
+	y1, x1, z1 = map(lambda x: x*np.pi/180., rot1)
 	rMat1      = t3eu.euler2mat(x1, y1, z1, 'szxy')
-	y2, x2, z2 = (lambda x: x*np.pi/180., rot2)
+	y2, x2, z2 = map(lambda x: x*np.pi/180., rot2)
 	rMat2      = t3eu.euler2mat(x2, y2, z2, 'szxy')
 	dRot       = np.dot(rMat2, rMat1.transpose())
 	#pitch, yaw, roll are rotations around x, y, z axis
@@ -147,9 +147,9 @@ def get_rots_label(lbInfo, rot1, rot2, pt1=None, pt2=None):
 	#Calculate the rotation
 	if 'euler' in lbInfo.labelType_:
 		if lbInfo.loss_ == 'classify':
-			rollBin  = find_bin_index(lbInfo.binRange_, roll)
-			yawBin   = find_bin_index(lbInfo.binRange_, yaw)
-			pitchBin = find_bin_index(lbInfo.binRange_, pitch)
+			rollBin  = su.find_bin_index(lbInfo.binRange_, roll)
+			yawBin   = su.find_bin_index(lbInfo.binRange_, yaw)
+			pitchBin = su.find_bin_index(lbInfo.binRange_, pitch)
 			if lbInfo.lbSz_ in [3,6]:
 				lb = (rollBin, yawBin, pitchBin)
 			else:
@@ -160,10 +160,10 @@ def get_rots_label(lbInfo, rot1, rot2, pt1=None, pt2=None):
 			else:
 				lb = (pitch, yaw)
 	elif lbInfo.labelType_ == 'euler-5dof':
-		dx, dy , dx = get_displacement_vector(pt1, pt2)
+		dx, dy , dx = su.get_displacement_vector(pt1, pt2)
 		lb = (pitch, yaw, dx, dy, dz )
 	elif lbInfo.labelType_ == 'euler-6dof':
-		dx, dy , dx = get_displacement_vector(pt1, pt2)
+		dx, dy , dx = su.get_displacement_vector(pt1, pt2)
 		lb = (pitch, yaw, roll, dx, dy, dz)
 	elif lbInfo.labelType_ == 'quat':
 		quat = t3eu.euler2quat(pitch, yaw, roll, axes='szxy')
