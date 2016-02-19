@@ -16,6 +16,8 @@ import matplotlib.path as mplPath
 import re
 import street_utils as su
 
+STREET_PKG_PATH = osp.dirname(osp.realpath(__file__))
+
 def _mkdir(fName):
 	if not osp.exists(fName):
 		os.makedirs(fName)
@@ -133,7 +135,7 @@ def get_paths():
 	paths.exp.window.tr = osp.join(paths.exp.window.dr, 'train-%s.txt')
 	paths.exp.window.te = osp.join(paths.exp.window.dr, 'test-%s.txt')
 	#Normalization data
-	paths.exp.window.nrmlz = osp.join(paths.exp.window.dr, 'nrmlz-%s.pkl')
+	paths.exp.window.nrmlz = osp.join(STREET_PKG_PATH, 'exp-data' , 'nrmlz-%s.pkl')
 	#Folderwise window dir
 	paths.exp.window.folderDr   = osp.join(paths.exp.dr, 'folder-window-files')
 	_mkdir(paths.exp.window.folderDr)

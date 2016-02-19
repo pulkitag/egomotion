@@ -210,17 +210,27 @@ def get_label_stats(prms, isForceCompute=False):
 			return dat['mu'], dat['sd']
 		else:
 			raise Exception('lbNrmlz %s not recognized' % lbNrmlz)
+	print ('RE-COMPUTING FEATURE NORMALIZATION FACTORS')
 	#Get the folders in the training set
 	folderIds = sp.get_train_test_defs(prms.geoFence, setName='train')
 	print folderIds
 	allLbs    = []
-	for fid in folderIds:
+	for fid in folderIds[0:3]:
 		wFile = prms.paths.exp.window.folderFile % fid
 		wFid  = mpio.GenericWindowReader(wFile)
 		lbs   = np.array(wFid.get_all_labels())
-		allLbs.append(lbls)
+		allLbs.append(lbs)
 	allLbs = np.concatenate(allLbs, axis=0)
-	return allLbs
+	N      = allLbs.shape[0]
 	#Sample 10% of the labels - compute mean and var
-
-	#Store the label info	
+	perm   = np.random.permutation(N)
+	perm   = perm[0:int(0.1*N)]
+	allLbs = allLbs[perm,:]
+	if prms['lbNrmlz'] == 'zscore':
+		mu  = np.mean(allLbs,0)
+		sd  = np.std(allLbs, 0)
+		dat = {'mu': mu, 'sd': sd} 
+	else:
+		raise Exception('lbNrmlz %s not recognized' % lbNrmlz)
+	pickle.dump(dat, open(fName, 'w'))
+	return get_label_stats(prms, isForceCompute=False)	
