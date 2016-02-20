@@ -213,7 +213,6 @@ def get_label_pose(prms, groups, numSamples, randSeed=1003):
                 gp.data[n1].pts.camera, gp.data[n2].pts.camera)
 		if rotLb is None:
 			continue
-		print st, en, rotLb
 		lb[st:en]  = rotLb
 		prefix.append((gp.folderId, gp.prefix[n1].strip(),
 							 gp.folderId, gp.prefix[n2].strip()))
