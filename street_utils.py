@@ -22,6 +22,7 @@ import copy
 import street_params as sp
 from multiprocessing import Pool
 import math
+import my_exp_pose_v2 as mepo2
 
 ##
 #helper functions
@@ -58,6 +59,32 @@ def get_displacement_vector(pt1, pt2):
 	x = R * (long2 - long1) * math.acos((lat1 + lat2)/2.0)
 	z = h2 - h1
 	return x, y, z
+
+##
+#Test the displacement computed using get_displacement_vector
+def _test_get_displacement_vector():
+	prms,_ = mepo2.smallnetv5_fc5_pose_euler_5dof_crp192_rawImSz256_lossl1()
+	grps = get_groups(prms, '0001')
+	errs = []
+	gAll, aAll = [], []
+	for g in grps:
+		N    = g.num
+		perm = np.random.permutation(N)
+		if N < 2:
+			continue	
+		p1, p2 = perm[0], perm[1]
+		pt1   = g.data[p1].pts.camera[0:3]
+		pt2   = g.data[p2].pts.camera[0:3]
+		gDist = geodist(pt1[0:2], pt2[0:2]).meters
+		x, y, z = get_displacement_vector(pt1, pt2)
+		aDist   = np.sqrt(x*x + y*y)
+		errs.append(gDist - aDist)
+		gAll.append(gDist)
+		aAll.append(aDist)
+	errs, gAll, aAll = np.array(errs), np.array(gAll), np.array(aAll)
+	rErr = np.abs(errs)/np.minimum(np.abs(gAll), np.abs(aAll))
+	print 'Mean relative Error: %f, sd relative error: %f' % (np.mean(rErr), np.std(rErr))
+	return errs, rErr, gAll, aAll
 
 ##
 #Get the prefixes for a specific folderId
