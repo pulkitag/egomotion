@@ -145,7 +145,7 @@ def get_rots_label(lbInfo, rot1, rot2, pt1=None, pt2=None):
 		if (np.abs(thRot) > lbInfo.maxRot_):
 				return lb
 	#Calculate the rotation
-	if 'euler' in lbInfo.labelType_:
+	if lbInfo.labelType_ == 'euler':
 		if lbInfo.loss_ == 'classify':
 			rollBin  = su.find_bin_index(lbInfo.binRange_, roll)
 			yawBin   = su.find_bin_index(lbInfo.binRange_, yaw)
@@ -160,10 +160,10 @@ def get_rots_label(lbInfo, rot1, rot2, pt1=None, pt2=None):
 			else:
 				lb = (pitch, yaw)
 	elif lbInfo.labelType_ == 'euler-5dof':
-		dx, dy , dx = su.get_displacement_vector(pt1, pt2)
+		dx, dy, dz = su.get_displacement_vector(pt1, pt2)
 		lb = (pitch, yaw, dx, dy, dz )
 	elif lbInfo.labelType_ == 'euler-6dof':
-		dx, dy , dx = su.get_displacement_vector(pt1, pt2)
+		dx, dy, dz = su.get_displacement_vector(pt1, pt2)
 		lb = (pitch, yaw, roll, dx, dy, dz)
 	elif lbInfo.labelType_ == 'quat':
 		quat = t3eu.euler2quat(pitch, yaw, roll, axes='szxy')
@@ -213,6 +213,7 @@ def get_label_pose(prms, groups, numSamples, randSeed=1003):
                 gp.data[n1].pts.camera, gp.data[n2].pts.camera)
 		if rotLb is None:
 			continue
+		print st, en, rotLb
 		lb[st:en]  = rotLb
 		prefix.append((gp.folderId, gp.prefix[n1].strip(),
 							 gp.folderId, gp.prefix[n2].strip()))
