@@ -110,6 +110,102 @@ def get_target_groups(prms, folderId):
 	return S
 
 ##
+#Get the groups
+def get_groups(prms, folderId, setName='train'):
+	'''
+		Labels for a particular split
+	'''
+	grpList   = []
+	if prms.geoFence in ['dc-v2', 'cities-v1', 'vegas-v1']:
+		keys = get_geo_folderids(prms)
+		if folderId not in keys:
+			return grpList
+		
+	if prms.geoFence == 'dc-v1':
+		groups = read_geo_groups(prms, folderId)
+		gKeys  = groups.keys()
+	else:
+		#Read labels from the folder
+		if prms.isAligned:  
+			grpFile = prms.paths.label.grpsAlgn % folderId
+		else:
+			grpFile = prms.paths.label.grps % folderId
+		grpData = pickle.load(open(grpFile,'r'))
+		groups  = grpData['groups']
+		gKeys   = groups.keys()
+
+	if setName is not None:
+		#Find the groups belogning to the split
+		splits    = get_train_test_splits(prms, folderId)
+		gSplitIds = splits[setName]
+		for g in gSplitIds:
+			if g in gKeys:
+				grpList.append(groups[g])
+		return grpList
+	else:
+		return copy.deepcopy(groups)
+
+##
+#Get all the raw labels
+def get_groups_all(prms, setName='train'):
+	keys = get_folder_keys(prms)
+	#keys  = ['0052']
+	grps   = []
+	for k in keys:
+		grps = grps + get_groups(prms, k, setName=setName)
+	return grps
+
+##
+#Get the overall count of number of groups in the dataset
+def get_group_counts(prms):
+	dat = pickle.load(open(prms.paths.proc.countFile, 'r'))
+	if prms.isAligned:
+		keys   = get_folder_keys_aligned(prms)	
+	else:
+		keys,_ = get_folder_keys_all(prms)	
+	count = 0
+	for k in keys:
+		count += dat['groupCount'][k]
+	return count
+
+##
+#polygon of type mplPath
+def is_geo_coord_inside(polygon,cord):
+	return polygon.contains_point(cord)
+
+##
+#Find if a group is inside the geofence
+def is_group_in_geo(prms, grp):
+	isInside = False
+	if prms.geoPoly is None:
+		return True
+	else:
+		#Even if a single target point is inside the geo
+		#fence count as true
+		for geo in prms.geoPoly:
+			for i in range(grp.num):
+				cc = grp.data[i].pts.target
+				isInside = isInside or is_geo_coord_inside(geo, (cc[1], cc[0]))	
+	return isInside
+
+##
+#Read Geo groups
+def read_geo_groups_all(prms):
+	geoGrps = edict()
+	keys    = get_folder_keys(prms)
+	for k in keys:
+		geoGrps[k] = read_geo_groups(prms, k)
+	return geoGrps
+
+##
+#Read geo group from a particular folder
+def read_geo_groups(prms, folderId):
+	fName      = prms.paths.grp.geoFile % folderId
+	data       = pickle.load(open(fName,'r'))
+	return data['groups']
+
+
+##
 #Get the distance between groups, 
 #Finds the minimum distance between as 
 # min(dist_camera_points, dist_target_point)
@@ -214,18 +310,6 @@ def folderid_to_im_label_files(prms, folderId, opPrefix=False):
 	else:
 		return imNames, lbNames	
 
-##
-#Get the overall count of number of groups in the dataset
-def get_group_counts(prms):
-	dat = pickle.load(open(prms.paths.proc.countFile, 'r'))
-	if prms.isAligned:
-		keys   = get_folder_keys_aligned(prms)	
-	else:
-		keys,_ = get_folder_keys_all(prms)	
-	count = 0
-	for k in keys:
-		count += dat['groupCount'][k]
-	return count
 		
 ##
 #Get the train and test splits
@@ -233,43 +317,6 @@ def get_train_test_splits(prms, folderId):
 	fName  = prms.paths.proc.splitsFile % folderId
 	splits = edict(pickle.load(open(fName,'r')))
 	return splits.splits
-
-##
-#polygon of type mplPath
-def is_geo_coord_inside(polygon,cord):
-	return polygon.contains_point(cord)
-
-
-##
-#Find if a group is inside the geofence
-def is_group_in_geo(prms, grp):
-	isInside = False
-	if prms.geoPoly is None:
-		return True
-	else:
-		#Even if a single target point is inside the geo
-		#fence count as true
-		for geo in prms.geoPoly:
-			for i in range(grp.num):
-				cc = grp.data[i].pts.target
-				isInside = isInside or is_geo_coord_inside(geo, (cc[1], cc[0]))	
-	return isInside
-
-##
-#Read Geo groups
-def read_geo_groups_all(prms):
-	geoGrps = edict()
-	keys    = get_folder_keys(prms)
-	for k in keys:
-		geoGrps[k] = read_geo_groups(prms, k)
-	return geoGrps
-
-##
-#Read geo group from a particular folder
-def read_geo_groups(prms, folderId):
-	fName      = prms.paths.grp.geoFile % folderId
-	data       = pickle.load(open(fName,'r'))
-	return data['groups']
 
 ##
 #Get geo folderids
@@ -284,53 +331,6 @@ def get_geo_folderids(prms):
 	else:
 		raise Exception('Not found')
 	return keys
-
-##
-#Get the groups
-def get_groups(prms, folderId, setName='train'):
-	'''
-		Labels for a particular split
-	'''
-	grpList   = []
-	if prms.geoFence in ['dc-v2', 'cities-v1', 'vegas-v1']:
-		keys = get_geo_folderids(prms)
-		if folderId not in keys:
-			return grpList
-		
-	if prms.geoFence == 'dc-v1':
-		groups = read_geo_groups(prms, folderId)
-		gKeys  = groups.keys()
-	else:
-		#Read labels from the folder
-		if prms.isAligned:  
-			grpFile = prms.paths.label.grpsAlgn % folderId
-		else:
-			grpFile = prms.paths.label.grps % folderId
-		grpData = pickle.load(open(grpFile,'r'))
-		groups  = grpData['groups']
-		gKeys   = groups.keys()
-
-	if setName is not None:
-		#Find the groups belogning to the split
-		splits    = get_train_test_splits(prms, folderId)
-		gSplitIds = splits[setName]
-		for g in gSplitIds:
-			if g in gKeys:
-				grpList.append(groups[g])
-		return grpList
-	else:
-		return copy.deepcopy(groups)
-
-##
-#Get all the raw labels
-def get_groups_all(prms, setName='train'):
-	keys = get_folder_keys(prms)
-	#keys  = ['0052']
-	grps   = []
-	for k in keys:
-		grps = grps + get_groups(prms, k, setName=setName)
-	return grps
-
 
 ##
 # Convert a prefix and folder into the image name
@@ -366,43 +366,3 @@ def prefix2imname_geo(prms, prefixes):
 		raise Exception('Doesnot work for %s', prms.geoFence)
 	return imNames
 			
-##
-#Make the window files
-def make_window_file(prms, setNames=['test', 'train']):
-	if len(prms.labelNames)==1 and prms.labelNames[0] == 'nrml':
-		numImPerExample = 1
-	else:
-		numImPerExample = 2	
-
-	#Assuming the size of images
-	h, w, ch = prms.rawImSz, prms.rawImSz, 3
-	hCenter, wCenter = int(h/2), int(w/2)
-	cr = int(prms.crpSz/2)
-	minH = max(0, hCenter - cr)
-	maxH = min(h, hCenter + cr)
-	minW = max(0, wCenter - cr)
-	maxW = min(w, wCenter + cr)  
-
-	for s in setNames:
-		#Get the im-label data
-		lb, prefix = get_labels(prms, s)
-		if prms.geoFence is None:	
-			imNames1 = prefix2imname(prms, prefix)
-		else:
-			imNames1 = prefix2imname_geo(prms, prefix) 
-		#Randomly permute the data
-		N = len(imNames1)
-		randState = np.random.RandomState(19)
-		perm      = randState.permutation(N) 
-		#The output file
-		gen = mpio.GenericWindowWriter(prms['paths']['windowFile'][s],
-						len(imNames1), numImPerExample, prms['labelSz'])
-		for i in perm:
-			line = []
-			for n in range(numImPerExample):
-				line.append([imNames1[i][n], [ch, h, w], [minW, minH, maxW, maxH]])
-			gen.write(lb[i], *line)
-		gen.close()
-
-
-
