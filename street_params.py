@@ -220,7 +220,7 @@ class LabelNLoss(object):
 		self.isMultiLabel = isMultiLabel
 		self.numBins_ = numBins
 		self.binType_ = binType
-		assert self.loss_ in ['l2', 'classify', 'l1'], self.loss_
+		assert self.loss_ in ['l2', 'classify', 'l1', 'logl1'], self.loss_
 		#augLbSz_ - augmented labelSz to include the ignore label option
 		self.augLbSz_, self.lbSz_  = self.get_label_sz()
 		self.lbStr_       = '%s-%s' % (self.label_, self.labelType_)

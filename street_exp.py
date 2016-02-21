@@ -459,11 +459,13 @@ def make_loss_proto(prms, cPrms):
 	if 'pose' in prms.labelNames:
 		idx     = prms.labelNames.index('pose')
 		lbInfo  = prms.labels[idx]
-		if lbInfo.loss_ in ['l2', 'l1']:
+		if lbInfo.loss_ in ['l2', 'l1', 'logl1']:
 			if lbInfo.loss_ in ['l2']:
 				defFile = osp.join(baseFilePath, 'pose_loss_layers.prototxt')
-			else:
+			elif lbInfo.loss_ in ['l1']:
 				defFile = osp.join(baseFilePath, 'pose_loss_l1_layers.prototxt')
+			else:
+				defFile = osp.join(baseFilePath, 'pose_loss_log_l1_layers.prototxt')
 			lbDef   = mpu.ProtoDef(defFile)
 			lbDef.set_layer_property('pose_fc', ['inner_product_param', 'num_output'],
 							 '%d' % lbInfo.lbSz_)
