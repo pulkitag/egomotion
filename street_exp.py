@@ -644,13 +644,6 @@ def plot_experiment_accuracy(prms, cPrms=None, svFile=None,
 	if ax is None:
 		plt.figure()
 		ax = plt.subplot(111)
-	if not isTrainOnly:
-		for k in testData.keys():
-			if lossName is not None and not (k in lossName):
-				continue
-			if k == 'iters':
-				continue
-			ax.plot(testData['iters'][1:], testData[k][1:],'r',  linewidth=3.0)
 	if not isTestOnly:
 		for k in trainData.keys():
 			if lossName is not None and not (k in lossName):
@@ -658,6 +651,13 @@ def plot_experiment_accuracy(prms, cPrms=None, svFile=None,
 			if k == 'iters':
 				continue
 			ax.plot(trainData['iters'][1:], trainData[k][1:],'b',  linewidth=3.0)
+	if not isTrainOnly:
+		for k in testData.keys():
+			if lossName is not None and not (k in lossName):
+				continue
+			if k == 'iters':
+				continue
+			ax.plot(testData['iters'][1:], testData[k][1:],'r',  linewidth=3.0)
 	if svFile is not None:
 		with PdfPages(svFile) as pdf:
 			pdf.savefig()

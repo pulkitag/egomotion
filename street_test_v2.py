@@ -30,6 +30,10 @@ def get_street_pose_proto(exp, protoType='all'):
 	elif protoType == 'all':
 		wFile = 'test-files/test_pose-euler_spDist100_spVer-v1_geodc-v2_geo-dc-v2_lbNrmlz-zscore_crpSz192_nTe-1.00e+04_rawImSz256_exp-V2.txt'
 		numIter   = 100
+	elif protoType == 'all-5dof':
+		wFile = 'test-files/test_pose-euler-5dof_spDist100_spVer-v1_geodc-v2_geo-dc-v2_lbNrmlz-zscore_crpSz192_nTe-1.00e+04_rawImSz256_exp-V2.txt'
+		numIter   = 100
+		
 	netDef    = mpu.ProtoDef(exp.files_['netdef'])
 	paramStr  = netDef.get_layer_property('window_data', 'param_str')[1:-1]
 	paramStr  = ste.modify_params(paramStr, 'source', wFile)
@@ -131,15 +135,17 @@ def test_pose(prms, cPrms=None,  modelIter=None, protoType='all'):
 	gtLabel, pdLabel, loss = [], [], []
 	for i in range(numIter):
 		data = net.forward(['pose_label','pose_fc', 'pose_loss'])
-		gtLabel.append(copy.deepcopy(data['pose_label'][:,0:2].squeeze()))
-		pdLabel.append(copy.deepcopy(data['pose_fc']))
+		gtLabel.append(copy.deepcopy(data['pose_label'].squeeze()))
+		pdLabel.append(copy.deepcopy(data['pose_fc'].squeeze()))
 		loss.append(copy.deepcopy(data['pose_loss']))
-	gtLabel = denormalize(prms, np.concatenate(gtLabel))
-	pdLabel = denormalize(prms, np.concatenate(pdLabel))
 	lbInfo = prms.labels[0]
 	if lbInfo.labelType_ in ['euler']:
+		gtLabel = denormalize(prms, np.concatenate(gtLabel)[:,0:2])
+		pdLabel = denormalize(prms, np.concatenate(pdLabel)[:,0:2])
 		err, gtTheta, _ = delta_rots(gtLabel, pdLabel, opDeltaOnly=False) 	
 	elif lbInfo.labelType_ in ['euler-5dof']:
+		gtLabel = denormalize(prms, np.concatenate(gtLabel)[:,0:5])
+		pdLabel = denormalize(prms, np.concatenate(pdLabel)[:,0:5])
 		err, gtTheta, _ = delta_rots(gtLabel[:,0:2], pdLabel[:,0:2], opDeltaOnly=False) 	
 	else:
 		raise Exception ('LabelType %s not recognized' % lbInfo.labelType_)	
