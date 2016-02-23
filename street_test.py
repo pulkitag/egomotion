@@ -19,6 +19,7 @@ import rot_utils as ru
 from pycaffe_config import cfg
 import scipy.misc as scm
 import pickle
+from scipy import io as sio
 
 def modify_params(paramStr, key, val):
 	params = paramStr.strip().split('--')
@@ -486,24 +487,57 @@ def test_linear_ptch_from_ptch_lt5_pose_all(protoType='gt5'):
 
 ##
 #Save the York features
-def save_york_feats(modelIter=20000, yorkType='york', lossType='l1'):
-	if lossType == 'l2':
+def save_york_feats(modelIter=20000, dataset='york', lossType='pose_l1', isMat=False):
+	if lossType == 'pose_l2':
 		prms, cPrms = mepo.smallnetv5_fc5_pose_euler_crp192_rawImSz256(numFc5=512)
-	elif lossType == 'l1':
+		delLayers   = ['slice_pair']
+	elif lossType == 'pose_l1':
 		prms, cPrms = mepo.smallnetv5_fc5_pose_euler_crp192_rawImSz256_lossl1()
+		delLayers   = ['slice_pair']
+	elif lossType == 'pose_ptch_l1':
+		prms, cPrms = mev2.ptch_pose_euler_smallnet_v5_fc5_exp1_lossl1()
+		delLayers   = ['slice_pair', 'slice_label']
 	exp         = se.setup_experiment(prms, cPrms)
 	#Read the images
-	if yorkType == 'york':
+	dataDir = '/work5/pulkitag/data_sets/streetview'
+	if dataset == 'york':
 		dirName = '/work5/pulkitag/data_sets/streetview/york/York_VP_imOnly'
 		outDir = '/work5/pulkitag/data_sets/streetview/york/feats/'
-	else:
+	elif dataset == 'york_others':
 		dirName = '/work5/pulkitag/data_sets/streetview/york_and_others/tvp_pku_york_ims'
 		outDir = '/work5/pulkitag/data_sets/streetview/york_and_others/feats/'
+	elif dataset == 'gen_test':
+		dirName = '/work5/pulkitag/data_sets/streetview/gen_test/gen_test_imgs'
+		outDir = '/work5/pulkitag/data_sets/streetview/gen_test/feats/'
+	elif dataset == 'army':
+		dirName = osp.join(dataDir, 'army_patches', 'Army_Patches')
+		outDir  = osp.join(dataDir, 'army_patches', 'feats')
+	elif dataset == 'places':
+		dirName = osp.join(dataDir, 'places', 'images')
+		outDir  = osp.join(dataDir, 'places', 'feats-%s' % lossType)
+	elif dataset == 'lib_indoor':
+		dirName = osp.join(dataDir, 'places', 'library_indoor', 'indoor')
+		outDir  = osp.join(dataDir, 'places', 'library_indoor', 'feats-%s' % lossType)
+	elif dataset == 'swim':
+		dirName = osp.join(dataDir, 'places', 'swim_hotel', 'swimming_pool_indoor')
+		outDir  = osp.join(dataDir, 'places', 'swim_hotel', 'swim-feats-%s' % lossType)
+	elif dataset == 'room':
+		dirName = osp.join(dataDir, 'places', 'swim_hotel', 'hotel_room')
+		outDir  = osp.join(dataDir, 'places', 'swim_hotel', 'hotel-feats-%s' % lossType)
+	elif dataset == 'herz':
+		dirName = osp.join(dataDir, 'herz', 'jesuoutLarge2')
+		outDir  = osp.join(dataDir, 'herz', 'herz-feats-%s' % lossType)
+	elif dataset == 'pascal3d':
+		dirName = osp.join(dataDir, 'pascal3d', 'val_crops')
+		outDir  = osp.join(dataDir, 'pascal3d', 'val_feats-%s' % lossType)
 	if not osp.exists(outDir):
 		os.makedirs(outDir)	
 	prefix = [f[0:-4] for f in os.listdir(dirName) if '.jpg' in f]
 	imFile  = [osp.join(dirName, p + '.jpg') for p in prefix]
-	outName = [osp.join(outDir,  p + '.pkl') for p in prefix]  
+	if isMat:
+		outName = [osp.join(outDir,  p + '.mat') for p in prefix]  
+	else:
+		outName = [osp.join(outDir,  p + '.pkl') for p in prefix]  
 
 	#Setup the Net
 	mainDataDr = cfg.STREETVIEW_DATA_MAIN
@@ -513,22 +547,90 @@ def save_york_feats(modelIter=20000, yorkType='york', lossType='l1'):
 	testNet.setup_network(opNames=['fc5'], imH=101, imW=101, cropH=101, cropW=101,
 								modelIterations=modelIter, delAbove='relu5', batchSz=batchSz,
 								isAccuracyTest=False, dataLayerNames=['window_data'], 
-								newDataLayerNames=['data'], delLayers=['slice_pair'],
+								newDataLayerNames=['data'], delLayers=delLayers,
 								meanFile =meanFile)
 	#Send images and get features
 	for st in range(0,len(imFile),batchSz):
 		en = min(len(imFile), st+ batchSz)
-		ims = []
+		ims      = []
+		skipList = []
 		for i in range(st,en):
 			im = scm.imread(imFile[i])
 			im = scm.imresize(im, (192,192))
+			if im.ndim ==2:
+				skipList.append(i)
+				print ('SKIPPING GRAY SCALE IMAGE')
+				continue
+			if im.ndim==3 and im.shape[2] == 1:
+				skipList.append(i)
+				print ('SKIPPING GRAY SCALE IMAGE')
+				continue
 			ims.append(im.reshape((1,) + im.shape))
 		ims = np.concatenate(ims)
 		print ims.shape
 		feats = testNet.net_.forward_all(blobs=['fc5'], **{'data': ims})
-		for i in range(st,en):	
-			pickle.dump({'feat': feats['fc5'][i-st]}, open(outName[i], 'w'))	
+		count = 0
+		for i in range(st,en):
+			if i in skipList:
+				continue
+			if isMat:
+				sio.savemat(outName[i], {'feat': feats['fc5'][count]})
+			else:
+				pickle.dump({'feat': feats['fc5'][count]}, open(outName[i], 'w'))
+			count += 1	
 
+
+def get_nrml_results(modelIter=20000):
+	#prms, cPrms = mept.smallnetv5_fc5_ptch_crp192_rawImSz256()
+	prms, cPrms = mept.smallnetv2_pool4_ptch_crp192_rawImSz256(isPythonLayer=True)
+	exp         = se.setup_experiment(prms, cPrms)
+	#Setup the Net
+	mainDataDr = cfg.STREETVIEW_DATA_MAIN
+	meanFile   = osp.join(mainDataDr, 'pulkitag/caffe_models/ilsvrc2012_mean_for_siamese.binaryproto')
+	batchSz    = 500
+	testNet = mpu.CaffeTest.from_caffe_exp(exp)
+	testNet.setup_network(opNames=['ptch_fc'], imH=101, imW=101, cropH=101, cropW=101,
+								modelIterations=modelIter, delAbove='ptch_fc', batchSz=batchSz,
+								channels = 6, chSwap=(2,1,0,5,4,3), 
+								isAccuracyTest=False, dataLayerNames=['window_data'], 
+								newDataLayerNames=['pair_data'],
+								meanFile =meanFile)
+
+	#Just read the first 10K images
+	wFile = prms.paths['windowFile']['train']
+	wFid  = mpio.GenericWindowReader(wFile)
+	rootFolder='/data0/pulkitag/data_sets/streetview/proc/resize-im/im256'
+	ims, lbs = [], []
+	#N, numTest = 10000, 1000
+	N, numTest = 100, 10
+	for i in range(N):
+		im, lb = wFid.read_next_processed(rootFolder)
+		ims.append(im[0])
+		lbs.append(lb)	
+
+	#Read the test data
+	wFile = prms.paths['windowFile']['test']
+	wFid  = mpio.GenericWindowReader(wFile)
+	rootFolder='/data0/pulkitag/data_sets/streetview/proc/resize-im/im256'
+	gtIms, gtLbs = [], []
+	for i in range(numTest):
+		im, lb = wFid.read_next_processed(rootFolder)
+		gtIms.append(im[0])
+		gtLbs.append(lb)	
+
+	#return ims, gtIms
+	predFeat = []
+	for te in range(numTest):
+		imTe = gtIms[te].reshape((1,) + gtIms[te].shape)
+		for tr in range(0,N,batchSz):
+			batchIm = []
+			for i in range(tr, min(tr+batchSz,N)):
+				im = ims[i].reshape((1,) + ims[i].shape)
+				batchIm.append(np.concatenate([imTe, im], axis=3))
+			batchIm = np.concatenate(batchIm, axis=0)
+			feats = testNet.net_.forward_all(blobs=['ptch_fc'], **{'pair_data': batchIm})
+			predFeat.append(copy.deepcopy(feats['ptch_fc']))
+	return predFeat
 
 ##
 #Verify pose fc
@@ -573,14 +675,21 @@ def verify_pose_results(modelIter):
 	print (err)
 	return gtFeat, predFeat
 
-def save_alexnet_york_feats(yorkType='york'):
+def save_alexnet_york_feats(dataset = 'york'):
 	#Read the images
-	if yorkType == 'york':
+	dataDir = '/work5/pulkitag/data_sets/streetview'
+	if dataset == 'york':
 		dirName = '/work5/pulkitag/data_sets/streetview/york/York_VP_imOnly'
 		outDir = '/work5/pulkitag/data_sets/streetview/york/feats-alexnet/'
-	else:
+	elif dataset == 'york_others':
 		dirName = '/work5/pulkitag/data_sets/streetview/york_and_others/tvp_pku_york_ims'
 		outDir = '/work5/pulkitag/data_sets/streetview/york_and_others/feats-alexnet/'
+	elif dataset == 'gen_test':
+		dirName = '/work5/pulkitag/data_sets/streetview/gen_test/gen_test_imgs'
+		outDir = '/work5/pulkitag/data_sets/streetview/gen_test/feats-alexnet/'
+	elif dataset == 'places':
+		dirName = osp.join(dataDir, 'places', 'images')
+		outDir  = osp.join(dataDir, 'places', 'feats-alexnet')
 	if not osp.exists(outDir):
 		os.makedirs(outDir)
 	prefix = [f[0:-4] for f in os.listdir(dirName) if '.jpg' in f]
@@ -594,7 +703,7 @@ def save_alexnet_york_feats(yorkType='york'):
 								'pulkitag/caffe_models/bvlc_reference/bvlc_reference_caffenet.caffemodel')
 	defFile    = osp.join(mainDataDr, 
 								'pulkitag/caffe_models/bvlc_reference/caffenet_full_deploy.prototxt')
-	batchSz    = 10
+	batchSz    = 256
 	testNet    = mp.MyNet(defFile, netFile, caffe.TEST)
 	testNet.set_preprocess(ipName = 'data', isBlobFormat=False,
 				imageDims = (227, 227, 3),
@@ -605,14 +714,27 @@ def save_alexnet_york_feats(yorkType='york'):
 	for st in range(0,len(imFile),batchSz):
 		en = min(len(imFile), st+ batchSz)
 		ims = []
+		skipList = []
 		for i in range(st,en):
 			im = scm.imread(imFile[i])
 			im = scm.imresize(im, (227,227))
+			if im.ndim ==2:
+				skipList.append(i)
+				print ('SKIPPING GRAY SCALE IMAGE')
+				continue
+			if im.ndim==3 and im.shape[2] == 1:
+				skipList.append(i)
+				print ('SKIPPING GRAY SCALE IMAGE')
+				continue
 			ims.append(im.reshape((1,) + im.shape))
 		ims = np.concatenate(ims)
 		print ims.shape
-		feats = testNet.forward_all(blobs=['pool5', 'fc6', 'fc7'], **{'data': ims})
+		feats = testNet.forward_all(blobs=['fc7'], **{'data': ims})
+		count = 0
 		for i in range(st,en):	
-			pickle.dump({'pool5': feats['pool5'][i-st], 'fc6': feats['fc6'][i-st], 
-									 'fc7': feats['fc7'][i-st]}, open(outName[i], 'w'))	
-
+			#pickle.dump({'pool5': feats['pool5'][i-st], 'fc6': feats['fc6'][i-st], 
+			#						 'fc7': feats['fc7'][i-st]}, open(outName[i], 'w'))
+			if i in skipList:
+				continue	
+			pickle.dump({'fc7': feats['fc7'][count]}, open(outName[i], 'w'))
+			count += 1	

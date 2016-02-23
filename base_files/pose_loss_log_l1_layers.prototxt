@@ -1,0 +1,40 @@
+layer {
+  name: "pose_fc"
+  type: "InnerProduct"
+  bottom: "common_fc"
+  top: "pose_fc"
+  param {
+		name: "pose_fc_w"
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+		name: "pose_fc_b"
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 4
+    weight_filler {
+      type: "gaussian"
+      std: 0.005
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+layer {
+  name: "pose_loss"
+  type: "Python"
+  bottom: "pose_fc"
+  bottom: "pose_label"
+  top: "pose_loss"
+	python_param{
+		module: "python_loss_layers"
+		layer: "L1LogLossWithIgnoreLayer"
+		param_str: "--loss_weight 10.0"
+	}
+	loss_weight: 1
+}

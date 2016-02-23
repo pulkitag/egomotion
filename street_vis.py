@@ -109,6 +109,8 @@ def vis_window_file(prms, setName='test', isSave=False,
 			lbStr   = 'roll: %.2f, yaw: %.2f, pitch: %.2f, isRot: %d'
 	elif labelType == 'ptch':
 		lbStr   = 'IsMatch: %d'
+	elif labelType == 'nrml':
+		lbStr = 'nx: %.4f, ny: %.4f'
 	else:
 		raise Exception('%s not recognized' % labelType)	
 	
@@ -150,8 +152,10 @@ def vis_window_file(prms, setName='test', isSave=False,
 				figTitle = lbStr % (yaw, pitch)
 			else:
 				figTitle = lbStr % (roll, yaw, pitch, isRot)
-		elif labelType == 'ptch':			
+		elif labelType == 'ptch':
 			figTitle = lbStr % lbs[0][0]
+		elif labelType == 'nrml':
+			figTitle = lbStr % (lbs[0][0], lbs[0][1])
 
 		print (figTitle, count)
 		im1      = plt.imread(imNames[0])

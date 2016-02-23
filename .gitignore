@@ -4,6 +4,10 @@ h5py*
 docs/*
 test-files/*
 pose-files/*
+for-amir/*
+*.tar
+*.dat
+tmp/*
 
 # Compiled Object files
 *.slo
