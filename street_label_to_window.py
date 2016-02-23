@@ -248,4 +248,48 @@ def get_label_stats(prms, isForceCompute=False):
 	else:
 		raise Exception('lbNrmlz %s not recognized' % lbNrmlz)
 	pickle.dump(dat, open(fName, 'w'))
-	return get_label_stats(prms, isForceCompute=False)	
+	return get_label_stats(prms, isForceCompute=False)
+
+
+###OLD CODE ################
+'''
+##
+#Make the window files
+def make_window_file(prms, setNames=['test', 'train']):
+	if len(prms.labelNames)==1 and prms.labelNames[0] == 'nrml':
+		numImPerExample = 1
+	else:
+		numImPerExample = 2	
+
+	#Assuming the size of images
+	h, w, ch = prms.rawImSz, prms.rawImSz, 3
+	hCenter, wCenter = int(h/2), int(w/2)
+	cr = int(prms.crpSz/2)
+	minH = max(0, hCenter - cr)
+	maxH = min(h, hCenter + cr)
+	minW = max(0, wCenter - cr)
+	maxW = min(w, wCenter + cr)  
+
+	for s in setNames:
+		#Get the im-label data
+		lb, prefix = get_labels(prms, s)
+		if prms.geoFence is None:	
+			imNames1 = prefix2imname(prms, prefix)
+		else:
+			imNames1 = prefix2imname_geo(prms, prefix) 
+		#Randomly permute the data
+		N = len(imNames1)
+		randState = np.random.RandomState(19)
+		perm      = randState.permutation(N) 
+		#The output file
+		gen = mpio.GenericWindowWriter(prms['paths']['windowFile'][s],
+						len(imNames1), numImPerExample, prms['labelSz'])
+		for i in perm:
+			line = []
+			for n in range(numImPerExample):
+				line.append([imNames1[i][n], [ch, h, w], [minW, minH, maxW, maxH]])
+			gen.write(lb[i], *line)
+		gen.close()
+'''
+
+
