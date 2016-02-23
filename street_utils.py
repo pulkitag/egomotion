@@ -21,6 +21,7 @@ from geopy.distance import vincenty as geodist
 import copy
 import street_params as sp
 from multiprocessing import Pool
+import math
 
 ##
 #helper functions
@@ -350,7 +351,23 @@ def get_label_nrml(prms, groups, numSamples, randSeed=1001):
 		if not isClassify:
 			en = en - 1
 			lb[en]  = 1
-			lb[st:en] = gp.data[idx].nrml[0:2]
+			rawNrml = gp.data[idx].nrml[0:2]
+			rawNrml = np.array([rawNrml[0], rawNrml[1], 0])
+			cHead, cPitch = gp.data[idx].rots[0:2]
+			cHead         = rot_range(cHead + 90)
+			cHead, cPitch = (cHead * np.pi)/180.0, (cPitch * np.pi)/180.0
+			rotMat        = ru.euler2mat(cHead, cPitch, isRadian=True)
+			rotNrml       = np.dot(rotMat, rawNrml)
+			#try:
+			#	assert (np.abs(rotNrml[2]) < 1e-4)
+			#except:
+			#	pdb.set_trace()
+			#nHead, nPitch = (nHead * 180.0)/np.pi, (nPitch * 180.0)/np.pi
+			#nHead, nPitch = rot_range(nHead)/30.0, rot_range(nPitch)/30.0
+			lb[st:en] = math.atan2(rotNrml[1], rotNrml[0]), math.asin(rotNrml[2])
+			lb[st:en] = (lb[st:en] * 180.0)/np.pi
+			lb[st]    = rot_range(lb[st])
+			lb[st+1]  = rot_range(lb[st+1])
 		else:
 			nxBin  = find_bin_index(lbInfo.binRange_, gp.data[idx].nrml[0])
 			nyBin  = find_bin_index(lbInfo.binRange_, gp.data[idx].nrml[1])
@@ -887,7 +904,7 @@ def make_combined_window_file(prms, setName='train'):
 			lbInfo = prms.labels[idx]
 			nrmlPrune = True
 			if lbInfo.loss_ in ['l2', 'l1']:
-				nrmlBins  = np.linspace(-1,1,101)
+				nrmlBins  = np.linspace(-180,180,101)
 				binCounts = np.zeros((2,101))
 			elif lbInfo.loss_ == 'classify':
 				nrmlBins  = np.array(range(lbInfo.numBins_+1))
