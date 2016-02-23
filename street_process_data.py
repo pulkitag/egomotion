@@ -6,6 +6,7 @@ import copy
 import other_utils as ou
 import socket
 import numpy as np
+import pdb
 
 def get_config_paths():
 	hostName = socket.gethostname()
@@ -217,6 +218,8 @@ class StreetFolder(object):
 		count    = 0
 		for (i,p) in enumerate(self.prefixList_):	
 			_,_,_,grp = p.split('_')
+			if i == 0:
+				prev = grp
 			count += 1
 			if not(grp == prev):
 				grps[prev]= count
@@ -248,7 +251,14 @@ class StreetFolder(object):
 		prevCount = 0
 		for gk, numPrefix in preCountPerGrp.iteritems():
 			st, en = prevCount, prevCount + numPrefix
-			grps[gk] = StreetGroup(self.id_, gk, self.prefixList_[st:en], lbNames[st:en])
+			try:
+				grps[gk] = StreetGroup(self.id_, gk, self.prefixList_[st:en], lbNames[st:en])
+			except:
+				print ('#### ERROR Encountered #####')
+				print (gk, st, en)
+				print (self.prefixList_[st:en])
+				pdb.set_trace()
 			prevCount += numPrefix
+		print ('SAVING to %s' % self.paths_.targetGrps)
 		pickle.dump({'groups': grps}, open(self.paths_.targetGrps, 'w'))	
 
