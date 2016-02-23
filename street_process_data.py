@@ -232,7 +232,7 @@ class StreetFolder(object):
 				prev = grp
 			count += 1
 			if not(grp == prev):
-				tgtList.append(grp)
+				tgtList.append(prev)
 				grps[prev]= count
 				prev  = grp
 				count = 0
