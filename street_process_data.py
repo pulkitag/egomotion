@@ -197,8 +197,9 @@ class StreetFolder(object):
 		'''
 		if not forceCompute and osp.exists(self.paths_.prefix):
 			dat = pickle.load(open(self.paths_.prefix,'r'))
-			self.prefixList_ = dat['prefixStr']	
-		print ('Computing prefixes for folderid %s', self.id_)	
+			self.prefixList_ = dat['prefixStr']
+			return	
+		print ('Computing prefixes for folderid %s' % self.id_)	
 		self._save_prefixes()	
 		self._read_prefixes_from_file(forceCompute=False)
 
