@@ -5,6 +5,7 @@ from os import path as osp
 import copy
 import other_utils as ou
 import socket
+import numpy as np
 
 def get_config_paths():
 	hostName = socket.gethostname()
@@ -134,8 +135,8 @@ class StreetGroup(object):
 		grp.folderId = folderId
 		grp.gid      = gId
 		for i,p in enumerate(prefix):
-			bsName = osp.basename(lbNames[i])
-			assert bsName == p, bsName
+			bsName = osp.basename(lbNames[i]).split('.')[0]
+			assert bsName == p, 'bsName:%s, p: %s'% (bsName,p)
 			grp.data.append(StreetLabel.from_file(lbNames[i]))
 		self.grp = grp
 
@@ -216,11 +217,12 @@ class StreetFolder(object):
 		count    = 0
 		for (i,p) in enumerate(self.prefixList_):	
 			_,_,_,grp = p.split('_')
+			count += 1
 			if not(grp == prev):
 				grps[prev]= count
 				prev  = grp
 				count = 0
-		pickle.dump(grps, open(self.paths_.grpCount, 'w'))
+		pickle.dump(grps, open(self.paths_.prePerGrp, 'w'))
 
 
 	#get all the target group counts
@@ -246,6 +248,7 @@ class StreetFolder(object):
 		prevCount = 0
 		for gk, numPrefix in preCountPerGrp.iteritems():
 			st, en = prevCount, prevCount + numPrefix
-			grps[gk] = StreetGrp(folderId, gf, self.prefixList_[st:en], lbFileNames[st:en])
+			grps[gk] = StreetGroup(self.id_, gk, self.prefixList_[st:en], lbNames[st:en])
+			prevCount += numPrefix
 		pickle.dump({'groups': grps}, open(self.paths_.targetGrps, 'w'))	
 
