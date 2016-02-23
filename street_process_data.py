@@ -174,6 +174,10 @@ class StreetFolder(object):
 		self.paths_.dr = 'tmp/'
 		self.paths_.prefix     = osp.join(self.paths_.dr, 'prefix.pkl')
 		self.paths_.prePerGrp  = osp.join(self.paths_.dr, 'prePerGrp.pkl')
+		#List of targetgroups in ordered format - necessary as ordering matters
+		#ordering can be used to split the data into train/val/test as points
+		#closer in the ordering are physically close to each other
+		self.paths_.targetGrpList = osp.join(self.paths_.dr, 'targetGrpList.pkl')
 		self.paths_.targetGrps = osp.join(self.paths_.dr, 'targetGrps.pkl')
 
 
@@ -210,23 +214,30 @@ class StreetFolder(object):
 	def get_prefixes(self):
 		return copy.deepcopy(self.prefixList_)
 
+	#
+	def get_im_label_files(self):
+		imFiles = [osp.join(self.dirName_, '%s.jpg') % p for p in self.prefixList_]
+		lbFiles = [osp.join(self.dirName_, '%s.txt') % p for p in self.prefixList_]
+		return imFiles, lbFiles
 
 	#Save group of images that look at the same target point. 	
 	def _save_target_group_counts(self):
 		grps = {}
 		prev     = None
 		count    = 0
+		tgtList  = []
 		for (i,p) in enumerate(self.prefixList_):	
 			_,_,_,grp = p.split('_')
 			if i == 0:
 				prev = grp
 			count += 1
 			if not(grp == prev):
+				tgtList.append(grp)
 				grps[prev]= count
 				prev  = grp
 				count = 0
 		pickle.dump(grps, open(self.paths_.prePerGrp, 'w'))
-
+		pickle.dump({'grpList': tgtList}, open(self.paths_.targetGrpList, 'w'))
 
 	#get all the target group counts
 	def get_num_prefix_per_target_group(self, forceCompute=False):
@@ -236,13 +247,11 @@ class StreetFolder(object):
 		self._save_target_group_counts()
 		return self.get_num_prefix_per_target_group()
 
-	#
-	def get_im_label_files(self):
-		imFiles = [osp.join(self.dirName_, '%s.jpg') % p for p in self.prefixList_]
-		lbFiles = [osp.join(self.dirName_, '%s.txt') % p for p in self.prefixList_]
-		return imFiles, lbFiles
-
-	
+	#ordered list of groups
+	def get_group_list(self):
+		data = pickle.load(open(self.paths_.targetGrpList, 'r'))
+		return data['grpList']	
+		
 	#save the target group data
 	def _save_target_groups(self):
 		imNames, lbNames = self.get_im_label_files()
