@@ -142,6 +142,17 @@ class StreetGroup(object):
 	def distance_from_other(self, grp2):
 		pass
 
+	def as_dict(self):
+		grpDict = edict()
+		for k in self.grp.keys()
+			if k == 'data':
+				continue
+			grpDict[k] = self.grp[k]	
+		grpDict['data'] = []
+		for d in self.grp.data:
+			grpDict['data'] = d.label
+		return grpDict
+
 
 class StreetFolder(object):
 	'''

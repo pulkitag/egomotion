@@ -159,3 +159,8 @@ def read_normals_fronal(isSave=False,
 			if inp=='q':
 				return
 	
+def group_fetch():
+	pass
+
+	
+
