@@ -7,6 +7,7 @@ import other_utils as ou
 import socket
 import numpy as np
 import pdb
+import scipy.misc as scm
 
 def get_config_paths():
 	hostName = socket.gethostname()
@@ -15,6 +16,7 @@ def get_config_paths():
 		pass
 	else:
 		pths.mainDataDr = '/data0/pulkitag/data_sets/streetview'
+	pths.folderProc = osp.dirname(pths.mainDataDr, 'proc2', '%s')
 	pths.cwd = osp.dirname(osp.abspath(__file__))
 	return pths
 	
@@ -161,7 +163,8 @@ class StreetGroup(object):
 		return grpDict
 
 
-def save_cropped_image_unaligned(imNames, outNames, isForceWrite=False):
+def save_cropped_image_unaligned(imNames, outNames, rawImSz=256, 
+											isForceWrite=False):
 	N = len(inNames)
 	assert N == len(outNames)
 	for i in range(N):
@@ -210,7 +213,8 @@ class StreetFolder(object):
 		#raw data
 		self.dirName_ = osp.join(cPaths.mainDataDr, self.name_)
 		self.paths_   = edict()
-		self.paths_.dr = 'tmp/'
+		self.paths_.dr = cPaths.proc % self.id_
+		ou.mkdir(self.paths_.dr)
 		self.paths_.prefix     = osp.join(self.paths_.dr, 'prefix.pkl')
 		self.paths_.prePerGrp  = osp.join(self.paths_.dr, 'prePerGrp.pkl')
 		#List of targetgroups in ordered format - necessary as ordering matters
@@ -218,7 +222,9 @@ class StreetFolder(object):
 		#closer in the ordering are physically close to each other
 		self.paths_.targetGrpList = osp.join(self.paths_.dr, 'targetGrpList.pkl')
 		self.paths_.targetGrps = osp.join(self.paths_.dr, 'targetGrps.pkl')
-
+		#path for storing the cropped images
+		self.paths_.crpImPath  = osp.join(self.paths_.dr, 
+                             'imCrop',  )
 
 	#Save all prefixes in the folder
 	def _save_prefixes(self):
@@ -311,14 +317,15 @@ class StreetFolder(object):
 		pickle.dump({'groups': grps}, open(self.paths_.targetGrps, 'w'))	
 
 	#crop and save images - that makes it faster to read for training nets
-	def save_cropped_images(self):
+	def save_cropped_images(self, imSz=256, isForceWrite=False):
 		for i, p in enumerate(self.prefixList_):
 			if np.mod(i,1000)==1:
-				print(i)
+				print(i
 			inName    = osp.join(self.dirName_, p + '.jpg')
-			outName   = osp.join(svFolder, self._idx2cropname(p))
+			outName   = osp.join(self.paths_., self._idx2cropname(p))
 			#Save the image
-			saverite_im_v2(prms, inList, outList, crpList, isForceWrite)
+			save_cropped_image_unaligned([inName], [outName],
+            imSz, isForceWrite)
 
 	def _idx2cropname(self, idx):
 		lNum  = int(idx/1000)
