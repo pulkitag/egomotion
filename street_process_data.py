@@ -16,7 +16,7 @@ def get_config_paths():
 		pass
 	else:
 		pths.mainDataDr = '/data0/pulkitag/data_sets/streetview'
-	pths.folderProc = osp.dirname(pths.mainDataDr, 'proc2', '%s')
+	pths.folderProc = osp.join(pths.mainDataDr, 'proc2', '%s')
 	pths.cwd = osp.dirname(osp.abspath(__file__))
 	return pths
 	
@@ -163,7 +163,7 @@ class StreetGroup(object):
 		return grpDict
 
 
-def save_cropped_image_unaligned(imNames, outNames, rawImSz=256, 
+def save_cropped_image_unaligned(inNames, outNames, rawImSz=256, 
 											isForceWrite=False):
 	N = len(inNames)
 	assert N == len(outNames)
@@ -174,17 +174,17 @@ def save_cropped_image_unaligned(imNames, outNames, rawImSz=256,
 		h, w, ch = im.shape
 		cy, cx = h/2, w/2
 		#Crop
-		hSt = min(h, max(0,int(cy - prms.rawImSz/2)))
-		wSt = min(w, max(0,int(cx - prms.rawImSz/2)))
-		hEn = min(h, int(hSt + prms.rawImSz))
-		wEn = min(w, int(wSt + prms.rawImSz))
-		imSave = np.zeros((prms.rawImSz, prms.rawImSz,3)).astype(np.uint8)
+		hSt = min(h, max(0,int(cy - rawImSz/2)))
+		wSt = min(w, max(0,int(cx - rawImSz/2)))
+		hEn = min(h, int(hSt + rawImSz))
+		wEn = min(w, int(wSt + rawImSz))
+		imSave = np.zeros((rawImSz, rawImSz,3)).astype(np.uint8)
 		hL, wL  = hEn - hSt, wEn - wSt
 		#print hSt, hEn, wSt, wEn
 		imSave[0:hL, 0:wL,:] =  im[hSt:hEn, wSt:wEn, :] 
 		#Save the image
 		dirName, _ = osp.split(outNames[i])
-		sp._mkdir(dirName)
+		ou.mkdir(dirName)
 		scm.imsave(outNames[i], imSave)
 
 class StreetFolder(object):
@@ -213,7 +213,7 @@ class StreetFolder(object):
 		#raw data
 		self.dirName_ = osp.join(cPaths.mainDataDr, self.name_)
 		self.paths_   = edict()
-		self.paths_.dr = cPaths.proc % self.id_
+		self.paths_.dr = cPaths.folderProc % self.id_
 		ou.mkdir(self.paths_.dr)
 		self.paths_.prefix     = osp.join(self.paths_.dr, 'prefix.pkl')
 		self.paths_.prePerGrp  = osp.join(self.paths_.dr, 'prePerGrp.pkl')
@@ -223,8 +223,8 @@ class StreetFolder(object):
 		self.paths_.targetGrpList = osp.join(self.paths_.dr, 'targetGrpList.pkl')
 		self.paths_.targetGrps = osp.join(self.paths_.dr, 'targetGrps.pkl')
 		#path for storing the cropped images
-		self.paths_.crpImPath  = osp.join(self.paths_.dr, 
-                             'imCrop',  )
+		self.paths_.crpImStr   = 'imCrop/imSz%s' % '%d'
+		self.paths_.crpImPath  = osp.join(self.paths_.dr, self.paths_.crpImStr)
 
 	#Save all prefixes in the folder
 	def _save_prefixes(self):
@@ -318,11 +318,14 @@ class StreetFolder(object):
 
 	#crop and save images - that makes it faster to read for training nets
 	def save_cropped_images(self, imSz=256, isForceWrite=False):
+		cropDirName = self.paths_.crpImPath % imSz
+		ou.mkdir(cropDirName)
 		for i, p in enumerate(self.prefixList_):
 			if np.mod(i,1000)==1:
-				print(i
+				print(i)
 			inName    = osp.join(self.dirName_, p + '.jpg')
-			outName   = osp.join(self.paths_., self._idx2cropname(p))
+			outName   = osp.join(self.paths_.crpImPath % imSz, 
+                 self._idx2cropname(i))
 			#Save the image
 			save_cropped_image_unaligned([inName], [outName],
             imSz, isForceWrite)
@@ -331,6 +334,7 @@ class StreetFolder(object):
 		lNum  = int(idx/1000)
 		imNum = np.mod(idx, 1000)
 		name  = 'l-%d/im%04d.jpg' % (lNum, imNum) 
+		return name
 
 	def get_cropped_imname(self, prefix):
 		idx = self.prefixList_.index(prefix)
