@@ -70,6 +70,11 @@ class FolderStore(object):
 	def get_list(self):
 		return copy.deepcopy(self.folders)
 
+	#Return the name of the folder form the id
+	def get_folder_name(self, fid):
+		assert fid in self.folders.keys(), '%s folder id not found' % fid
+		return self.folders[fid]
+
 
 class StreetLabel(object):
 	def __init__(self):
@@ -146,7 +151,7 @@ class StreetGroup(object):
 
 	def as_dict(self):
 		grpDict = edict()
-		for k in self.grp.keys()
+		for k in self.grp.keys():
 			if k == 'data':
 				continue
 			grpDict[k] = self.grp[k]	
