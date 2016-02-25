@@ -161,6 +161,29 @@ class StreetGroup(object):
 		return grpDict
 
 
+def save_cropped_image_unaligned(imNames, outNames, isForceWrite=False):
+	N = len(inNames)
+	assert N == len(outNames)
+	for i in range(N):
+		if osp.exists(outNames[i]) and not isForceWrite:
+			continue
+		im         = scm.imread(inNames[i])
+		h, w, ch = im.shape
+		cy, cx = h/2, w/2
+		#Crop
+		hSt = min(h, max(0,int(cy - prms.rawImSz/2)))
+		wSt = min(w, max(0,int(cx - prms.rawImSz/2)))
+		hEn = min(h, int(hSt + prms.rawImSz))
+		wEn = min(w, int(wSt + prms.rawImSz))
+		imSave = np.zeros((prms.rawImSz, prms.rawImSz,3)).astype(np.uint8)
+		hL, wL  = hEn - hSt, wEn - wSt
+		#print hSt, hEn, wSt, wEn
+		imSave[0:hL, 0:wL,:] =  im[hSt:hEn, wSt:wEn, :] 
+		#Save the image
+		dirName, _ = osp.split(outNames[i])
+		sp._mkdir(dirName)
+		scm.imsave(outNames[i], imSave)
+
 class StreetFolder(object):
 	'''
 		prefix: prefix.jpg, prefix.txt define the corresponding image and lbl file
@@ -289,33 +312,16 @@ class StreetFolder(object):
 
 	#crop and save images - that makes it faster to read for training nets
 	def save_cropped_images(self):
-		for p in self.prefixList_:
-		inName    = osp.join(rootFolder, p + '.jpg')
-		outName   = 'l-%d/im%04d.jpg' % (lCount, imCount % int(lMax))
-		imKeys[p] = outName
-		outName   = osp.join(svFolder, outName)
-		inList.append(inName)
-		outList.append(outName)
-		if g.data[i].align is not None:
-			crpList.append(g.data[i].align.loc)
-		else:
-			crpList.append(None)
-
-		#Increment the counters
-		imCount = imCount + 1
-		lCount = int(np.floor(imCount/lMax))
-
-		if (imCount > lMax and (imCount % lMax)==0):
+		for i, p in enumerate(self.prefixList_):
+			if np.mod(i,1000)==1:
+				print(i)
+			inName    = osp.join(self.dirName_, p + '.jpg')
+			outName   = osp.join(svFolder, self._idx2cropname(p))
 			#Save the image
-			print (folderId, imCount)
-			if isParallel:
-				inArgs.append([prms, inList, outList, crpList, isForceWrite])
-			else:
-				_write_im_v2(prms, inList, outList, crpList, isForceWrite)
-
+			saverite_im_v2(prms, inList, outList, crpList, isForceWrite)
 
 	def _idx2cropname(self, idx):
-		lNum  = idx/1000
+		lNum  = int(idx/1000)
 		imNum = np.mod(idx, 1000)
 		name  = 'l-%d/im%04d.jpg' % (lNum, imNum) 
 
