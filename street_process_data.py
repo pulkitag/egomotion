@@ -287,3 +287,38 @@ class StreetFolder(object):
 		print ('SAVING to %s' % self.paths_.targetGrps)
 		pickle.dump({'groups': grps}, open(self.paths_.targetGrps, 'w'))	
 
+	#crop and save images - that makes it faster to read for training nets
+	def save_cropped_images(self):
+		for p in self.prefixList_:
+		inName    = osp.join(rootFolder, p + '.jpg')
+		outName   = 'l-%d/im%04d.jpg' % (lCount, imCount % int(lMax))
+		imKeys[p] = outName
+		outName   = osp.join(svFolder, outName)
+		inList.append(inName)
+		outList.append(outName)
+		if g.data[i].align is not None:
+			crpList.append(g.data[i].align.loc)
+		else:
+			crpList.append(None)
+
+		#Increment the counters
+		imCount = imCount + 1
+		lCount = int(np.floor(imCount/lMax))
+
+		if (imCount > lMax and (imCount % lMax)==0):
+			#Save the image
+			print (folderId, imCount)
+			if isParallel:
+				inArgs.append([prms, inList, outList, crpList, isForceWrite])
+			else:
+				_write_im_v2(prms, inList, outList, crpList, isForceWrite)
+
+
+	def _idx2cropname(self, idx):
+		lNum  = idx/1000
+		imNum = np.mod(idx, 1000)
+		name  = 'l-%d/im%04d.jpg' % (lNum, imNum) 
+
+	def get_cropped_imname(self, prefix):
+		idx = self.prefixList_.index(prefix)
+		return self._idx2cropname(idx)
