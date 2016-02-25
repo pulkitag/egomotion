@@ -5,6 +5,8 @@ from os import path as osp
 import copy
 import other_utils as ou
 import socket
+import numpy as np
+import pdb
 
 def get_config_paths():
 	hostName = socket.gethostname()
@@ -134,8 +136,8 @@ class StreetGroup(object):
 		grp.folderId = folderId
 		grp.gid      = gId
 		for i,p in enumerate(prefix):
-			bsName = osp.basename(lbNames[i])
-			assert bsName == p, bsName
+			bsName = osp.basename(lbNames[i]).split('.')[0]
+			assert bsName == p, 'bsName:%s, p: %s'% (bsName,p)
 			grp.data.append(StreetLabel.from_file(lbNames[i]))
 		self.grp = grp
 
@@ -183,6 +185,10 @@ class StreetFolder(object):
 		self.paths_.dr = 'tmp/'
 		self.paths_.prefix     = osp.join(self.paths_.dr, 'prefix.pkl')
 		self.paths_.prePerGrp  = osp.join(self.paths_.dr, 'prePerGrp.pkl')
+		#List of targetgroups in ordered format - necessary as ordering matters
+		#ordering can be used to split the data into train/val/test as points
+		#closer in the ordering are physically close to each other
+		self.paths_.targetGrpList = osp.join(self.paths_.dr, 'targetGrpList.pkl')
 		self.paths_.targetGrps = osp.join(self.paths_.dr, 'targetGrps.pkl')
 
 
@@ -208,8 +214,9 @@ class StreetFolder(object):
 		'''
 		if not forceCompute and osp.exists(self.paths_.prefix):
 			dat = pickle.load(open(self.paths_.prefix,'r'))
-			self.prefixList_ = dat['prefixStr']	
-		print ('Computing prefixes for folderid %s', self.id_)	
+			self.prefixList_ = dat['prefixStr']
+			return	
+		print ('Computing prefixes for folderid %s' % self.id_)	
 		self._save_prefixes()	
 		self._read_prefixes_from_file(forceCompute=False)
 
@@ -218,20 +225,30 @@ class StreetFolder(object):
 	def get_prefixes(self):
 		return copy.deepcopy(self.prefixList_)
 
+	#
+	def get_im_label_files(self):
+		imFiles = [osp.join(self.dirName_, '%s.jpg') % p for p in self.prefixList_]
+		lbFiles = [osp.join(self.dirName_, '%s.txt') % p for p in self.prefixList_]
+		return imFiles, lbFiles
 
 	#Save group of images that look at the same target point. 	
 	def _save_target_group_counts(self):
 		grps = {}
 		prev     = None
 		count    = 0
+		tgtList  = []
 		for (i,p) in enumerate(self.prefixList_):	
 			_,_,_,grp = p.split('_')
+			if i == 0:
+				prev = grp
+			count += 1
 			if not(grp == prev):
+				tgtList.append(prev)
 				grps[prev]= count
 				prev  = grp
 				count = 0
-		pickle.dump(grps, open(self.paths_.grpCount, 'w'))
-
+		pickle.dump(grps, open(self.paths_.prePerGrp, 'w'))
+		pickle.dump({'grpList': tgtList}, open(self.paths_.targetGrpList, 'w'))
 
 	#get all the target group counts
 	def get_num_prefix_per_target_group(self, forceCompute=False):
@@ -241,13 +258,11 @@ class StreetFolder(object):
 		self._save_target_group_counts()
 		return self.get_num_prefix_per_target_group()
 
-	#
-	def get_im_label_files(self):
-		imFiles = [osp.join(self.dirName_, '%s.jpg') % p for p in self.prefixList_]
-		lbFiles = [osp.join(self.dirName_, '%s.txt') % p for p in self.prefixList_]
-		return imFiles, lbFiles
-
-	
+	#ordered list of groups
+	def get_group_list(self):
+		data = pickle.load(open(self.paths_.targetGrpList, 'r'))
+		return data['grpList']	
+		
 	#save the target group data
 	def _save_target_groups(self):
 		imNames, lbNames = self.get_im_label_files()
@@ -256,6 +271,14 @@ class StreetFolder(object):
 		prevCount = 0
 		for gk, numPrefix in preCountPerGrp.iteritems():
 			st, en = prevCount, prevCount + numPrefix
-			grps[gk] = StreetGrp(folderId, gf, self.prefixList_[st:en], lbFileNames[st:en])
+			try:
+				grps[gk] = StreetGroup(self.id_, gk, self.prefixList_[st:en], lbNames[st:en])
+			except:
+				print ('#### ERROR Encountered #####')
+				print (gk, st, en)
+				print (self.prefixList_[st:en])
+				pdb.set_trace()
+			prevCount += numPrefix
+		print ('SAVING to %s' % self.paths_.targetGrps)
 		pickle.dump({'groups': grps}, open(self.paths_.targetGrps, 'w'))	
 

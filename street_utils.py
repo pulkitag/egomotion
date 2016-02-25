@@ -215,4 +215,3 @@ def prefix2imname_geo(prms, prefixes):
 	elif prms.geoFence in ['dc-v2', 'cities-v1']:
 		raise Exception('Doesnot work for %s', prms.geoFence)
 	return imNames
-			
