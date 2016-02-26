@@ -203,10 +203,12 @@ class StreetLabel(object):
 		pass
 
 
- 
-
 class StreetGroup(object):
-	def __init__(self, folderId, gId, prefix, lbNames):
+	def __init__(self, grp=edict()):
+		self.grp = copy.deepcopy(grp)
+
+	@classmethod
+	def from_raw(cls, folderId, gId, prefix, lbNames):
 		grp = edict()
 		grp.num  = len(prefix)
 		grp.prefix   = prefix
@@ -217,7 +219,7 @@ class StreetGroup(object):
 			bsName = osp.basename(lbNames[i]).split('.')[0]
 			assert bsName == p, 'bsName:%s, p: %s'% (bsName,p)
 			grp.data.append(StreetLabel.from_file(lbNames[i]))
-		self.grp = grp
+		return cls(grp)
 
 	def distance_from_other(self, grp2):
 		return get_distance_between_groups(self.grp, grp2.grp)
@@ -232,8 +234,6 @@ class StreetGroup(object):
 		for d in self.grp.data:
 			grpDict['data'] = d.label
 		return grpDict
-
-
 
 
 class StreetFolder(object):
@@ -334,12 +334,12 @@ class StreetFolder(object):
 			_,_,_,grp = p.split('_')
 			if i == 0:
 				prev = grp
-			count += 1
 			if not(grp == prev):
 				tgtList.append(prev)
 				grps[prev]= count
 				prev  = grp
 				count = 0
+			count += 1
 		pickle.dump(grps, open(self.paths_.prePerGrp, 'w'))
 		pickle.dump({'grpList': tgtList}, open(self.paths_.targetGrpList, 'w'))
 
@@ -361,11 +361,13 @@ class StreetFolder(object):
 		imNames, lbNames = self.get_im_label_files()
 		preCountPerGrp   = self.get_num_prefix_per_target_group()
 		grps  = edict()
+		grpKeys          = self.get_target_group_list()
 		prevCount = 0
-		for gk, numPrefix in preCountPerGrp.iteritems():
-			st, en = prevCount, prevCount + numPrefix
+		for gk in grpKeys:
+			numPrefix = preCountPerGrp[gk] 
+			st, en    = prevCount, prevCount + numPrefix
 			try:
-				grps[gk] = StreetGroup(self.id_, gk, self.prefixList_[st:en], lbNames[st:en])
+				grps[gk] = StreetGroup.from_raw(self.id_, gk, self.prefixList_[st:en], lbNames[st:en])
 			except:
 				print ('#### ERROR Encountered #####')
 				print (gk, st, en)
@@ -449,6 +451,6 @@ class StreetFolder(object):
 		pickle.dump({'setKeys': setKeys, 'splitPrms': self.splitPrms_},
                open(self.paths_.trainvalSplit, 'w')) 
 		for s in ['train', 'val', 'test']:
-			sGroups = [grps[gk] for gk in setKeys[s]]
+			sGroups = [grps[gk].as_dict() for gk in setKeys[s]]
 			pickle.dump({'groups': sGroups}, open(self.paths_.grpSplits[s], 'w')) 	
 		
