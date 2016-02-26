@@ -91,6 +91,28 @@ def prune_groups(grps, gList1, gList2, minDist):
 	return gListTmp
 	
 
+##
+#Geo distance calculations
+class GeoCoordinate(object):
+	def __init__(self, latitude, longitude, z=0):
+		#In radians
+		self.lat_  = np.pi * latitude/180.
+		self.long_ = np.pi * longitude/180.
+		self.z_    = z
+		#in meters
+		self.earthRadius = 6371.0088 * 1000
+
+	def get_xyz(self):
+		#Approximate xyz coordinates in meters
+		y = self.earthRadius * self.lat_
+		x = self.earthRadius * self.long_ * math.acos(self.lat_)
+		return x, y, self.z_
+
+	def get_xy(self):
+		x, y, z = self.get_xyz()
+		return x, y
+
+
 #Mantains a list of folders that have been processed
 #and provides a id for folder path
 class FolderStore(object):
@@ -426,10 +448,11 @@ class StreetFolder(object):
 		lastTrainGrp = grps[gKeys[nTrn]]
 		print ('Determining validation groups')
 		for n in range(firstValIdx, N):
-			tDist = get_distance_between_groups(last.grp, grps[gKeys[n]].grp)
+			tDist = get_distance_between_groups(lastTrainGrp.grp, grps[gKeys[n]].grp)
 			print (tDist)
 			if tDist > sPrms.minDist:
 				break
+		firstValIdx = n+1
 		trnKeys = [gKeys[i] for i in  range(0, nTrn)] 
 		valKeys = [gKeys[i] for i in  range(firstValIdx, N)]
 		print ('Num-Train: %d, Num-Val: %d' % 
