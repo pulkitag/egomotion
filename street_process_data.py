@@ -447,7 +447,7 @@ class StreetFolder(object):
            (len(setKeys['train']), len(setKeys['val']), len(setKeys['test'])))
 		#Save the split keys
 		pickle.dump({'setKeys': setKeys, 'splitPrms': self.splitPrms_},
-               open(self.paths_.trainvalSplit)) 
+               open(self.paths_.trainvalSplit, 'w')) 
 		for s in ['train', 'val', 'test']:
 			sGroups = [grps[gk] for gk in setKeys[s]]
 			pickle.dump({'groups': sGroups}, open(self.paths_.grpSplits[s], 'w')) 	
