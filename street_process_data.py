@@ -383,9 +383,27 @@ class StreetFolder(object):
 		grps  = self.get_target_groups()
 		gKeys = self.get_target_group_list()
 		N     = len(gKeys)
-		nTrn  = int(np.floor((sPrms.trnPct - 2) * N))
-		last  = grps[nTrn]
-		for range(nTrn+1, N):
-			tDist = get_distance_between_groups(last, grps[g
+		nTrn  = int(np.floor((sPrms.trnPct) * N))
+		last  = grps[gKeys[nTrn]]
+		print ('Determining validation groups')
+		for n in range(nTrn+1, N):
+			tDist = get_distance_between_groups(last, grps[gKeys[n])
+			if tDist > sPrms.minDist:
+				break
+		nVal   = np.int(np.floor(sPrms.valPct * N))
+		trnKeys = [gKeys[i] for i in  range(0, nTrn) 
+		valKeys = [gKeys[i] for i in  range(n, min(N, n + nVal))]
+		print ('Determining test groups')
+		lastVal = n + nVal 
+		last    = grps[gKeys[lastVal]]
+		for n in range(lastVal + 1, N):
+			tDist = get_distance_between_groups(last, grps[gKeys[n])
+			if tDist > sPrms.minDist:
+				break
+		teKeys  = [gKeys[i] for i in range(n, N)]
+		print ('Num-Train: %d, Num-Val: %d, Num-Test: %d' % 
+           (len(trnKeys), len(valKeys), len(teKeys)))
+		#Greedily remove the common groups
+		#train-val, train-test, val-test
 		
 		
