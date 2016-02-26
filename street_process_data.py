@@ -217,7 +217,9 @@ class StreetGroup(object):
 		grp.gid      = gId
 		for i,p in enumerate(prefix):
 			bsName = osp.basename(lbNames[i]).split('.')[0]
+			bsGid  = bsName.split('_')[3]
 			assert bsName == p, 'bsName:%s, p: %s'% (bsName,p)
+			assert bsGid  == gId, 'Group name mismatch: %s, %s' % (bsGid, gid)
 			grp.data.append(StreetLabel.from_file(lbNames[i]))
 		return cls(grp)
 
