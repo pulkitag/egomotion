@@ -8,6 +8,7 @@ import socket
 import numpy as np
 import pdb
 import scipy.misc as scm
+from geopy.distance import vincenty as geodist
 
 def get_config_paths():
 	hostName = socket.gethostname()
@@ -19,7 +20,47 @@ def get_config_paths():
 	pths.folderProc = osp.join(pths.mainDataDr, 'proc2', '%s')
 	pths.cwd = osp.dirname(osp.abspath(__file__))
 	return pths
+
+
+def save_cropped_image_unaligned(inNames, outNames, rawImSz=256, 
+											isForceWrite=False):
+	N = len(inNames)
+	assert N == len(outNames)
+	for i in range(N):
+		if osp.exists(outNames[i]) and not isForceWrite:
+			continue
+		im         = scm.imread(inNames[i])
+		h, w, ch = im.shape
+		cy, cx = h/2, w/2
+		#Crop
+		hSt = min(h, max(0,int(cy - rawImSz/2)))
+		wSt = min(w, max(0,int(cx - rawImSz/2)))
+		hEn = min(h, int(hSt + rawImSz))
+		wEn = min(w, int(wSt + rawImSz))
+		imSave = np.zeros((rawImSz, rawImSz,3)).astype(np.uint8)
+		hL, wL  = hEn - hSt, wEn - wSt
+		#print hSt, hEn, wSt, wEn
+		imSave[0:hL, 0:wL,:] =  im[hSt:hEn, wSt:wEn, :] 
+		#Save the image
+		dirName, _ = osp.split(outNames[i])
+		ou.mkdir(dirName)
+		scm.imsave(outNames[i], imSave)
+
 	
+def get_trainval_split_prms(**kwargs):
+	dArgs = edict()
+	dArgs.trnPct = 85
+	dArgs.valPct = 5
+	dArgs.tePct  = 10
+	assert (dArgs.trnPct + dArgs.valPct + dArgs.tePct == 100)
+	#The minimum distance between groups belonging to two sets
+	#in meters (m)
+	dArgs.minDist = 100
+	dArgs = ou.get_defaults(kwargs, dArgs, True)
+	dArgs.pStr = 'trn%d_val%d_te%d_dist%d' % (dArgs.trnPct, dArgs.valPct,
+                dArgs.tePct, dArgs.minDist)
+	return dArgs	
+
 
 #Mantains a list of folders that have been processed
 #and provides a id for folder path
@@ -134,6 +175,13 @@ class StreetLabel(object):
 		pass
 
 
+def get_distance_between_groups(grp1, grp2):
+	tPt1  = grp1.data[0].pts.target
+	tPt2  = grp2.data[0].pts.target
+	tDist = geodist(tPt1, tPt2).meters
+	return tDist
+	
+
 class StreetGroup(object):
 	def __init__(self, folderId, gId, prefix, lbNames):
 		grp = edict()
@@ -149,8 +197,9 @@ class StreetGroup(object):
 		self.grp = grp
 
 	def distance_from_other(self, grp2):
-		pass
-
+		assert isinstance(grp2, StreetGroup), type(grp2)
+		return get_distance_between_groups(self.grp, grp2.grp)
+	
 	def as_dict(self):
 		grpDict = edict()
 		for k in self.grp.keys():
@@ -163,36 +212,14 @@ class StreetGroup(object):
 		return grpDict
 
 
-def save_cropped_image_unaligned(inNames, outNames, rawImSz=256, 
-											isForceWrite=False):
-	N = len(inNames)
-	assert N == len(outNames)
-	for i in range(N):
-		if osp.exists(outNames[i]) and not isForceWrite:
-			continue
-		im         = scm.imread(inNames[i])
-		h, w, ch = im.shape
-		cy, cx = h/2, w/2
-		#Crop
-		hSt = min(h, max(0,int(cy - rawImSz/2)))
-		wSt = min(w, max(0,int(cx - rawImSz/2)))
-		hEn = min(h, int(hSt + rawImSz))
-		wEn = min(w, int(wSt + rawImSz))
-		imSave = np.zeros((rawImSz, rawImSz,3)).astype(np.uint8)
-		hL, wL  = hEn - hSt, wEn - wSt
-		#print hSt, hEn, wSt, wEn
-		imSave[0:hL, 0:wL,:] =  im[hSt:hEn, wSt:wEn, :] 
-		#Save the image
-		dirName, _ = osp.split(outNames[i])
-		ou.mkdir(dirName)
-		scm.imsave(outNames[i], imSave)
+
 
 class StreetFolder(object):
 	'''
 		prefix: prefix.jpg, prefix.txt define the corresponding image and lbl file
 		target_group: group of images looking at the same target point. 
 	'''
-	def __init__(self, name):
+	def __init__(self, name, splitPrms=None):
 		'''
 			name:  relative path where the raw data in the folder is present
 			svPth: the path where the processed data from the folder should be saved
@@ -206,6 +233,8 @@ class StreetFolder(object):
 		#Prefixes
 		self.prefixList_ = []
 		self._read_prefixes_from_file()
+		if splitPrms is None:
+			self.splitPrms_ = get_trainval_split_prms() 
 
 	#
 	def _paths(self):
@@ -225,6 +254,9 @@ class StreetFolder(object):
 		#path for storing the cropped images
 		self.paths_.crpImStr   = 'imCrop/imSz%s' % '%d'
 		self.paths_.crpImPath  = osp.join(self.paths_.dr, self.paths_.crpImStr)
+		#Split the sets
+		self.paths_.trainvalSplit = 'splits-%s.pkl' % self.splitPrms_.pStr
+
 
 	#Save all prefixes in the folder
 	def _save_prefixes(self):
@@ -293,7 +325,7 @@ class StreetFolder(object):
 		return self.get_num_prefix_per_target_group()
 
 	#ordered list of groups
-	def get_group_list(self):
+	def get_target_group_list(self):
 		data = pickle.load(open(self.paths_.targetGrpList, 'r'))
 		return data['grpList']	
 		
@@ -315,6 +347,11 @@ class StreetFolder(object):
 			prevCount += numPrefix
 		print ('SAVING to %s' % self.paths_.targetGrps)
 		pickle.dump({'groups': grps}, open(self.paths_.targetGrps, 'w'))	
+
+	#get groups
+	def get_target_groups(self):
+		dat = pickle.load(open(self.paths_.targetGrps, 'r'))
+		return dat['groups']		
 
 	#crop and save images - that makes it faster to read for training nets
 	def save_cropped_images(self, imSz=256, isForceWrite=False):
@@ -339,3 +376,16 @@ class StreetFolder(object):
 	def get_cropped_imname(self, prefix):
 		idx = self.prefixList_.index(prefix)
 		return self._idx2cropname(idx)
+
+	#Split into train/test/val
+	def split_sets():
+		sPrms = self.splitPrms_
+		grps  = self.get_target_groups()
+		gKeys = self.get_target_group_list()
+		N     = len(gKeys)
+		nTrn  = int(np.floor((sPrms.trnPct - 2) * N))
+		last  = grps[nTrn]
+		for range(nTrn+1, N):
+			tDist = get_distance_between_groups(last, grps[g
+		
+		
