@@ -182,6 +182,25 @@ def get_distance_between_groups(grp1, grp2):
 	tDist = geodist(tPt1, tPt2).meters
 	return tDist
 	
+def prune_groups(grps, gList1, gList2, minDist):
+	'''
+		grps  : a dict containing the group data
+		gList1: a list of group keys
+		gList2: a list of group keys
+		Remove all keys from gList2 that are less than minDist
+		from groups in gList1
+	'''
+	badList = []
+	for i1, gk1 in enumerate(gList1):
+		if np.mod(i1,1000)==1:
+			print i1, len(badList)
+		for gk2 in gList2:
+			tDist = get_distance_between_groups(grps[gk1].grp, grps[gk2].grp)
+			if tDist < minDist:
+				badList.append(gk2)
+	pruneList = [g for g in gk2 if g not in badList]
+	return pruneList
+	 
 
 class StreetGroup(object):
 	def __init__(self, folderId, gId, prefix, lbNames):
@@ -257,6 +276,10 @@ class StreetFolder(object):
 		#Split the sets
 		self.paths_.trainvalSplit = osp.join(self.paths_.dr, 
                      'splits-%s.pkl' % self.splitPrms_.pStr)
+		self.paths_.grpSplits  = edict()
+		for s in ['train', 'val', 'test']:
+			self.paths_.grpSplits[s]  = osp.join(self.paths_.dr, 
+											 'groups_%s_%s.pkl' % (s, self.splitPrms_.pStr))
 
 
 	#Save all prefixes in the folder
@@ -409,5 +432,18 @@ class StreetFolder(object):
            (len(trnKeys), len(valKeys), len(teKeys)))
 		#Greedily remove the common groups
 		#train-val, train-test, val-test
-		
+		print ('Pruning validation keys')
+		setKeys = edict()
+		valKeysPrune = prune_groups(grps, trnKeys, valKeys, sPrms.minDist)
+		print ('Pruning test keys')
+		teKeysPrune  = prune_groups(grps, valKeysPrune, teKeys, sPrms.minDist)
+		print ('Pruning test keys, phase 2')
+		teKeysPrune  = prune_groups(grps, trnKeys, teKeysPrune, sPrms.minDist)
+		print ('Num-Train: %d, Num-Val: %d, Num-Test: %d' % 
+           (len(trnKeys), len(valKeysPrune), len(teKeysPrune)))
+		pickle.dump({'trnKeys': trnKeys, 'valKeys': valKeysPrune, 
+         'teKeys': teKeysPrune, 'splitPrms': self.splitPrms_},
+          open(self.paths_.trainvalSplit)) 
+		for s in ['train', 'val', 'test']:
+			sGroups = 	
 		
