@@ -198,7 +198,7 @@ def prune_groups(grps, gList1, gList2, minDist):
 			tDist = get_distance_between_groups(grps[gk1].grp, grps[gk2].grp)
 			if tDist < minDist:
 				badList.append(gk2)
-	pruneList = [g for g in gk2 if g not in badList]
+	pruneList = [g for g in gList2 if g not in badList]
 	return pruneList
 	 
 
@@ -434,16 +434,18 @@ class StreetFolder(object):
 		#train-val, train-test, val-test
 		print ('Pruning validation keys')
 		setKeys = edict()
-		valKeysPrune = prune_groups(grps, trnKeys, valKeys, sPrms.minDist)
+		setKeys['train'] = trnKeys
+		setKeys['val']   = prune_groups(grps, trnKeys, valKeys, sPrms.minDist)
 		print ('Pruning test keys')
-		teKeysPrune  = prune_groups(grps, valKeysPrune, teKeys, sPrms.minDist)
+		setKeys['test']  = prune_groups(grps, setKeys['val'], teKeys, sPrms.minDist)
 		print ('Pruning test keys, phase 2')
-		teKeysPrune  = prune_groups(grps, trnKeys, teKeysPrune, sPrms.minDist)
+		setKeys['test'] = prune_groups(grps, trnKeys, setKeys['test'], sPrms.minDist)
 		print ('Num-Train: %d, Num-Val: %d, Num-Test: %d' % 
-           (len(trnKeys), len(valKeysPrune), len(teKeysPrune)))
-		pickle.dump({'trnKeys': trnKeys, 'valKeys': valKeysPrune, 
-         'teKeys': teKeysPrune, 'splitPrms': self.splitPrms_},
-          open(self.paths_.trainvalSplit)) 
+           (len(setKeys['train']), len(setKeys['val']), len(setKeys['test'])))
+		#Save the split keys
+		pickle.dump({'setKeys': setKeys, 'splitPrms': self.splitPrms_},
+               open(self.paths_.trainvalSplit)) 
 		for s in ['train', 'val', 'test']:
-			sGroups = 	
+			sGroups = [grps[gk] for gk in setKeys[s]]
+			pickle.dump({'groups': sGroups}, open(self.paths_.grpSplits[s], 'w')) 	
 		
