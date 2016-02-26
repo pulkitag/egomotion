@@ -197,7 +197,6 @@ class StreetGroup(object):
 		self.grp = grp
 
 	def distance_from_other(self, grp2):
-		assert isinstance(grp2, StreetGroup), type(grp2)
 		return get_distance_between_groups(self.grp, grp2.grp)
 	
 	def as_dict(self):
@@ -228,13 +227,13 @@ class StreetFolder(object):
 		fStore        = FolderStore('streetview')
 		self.id_      = fStore.get_id(name)
 		self.name_    = name
+		if splitPrms is None:
+			self.splitPrms_ = get_trainval_split_prms() 
 		#folder paths
 		self._paths()
 		#Prefixes
 		self.prefixList_ = []
 		self._read_prefixes_from_file()
-		if splitPrms is None:
-			self.splitPrms_ = get_trainval_split_prms() 
 
 	#
 	def _paths(self):
@@ -255,7 +254,8 @@ class StreetFolder(object):
 		self.paths_.crpImStr   = 'imCrop/imSz%s' % '%d'
 		self.paths_.crpImPath  = osp.join(self.paths_.dr, self.paths_.crpImStr)
 		#Split the sets
-		self.paths_.trainvalSplit = 'splits-%s.pkl' % self.splitPrms_.pStr
+		self.paths_.trainvalSplit = osp.join(self.paths_.dr, 
+                     'splits-%s.pkl' % self.splitPrms_.pStr)
 
 
 	#Save all prefixes in the folder
@@ -378,26 +378,28 @@ class StreetFolder(object):
 		return self._idx2cropname(idx)
 
 	#Split into train/test/val
-	def split_sets():
+	def split_trainval_sets(self, grps=None):
 		sPrms = self.splitPrms_
-		grps  = self.get_target_groups()
+		print ('Reading Groups')
+		if grps is None:
+			grps  = self.get_target_groups()
 		gKeys = self.get_target_group_list()
 		N     = len(gKeys)
-		nTrn  = int(np.floor((sPrms.trnPct) * N))
+		nTrn  = int(np.floor((sPrms.trnPct/100.0 * N)))
 		last  = grps[gKeys[nTrn]]
 		print ('Determining validation groups')
 		for n in range(nTrn+1, N):
-			tDist = get_distance_between_groups(last, grps[gKeys[n])
+			tDist = get_distance_between_groups(last.grp, grps[gKeys[n]].grp)
 			if tDist > sPrms.minDist:
 				break
-		nVal   = np.int(np.floor(sPrms.valPct * N))
-		trnKeys = [gKeys[i] for i in  range(0, nTrn) 
+		nVal   = np.int(np.floor(sPrms.valPct/100.0 * N))
+		trnKeys = [gKeys[i] for i in  range(0, nTrn)] 
 		valKeys = [gKeys[i] for i in  range(n, min(N, n + nVal))]
 		print ('Determining test groups')
 		lastVal = n + nVal 
 		last    = grps[gKeys[lastVal]]
 		for n in range(lastVal + 1, N):
-			tDist = get_distance_between_groups(last, grps[gKeys[n])
+			tDist = get_distance_between_groups(last.grp, grps[gKeys[n]].grp)
 			if tDist > sPrms.minDist:
 				break
 		teKeys  = [gKeys[i] for i in range(n, N)]
