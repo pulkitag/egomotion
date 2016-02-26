@@ -208,11 +208,10 @@ class StreetGroup(object):
 		self.grp = copy.deepcopy(grp)
 
 	@classmethod
-	def from_raw(cls, folderId, gId, prefix, lbNames, crpImNames):
+	def from_raw(cls, folderId, gId, prefix, lbNames):
 		grp = edict()
 		grp.num  = len(prefix)
 		grp.prefix   = prefix
-		grp.crpImNames    = crpImNames
 		grp.data     = []
 		grp.folderId = folderId
 		grp.gid      = gId
@@ -369,10 +368,8 @@ class StreetFolder(object):
 		for gk in grpKeys:
 			numPrefix = preCountPerGrp[gk] 
 			st, en    = prevCount, prevCount + numPrefix
-			cropImNames = [self._idx2cropname for idx in range(st, en)]
 			try:
-				grps[gk] = StreetGroup.from_raw(self.id_, gk,
-               self.prefixList_[st:en], lbNames[st:en], cropImNames)
+				grps[gk] = StreetGroup.from_raw(self.id_, gk, self.prefixList_[st:en], lbNames[st:en])
 			except:
 				print ('#### ERROR Encountered #####')
 				print (gk, st, en)
@@ -458,17 +455,4 @@ class StreetFolder(object):
 		for s in ['train', 'val', 'test']:
 			sGroups = [grps[gk].as_dict() for gk in setKeys[s]]
 			pickle.dump({'groups': sGroups}, open(self.paths_.grpSplits[s], 'w')) 	
-	
-
-def save_processed_data(folderName):
-	sf = sFolder.StreetFolder(FolderName)		
-	print ('Saving groups for %s' % folderName)
-	sf._save_target_groups()
-	print ('Saving splits for %s' % folderName)
-	sf.splt_trainval_sets()
-
-
-def save_processed_data_multiple():
-	fNames = ['0001', '0002', '0003', '0004', '0005']
-	inArgs = [osp.join('raw', f) for f in fNames]
-	
+		
