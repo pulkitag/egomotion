@@ -9,6 +9,7 @@ import numpy as np
 import pdb
 import scipy.misc as scm
 from geopy.distance import vincenty as geodist
+from multiprocessing import Pool
 
 def get_config_paths():
 	hostName = socket.gethostname()
@@ -375,7 +376,7 @@ class StreetFolder(object):
                self.prefixList_[st:en], lbNames[st:en], cropImNames)
 			except:
 				print ('#### ERROR Encountered #####')
-				print (gk, st, en)
+				print (self.id_, gk, st, en)
 				print (self.prefixList_[st:en])
 				pdb.set_trace()
 			prevCount += numPrefix
@@ -461,7 +462,7 @@ class StreetFolder(object):
 	
 
 def save_processed_data(folderName):
-	sf = sFolder.StreetFolder(FolderName)		
+	sf = StreetFolder(folderName)		
 	print ('Saving groups for %s' % folderName)
 	sf._save_target_groups()
 	print ('Saving splits for %s' % folderName)
@@ -471,4 +472,9 @@ def save_processed_data(folderName):
 def save_processed_data_multiple():
 	fNames = ['0001', '0002', '0003', '0004', '0005']
 	inArgs = [osp.join('raw', f) for f in fNames]
-	
+	for f in inArgs:
+		sf = StreetFolder(f)		
+	pool   = Pool(processes=6)
+	jobs   = pool.map_async(save_processed_data, inArgs)
+	res    = jobs.get()
+	del pool	
