@@ -62,6 +62,34 @@ def get_trainval_split_prms(**kwargs):
 	return dArgs	
 
 
+def get_distance_between_groups(grp1, grp2):
+	lb1, lb2 = grp1.data[0], grp2.data[0]
+	tPt1  = lb1.label.pts.target
+	tPt2  = lb2.label.pts.target
+	tDist = geodist(tPt1, tPt2).meters
+	return tDist
+	
+def prune_groups(grps, gList1, gList2, minDist):
+	'''
+		grps  : a dict containing the group data
+		gList1: a list of group keys
+		gList2: a list of group keys
+		Remove all keys from gList2 that are less than minDist
+		from groups in gList1
+	'''
+	badList  = []
+	gListTmp = copy.deepcopy(gList2) 
+	for i1, gk1 in enumerate(gList1):
+		if np.mod(i1,1000)==1:
+			print i1, len(badList)
+		for gk2 in gListTmp:
+			tDist = get_distance_between_groups(grps[gk1].grp, grps[gk2].grp)
+			if tDist < minDist:
+				badList.append(gk2)
+		gListTmp = [g for g in gListTmp if g not in badList]
+	return gListTmp
+	
+
 #Mantains a list of folders that have been processed
 #and provides a id for folder path
 class FolderStore(object):
@@ -175,32 +203,7 @@ class StreetLabel(object):
 		pass
 
 
-def get_distance_between_groups(grp1, grp2):
-	lb1, lb2 = grp1.data[0], grp2.data[0]
-	tPt1  = lb1.label.pts.target
-	tPt2  = lb2.label.pts.target
-	tDist = geodist(tPt1, tPt2).meters
-	return tDist
-	
-def prune_groups(grps, gList1, gList2, minDist):
-	'''
-		grps  : a dict containing the group data
-		gList1: a list of group keys
-		gList2: a list of group keys
-		Remove all keys from gList2 that are less than minDist
-		from groups in gList1
-	'''
-	badList = []
-	for i1, gk1 in enumerate(gList1):
-		if np.mod(i1,1000)==1:
-			print i1, len(badList)
-		for gk2 in gList2:
-			tDist = get_distance_between_groups(grps[gk1].grp, grps[gk2].grp)
-			if tDist < minDist:
-				badList.append(gk2)
-	pruneList = [g for g in gList2 if g not in badList]
-	return pruneList
-	 
+ 
 
 class StreetGroup(object):
 	def __init__(self, folderId, gId, prefix, lbNames):
