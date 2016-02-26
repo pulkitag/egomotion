@@ -176,8 +176,9 @@ class StreetLabel(object):
 
 
 def get_distance_between_groups(grp1, grp2):
-	tPt1  = grp1.data[0].pts.target
-	tPt2  = grp2.data[0].pts.target
+	lb1, lb2 = grp1.data[0], grp2.data[0]
+	tPt1  = lb1.label.pts.target
+	tPt2  = lb2.label.pts.target
 	tDist = geodist(tPt1, tPt2).meters
 	return tDist
 	
@@ -390,6 +391,7 @@ class StreetFolder(object):
 		print ('Determining validation groups')
 		for n in range(nTrn+1, N):
 			tDist = get_distance_between_groups(last.grp, grps[gKeys[n]].grp)
+			print (tDist)
 			if tDist > sPrms.minDist:
 				break
 		nVal   = np.int(np.floor(sPrms.valPct/100.0 * N))
