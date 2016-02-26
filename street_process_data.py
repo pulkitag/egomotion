@@ -370,7 +370,7 @@ class StreetFolder(object):
 		for gk in grpKeys:
 			numPrefix = preCountPerGrp[gk] 
 			st, en    = prevCount, prevCount + numPrefix
-			cropImNames = [self._idx2cropname for idx in range(st, en)]
+			cropImNames = [self._idx2cropname(idx) for idx in range(st, en)]
 			try:
 				grps[gk] = StreetGroup.from_raw(self.id_, gk,
                self.prefixList_[st:en], lbNames[st:en], cropImNames)
@@ -466,7 +466,7 @@ def save_processed_data(folderName):
 	print ('Saving groups for %s' % folderName)
 	sf._save_target_groups()
 	print ('Saving splits for %s' % folderName)
-	sf.splt_trainval_sets()
+	sf.split_trainval_sets()
 
 
 def save_processed_data_multiple():
