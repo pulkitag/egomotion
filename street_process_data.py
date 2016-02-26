@@ -416,21 +416,28 @@ class StreetFolder(object):
 	def split_trainval_sets(self, grps=None):
 		sPrms = self.splitPrms_
 		print ('Reading Groups')
+		numSafety = 3000
 		if grps is None:
 			grps  = self.get_target_groups()
 		gKeys = self.get_target_group_list()
 		N     = len(gKeys)
-		nTrn  = int(np.floor((sPrms.trnPct/100.0 * N)))
-		last  = grps[gKeys[nTrn]]
+		nTrn  = int(np.floor((sPrms.trnPct/100.0 * (N - numSafety))))
+		firstValIdx  = nTrn + numSafety
+		lastTrainGrp = grps[gKeys[nTrn]]
 		print ('Determining validation groups')
-		for n in range(nTrn+1, N):
+		for n in range(firstValIdx, N):
 			tDist = get_distance_between_groups(last.grp, grps[gKeys[n]].grp)
 			print (tDist)
 			if tDist > sPrms.minDist:
 				break
-		nVal   = np.int(np.floor(sPrms.valPct/100.0 * N))
 		trnKeys = [gKeys[i] for i in  range(0, nTrn)] 
-		valKeys = [gKeys[i] for i in  range(n, min(N, n + nVal))]
+		valKeys = [gKeys[i] for i in  range(firstValIdx, N)]
+		print ('Num-Train: %d, Num-Val: %d' % 
+           (len(trnKeys), len(valKeys)))
+		print ('Pruning validation keys')
+		setKeys['val']   = prune_groups(grps, trnKeys[::-1], valKeys, sPrms.minDist)
+		return
+	
 		print ('Determining test groups')
 		lastVal = n + nVal 
 		last    = grps[gKeys[lastVal]]
@@ -463,8 +470,8 @@ class StreetFolder(object):
 
 def save_processed_data(folderName):
 	sf = StreetFolder(folderName)		
-	print ('Saving groups for %s' % folderName)
-	sf._save_target_groups()
+	#print ('Saving groups for %s' % folderName)
+	#sf._save_target_groups()
 	print ('Saving splits for %s' % folderName)
 	sf.split_trainval_sets()
 
