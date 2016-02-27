@@ -311,6 +311,23 @@ class StreetGroupList(object):
 			xy[i,:] = tPt.get_xy()
 		return xy	
 
+	#plot the x,y points
+	def plot_xy(self):
+		xy = self.get_target_xy()
+		xMin, yMin = np.min(xy,0)
+		xMax, yMax = np.max(xy,0)
+		xy  = xy - np.array([xMin, yMin])
+		xy  = xy / np.array([xMax - xMin, yMax - yMin])
+		perm       = np.random.permutation(xy.shape[0])
+		perm       = perm[0:int(0.2*perm.shape[0])]
+		plt.ion()
+		fig        = plt.figure()
+		ax         = fig.add_subplot(111)
+		for i in perm:
+			ax.plot(xy[i,0], xy[i,1], '.r')
+		plt.draw()
+		plt.show()	
+	
 	#grid x,y locations
 	def grid_xy(self):
 		xy = self.get_target_xy()
@@ -346,8 +363,12 @@ class StreetGroupList(object):
 		if ax is None:
 			fig = plt.figure()
 			ax  = fig.add_subplot(111)
+		mx = np.max(self.gridBinCount)
 		im = self.gridBinCount/np.max(self.gridBinCount)
-		ax.imshow(im, interpolation="nearest")
+		cax = ax.imshow(im, interpolation="nearest", cmap='jet')
+		cbar = fig.colorbar(cax, ticks=np.linspace(0,1,11))
+		cbar.set_ticklabels(mx * np.linspace(0,1,11))
+		plt.draw()
 		print ('Number of groups: %d' % np.sum(self.gridBinCount))
 
 	def _update_grid_count(self, cx, cy, mxCount):
