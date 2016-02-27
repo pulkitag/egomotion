@@ -11,7 +11,6 @@ import scipy.misc as scm
 from geopy.distance import vincenty as geodist
 from multiprocessing import Pool
 import math
-from old_code import street_utils as su
 
 def get_config_paths():
 	hostName = socket.gethostname()
@@ -91,7 +90,26 @@ def prune_groups(grps, gList1, gList2, minDist):
 				badList.append(gk2)
 		gListTmp = [g for g in gListTmp if g not in badList]
 	return gListTmp
-	
+
+##
+#helper functions
+def find_first_false(idx):
+	for i in range(len(idx)):
+		if not idx[i]:
+			return i
+	return None
+
+##
+#Find the bin index
+def find_bin_index(bins, val):
+	idx = find_first_false(val>=bins)
+	if idx==0:
+		print ('WARNING - CHECK THE RANGE OF VALUES - %f was BELOW THE MIN' % val)
+	if idx is None:
+		return len(bins)-2
+	return max(0,idx-1)
+
+
 
 ##
 #Geo distance calculations
@@ -291,12 +309,6 @@ class SteetGroupList(object):
 			xy[i,:] = tPt.get_xy()
 		return xy	
 
-	def _update_grid_count(cx, cy, mxCount):
-		self._gridCount_ += self.binList[cx][cy]
-		breakFlag   = False
-		if self._gridCount_ >= mxCount:
-			breakFlag = True
-		return breakFlag
 	
 	#grid x,y locations
 	def grid_xy(self):
@@ -316,45 +328,57 @@ class SteetGroupList(object):
 			self.binList.append(yList)
 		#Find the bin index of all groups
 		for i, gk in enumerate(self.gKeys):
-			xIdx = su.find_bin_index(xBins, x[i])
-			yIdx = su.find_bin_index(yBins, y[i])
+			xIdx = find_bin_index(xBins, xy[i,0])
+			yIdx = find_bin_index(yBins, xy[i,1])
 			self.binList[xIdx][yIdx].append(gk)
 
+	def _update_grid_count(self, cx, cy, mxCount):
+		self._gridCount_ += len(self.binList[cx][cy])
+		breakFlag   = False
+		if self._gridCount_ >= mxCount:
+			breakFlag = True
+		return breakFlag
+
 	#Divide the group into two halves such that
-	def divide_group_counts(self):
+	def divide_group_counts(self, mxCount):
 		#Slowly prune the groups
 		minY, maxY = 0, 1
 		minX, maxX = 0, 1
+		#Current y and x locations
 		cy,  cx    = 0, 0
-		gCount     = 0
+		self._gridCount_ = 0
 		gBins      = []
-		breakFlag  = False
 		while True:
-			for y in range(minY, maxY):
-				gBins.append((cx, cy))
-				cy += 1
+			for y in range(cy, maxY):
+				gBins.append((cx, y))
+				y += 1
+				breakFlag = self._update_grid_count(cx, y, mxCount)
+				if breakFlag:
+					break
 			if breakFlag:
 				break
-			for x	in range(minX, maxX):
-				gCount += binList[cx][cy]
+			cy = y
+			for x	in range(0, maxX):
 				gBins.append((cx, cy))
 				cx += 1
-				if gCount >= minCount:
-					breakFlag = True
-					break	
+				breakFlag = self._update_grid_count(cx, cy, mxCount)
+				if breakFlag:
+					break
 			if breakFlag:
 				break
-			for y	in range(maxY, minY,-1):
-				gCount += binList[cx][cy]
+			for y	in range(maxY, 0,-1):
 				gBins.append((cx, cy))
 				cy -= 1
-				if gCount >= minCount:
-					breakFlag = True
-					break	
+				breakFlag = self._update_grid_count(cx, cy, mxCount)
+				if breakFlag:
+					break
 			if breakFlag:
 				break
-
-
+			cy = maxY + 1
+			cx = 0
+			maxX += 1
+			maxY += 1
+		return gBins
 
 
 class StreetFolder(object):
