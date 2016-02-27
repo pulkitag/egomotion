@@ -10,6 +10,7 @@ import pdb
 import scipy.misc as scm
 from geopy.distance import vincenty as geodist
 from multiprocessing import Pool
+import math
 
 def get_config_paths():
 	hostName = socket.gethostname()
@@ -101,6 +102,11 @@ class GeoCoordinate(object):
 		self.z_    = z
 		#in meters
 		self.earthRadius = 6371.0088 * 1000
+
+	@classmethod
+	def from_point(cls, pt):
+		la, lo, z = pt
+		return cls(la, lo, z)
 
 	def get_xyz(self):
 		#Approximate xyz coordinates in meters
@@ -260,6 +266,30 @@ class StreetGroup(object):
 		for d in self.grp.data:
 			grpDict['data'] = d.label
 		return grpDict
+
+
+class SteetGroupList(object):
+	def __init__(self):
+		self.grps  = edict()
+		self.gKeys = []
+
+	@classmethod
+	def from_dict(cls, grps, gKeys):
+		self = cls()
+		#self.grps  = copy.deepcopy(grps)
+		#self.gKeys = copy.deepcopy(gKeys)
+		self.grps  = grps
+		self.gKeys = gKeys
+		return self
+
+	#get the x,y point coordinates all the targets
+	def get_target_xy(self):
+		xy = np.zeros((len(self.gKeys),2))
+		for i, gk in enumerate(self.gKeys):	
+			tPt = GeoCoordinate.from_point(self.grps[gk].grp.data[0].label.pts.target)
+			xy[i,:] = tPt.get_xy()
+		return xy	
+
 
 
 class StreetFolder(object):
