@@ -356,6 +356,7 @@ class SteetGroupList(object):
 					break
 			if breakFlag:
 				break
+			cy = maxY
 			for x	in range(0, maxX):
 				gBins.append((cx, cy))
 				breakFlag = self._update_grid_count(cx, cy, mxCount)
