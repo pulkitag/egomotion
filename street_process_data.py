@@ -11,6 +11,8 @@ import scipy.misc as scm
 from geopy.distance import vincenty as geodist
 from multiprocessing import Pool
 import math
+from matplotlib import cm as cmap
+import matplotlib.pyplot as plt
 
 def get_config_paths():
 	hostName = socket.gethostname()
@@ -380,6 +382,17 @@ class SteetGroupList(object):
 			maxY += 1
 		return gBins
 
+	def vis_divided_grid(self, gBins):
+		nX, nY = len(self.binList), len(self.binList[0])
+		im = np.zeros((nY, nX, 3))
+		for i, g in enumerate(gBins):
+			x, y = g	
+			im[y,x,:] = cmap.jet(i)[0:3]
+		plt.ion()
+		plt.imshow(im)
+		plt.show()
+		plt.draw()
+		return im
 
 class StreetFolder(object):
 	'''
