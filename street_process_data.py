@@ -289,7 +289,7 @@ class StreetGroup(object):
 		return grpDict
 
 
-class SteetGroupList(object):
+class StreetGroupList(object):
 	def __init__(self):
 		self.grps  = edict()
 		self.gKeys = []
@@ -311,7 +311,6 @@ class SteetGroupList(object):
 			xy[i,:] = tPt.get_xy()
 		return xy	
 
-	
 	#grid x,y locations
 	def grid_xy(self):
 		xy = self.get_target_xy()
@@ -333,6 +332,23 @@ class SteetGroupList(object):
 			xIdx = find_bin_index(xBins, xy[i,0])
 			yIdx = find_bin_index(yBins, xy[i,1])
 			self.binList[xIdx][yIdx].append(gk)
+		self.grid_count()
+
+	#Count of number of groups in this bin
+	def grid_count(self):
+		nX, nY = len(self.binList), len(self.binList[0])
+		self.gridBinCount = np.zeros((nY, nX))
+		for x in range(nX):
+			for y in range(nY):
+				self.gridBinCount[y, x] = len(self.binList[x][y])
+
+	def plot_grid(self, ax=None):
+		if ax is None:
+			fig = plt.figure()
+			ax  = fig.add_subplot(111)
+		im = self.gridBinCount/np.max(self.gridBinCount)
+		ax.imshow(im, interpolation="nearest")
+		print ('Number of groups: %d' % np.sum(self.gridBinCount))
 
 	def _update_grid_count(self, cx, cy, mxCount):
 		self._gridCount_ += len(self.binList[cx][cy])
@@ -380,19 +396,53 @@ class SteetGroupList(object):
 			cx = 0
 			maxX += 1
 			maxY += 1
-		return gBins
+		#Find the bordering bins
+		bBins = []
+		#Find the bins along the x-axis
+		for x in range(0, cx+2):
+			bBins.append((x, maxY+1))
+		if cx < maxX:
+			for x in range(cx, maxX+1):
+				bBins.append((x, maxY))
+		for y in range(maxY, cy-1, -1):
+			bBins.append((maxX + 1, y))
+		for y in range(cy, -1, -1):
+			bBins.append((maxX, y))
+		return gBins, bBins
 
-	def vis_divided_grid(self, gBins):
+	def vis_divided_grid(self, gBins, bBins):
+		'''
+			gBins: grid bins
+			bBins: chosen bins
+		'''
 		nX, nY = len(self.binList), len(self.binList[0])
+		plt.ion()
+		fig    = plt.figure()
+		ax1     = fig.add_subplot(221)
+		ax2     = fig.add_subplot(222)
+		ax3     = fig.add_subplot(223)
 		im = np.zeros((nY, nX, 3))
+		imBoth = np.zeros((nY, nX, 3))
 		for i, g in enumerate(gBins):
 			x, y = g	
-			im[y,x,:] = cmap.jet(i)[0:3]
-		plt.ion()
-		plt.imshow(im)
+			im[y,x,:] = cmap.jet(int(255*float(i)/len(gBins)))[0:3]
+			imBoth[y,x,:] = cmap.jet(int(255*float(i)/len(gBins)))[0:3]
+		ax1.imshow(im, interpolation="nearest")
+		im2 = np.zeros((nY, nX, 3))
+		for i, g in enumerate(bBins):
+			x, y = g	
+			im2[y,x,:] = 1.0, 1.0, 1.0
+			imBoth[y,x,:] = 1.0, 1.0, 1.0
+		ax2.imshow(im2, interpolation="nearest")
+		ax3.imshow(imBoth, interpolation="nearest")
 		plt.show()
 		plt.draw()
-		return im
+
+def _debug_group_list_div(grps, grpList, mxCount=5000):
+	sgList = StreetGroupList.from_dict(grps, grpList)
+	sgList.grid_xy()
+	div, bdiv = sgList.divide_group_counts(mxCount)
+	sgList.vis_divided_grid(div, bdiv)
 
 class StreetFolder(object):
 	'''
