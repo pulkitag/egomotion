@@ -11,6 +11,7 @@ import scipy.misc as scm
 from geopy.distance import vincenty as geodist
 from multiprocessing import Pool
 import math
+from old_code import street_utils as su
 
 def get_config_paths():
 	hostName = socket.gethostname()
@@ -290,6 +291,13 @@ class SteetGroupList(object):
 			xy[i,:] = tPt.get_xy()
 		return xy	
 
+	def _update_grid_count(cx, cy, mxCount):
+		self._gridCount_ += self.binList[cx][cy]
+		breakFlag   = False
+		if self._gridCount_ >= mxCount:
+			breakFlag = True
+		return breakFlag
+	
 	#grid x,y locations
 	def grid_xy(self):
 		xy = self.get_target_xy()
@@ -297,18 +305,57 @@ class SteetGroupList(object):
 		xMax, yMax = np.max(xy, 0)
 		xLen, yLen = np.ceil(xMax - xMin), np.ceil(yMax - yMin)
 		numX, numY = np.ceil(xLen/100), np.ceil(yLen/100)
-		xBins = np.linspace(xMin, xMax, numX)
-		yBins = np.linspace(yMin, yMax, numY)
+		xBins = np.linspace(xMin, xMax+1, numX)
+		yBins = np.linspace(yMin, yMax+1, numY)
 		#Initialize the lists
-		binList = []
+		self.binList = []
 		for x in xBins:
 			yList = []
 			for y in yBins:	
 				yList.append([])
-			binList.append(yList)
+			self.binList.append(yList)
 		#Find the bin index of all groups
+		for i, gk in enumerate(self.gKeys):
+			xIdx = su.find_bin_index(xBins, x[i])
+			yIdx = su.find_bin_index(yBins, y[i])
+			self.binList[xIdx][yIdx].append(gk)
 
+	#Divide the group into two halves such that
+	def divide_group_counts(self):
 		#Slowly prune the groups
+		minY, maxY = 0, 1
+		minX, maxX = 0, 1
+		cy,  cx    = 0, 0
+		gCount     = 0
+		gBins      = []
+		breakFlag  = False
+		while True:
+			for y in range(minY, maxY):
+				gBins.append((cx, cy))
+				cy += 1
+			if breakFlag:
+				break
+			for x	in range(minX, maxX):
+				gCount += binList[cx][cy]
+				gBins.append((cx, cy))
+				cx += 1
+				if gCount >= minCount:
+					breakFlag = True
+					break	
+			if breakFlag:
+				break
+			for y	in range(maxY, minY,-1):
+				gCount += binList[cx][cy]
+				gBins.append((cx, cy))
+				cy -= 1
+				if gCount >= minCount:
+					breakFlag = True
+					break	
+			if breakFlag:
+				break
+
+
+
 
 class StreetFolder(object):
 	'''
