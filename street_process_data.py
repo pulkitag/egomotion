@@ -349,32 +349,31 @@ class SteetGroupList(object):
 		self._gridCount_ = 0
 		gBins      = []
 		while True:
-			for y in range(cy, maxY):
-				gBins.append((cx, y))
-				y += 1
-				breakFlag = self._update_grid_count(cx, y, mxCount)
+			for cy in range(minY, maxY):
+				gBins.append((cx, cy))
+				breakFlag = self._update_grid_count(cx, cy, mxCount)
 				if breakFlag:
 					break
 			if breakFlag:
 				break
-			cy = y
 			for x	in range(0, maxX):
 				gBins.append((cx, cy))
+				breakFlag = self._update_grid_count(cx, cy, mxCount)
 				cx += 1
-				breakFlag = self._update_grid_count(cx, cy, mxCount)
 				if breakFlag:
 					break
 			if breakFlag:
 				break
-			for y	in range(maxY, 0,-1):
+			for y	in range(maxY, -1,-1):
 				gBins.append((cx, cy))
-				cy -= 1
 				breakFlag = self._update_grid_count(cx, cy, mxCount)
+				cy -= 1
 				if breakFlag:
 					break
 			if breakFlag:
 				break
-			cy = maxY + 1
+			cy   = maxY + 1
+			minY = cy
 			cx = 0
 			maxX += 1
 			maxY += 1
