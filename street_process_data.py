@@ -290,7 +290,25 @@ class SteetGroupList(object):
 			xy[i,:] = tPt.get_xy()
 		return xy	
 
+	#grid x,y locations
+	def grid_xy(self):
+		xy = self.get_target_xy()
+		xMin, yMin = np.min(xy, 0)
+		xMax, yMax = np.max(xy, 0)
+		xLen, yLen = np.ceil(xMax - xMin), np.ceil(yMax - yMin)
+		numX, numY = np.ceil(xLen/100), np.ceil(yLen/100)
+		xBins = np.linspace(xMin, xMax, numX)
+		yBins = np.linspace(yMin, yMax, numY)
+		#Initialize the lists
+		binList = []
+		for x in xBins:
+			yList = []
+			for y in yBins:	
+				yList.append([])
+			binList.append(yList)
+		#Find the bin index of all groups
 
+		#Slowly prune the groups
 
 class StreetFolder(object):
 	'''
