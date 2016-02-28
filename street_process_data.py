@@ -397,10 +397,13 @@ class StreetGroupList(object):
 		self._gridCount_ = 0
 		#Select the groups
 		gBins      = []
+		mxX = 1
 		for cy in range(1, nY-1):
 			for cx in range(1, nX-1):
 				gBins.append((cx, cy))
 				breakFlag = self._update_grid_count(cx, cy, mxCount)
+				if cx > mxX:
+					mxX = cx
 				if breakFlag:
 					break
 			if breakFlag:
@@ -408,9 +411,9 @@ class StreetGroupList(object):
 		#Select a border of groups so that groups in two
 		#sets are seperated by 100m. 
 		bBins = []
-		for x in range(cx+1, nX-1):
+		for x in range(cx+1, min(mxX + 2,nX-1)):
 			bBins.append((x, cy))
-		for x in range(0, cx+1):
+		for x in range(0, min(nX-1,cx+2)):
 			bBins.append((x, cy+1))
 		#Include the top and bottom border
 		for x in range(nX):
