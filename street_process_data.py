@@ -351,6 +351,11 @@ class StreetGroupList(object):
 			self.binList[xIdx][yIdx].append(gk)
 		self.grid_count()
 
+	#get groups present in a certain grid location
+	def get_groups_in_gridxy(self, xy):
+		x, y = xy
+		return copy.deepcopy(self.binList[x][y])
+
 	#Count of number of groups in this bin
 	def grid_count(self):
 		nX, nY = len(self.binList), len(self.binList[0])
@@ -372,6 +377,7 @@ class StreetGroupList(object):
 		print ('Number of groups: %d' % np.sum(self.gridBinCount))
 
 	def _update_grid_count(self, cx, cy, mxCount):
+		print (cx, cy, self._gridCount_)
 		self._gridCount_ += len(self.binList[cx][cy])
 		breakFlag   = False
 		if self._gridCount_ >= mxCount:
@@ -380,6 +386,7 @@ class StreetGroupList(object):
 
 	#Divide the group into two halves such that
 	def divide_group_counts(self, mxCount):
+		nX, nY = len(self.binList), len(self.binList[0])
 		#Slowly prune the groups
 		minY, maxY = 0, 1
 		minX, maxX = 0, 1
@@ -395,7 +402,7 @@ class StreetGroupList(object):
 					break
 			if breakFlag:
 				break
-			cy = maxY
+			cy = min(nY - 1, maxY)
 			for x	in range(0, maxX):
 				gBins.append((cx, cy))
 				breakFlag = self._update_grid_count(cx, cy, mxCount)
@@ -412,11 +419,11 @@ class StreetGroupList(object):
 					break
 			if breakFlag:
 				break
-			cy   = maxY + 1
+			cy   = min(nY, maxY + 1)
 			minY = cy
 			cx = 0
-			maxX += 1
-			maxY += 1
+			maxX = min(nX, maxX + 1)
+			maxY = min(nY, maxY + 1)
 		#Find the bordering bins
 		bBins = []
 		#Find the bins along the x-axis
@@ -430,6 +437,20 @@ class StreetGroupList(object):
 		for y in range(cy, -1, -1):
 			bBins.append((maxX, y))
 		return gBins, bBins
+
+	def get_split_groups(self, splitCount):
+		self.grid_xy()
+		gBins, ignoreBins = self.divide_group_counts(splitCount)
+		keys1, keys2 = [], []
+		for g in gBins:
+			keys1.append(self.get_groups_in_gridxy(g))
+		igKeys = []
+		for g in ignoreBins:
+			igKeys.append(self.get_groups_in_gridxy(g))
+		igKeys = igKeys + keys1
+		keys2  = [gk for gk in self.gKeys if gk not in igKeys]
+		return keys1, keys2
+		
 
 	def vis_divided_grid(self, gBins, bBins):
 		'''
@@ -586,7 +607,7 @@ class StreetFolder(object):
 		return data['grpList']	
 		
 	#save the target group data
-	def _save_target_groups(self):
+	def _save_target_groups(self, forceWrite=False):
 		imNames, lbNames = self.get_im_label_files()
 		preCountPerGrp   = self.get_num_prefix_per_target_group()
 		grps  = edict()
@@ -640,13 +661,22 @@ class StreetFolder(object):
 	#Split into train/test/val
 	def split_trainval_sets(self, grps=None):
 		sPrms = self.splitPrms_
-		print ('Reading Groups')
-		numSafety = 3000
 		if grps is None:
+			print ('Reading Groups')
 			grps  = self.get_target_groups()
 		gKeys = self.get_target_group_list()
 		N     = len(gKeys)
-		nTrn  = int(np.floor((sPrms.trnPct/100.0 * (N - numSafety))))
+		nTrn  = int(np.floor((sPrms.trnPct/100.0 * (N))))
+		nVal  = int(np.floor((sPrms.valPct/100.0 * (N))))
+		nTe   = int(np.floor((sPrms.tePct/100.0 * (N))))
+		#Make a list of groups
+		gList = StreetGroupList.from_dict(grps, gKeys)
+		trnKeys, oKeys = gList.get_split_groups(nTrn)
+		print (len(trnKey) + len(oKeys))
+		print ('Num-Train: %d, Num-Others: %d, Total: %d' %
+           len(trnKeys), len(oKeys), len(gKeys))
+		return	
+
 		firstValIdx  = nTrn + numSafety
 		lastTrainGrp = grps[gKeys[nTrn]]
 		print ('Determining validation groups')
@@ -698,7 +728,7 @@ def save_processed_data(folderName):
 	sf = StreetFolder(folderName)		
 	#print ('Saving groups for %s' % folderName)
 	#sf._save_target_groups()
-	print ('Saving splits for %s' % folderName)
+	#print ('Saving splits for %s' % folderName)
 	sf.split_trainval_sets()
 
 
