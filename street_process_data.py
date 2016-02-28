@@ -13,18 +13,11 @@ from multiprocessing import Pool
 import math
 from matplotlib import cm as cmap
 import matplotlib.pyplot as plt
+import street_config as cfg
+import street_exp_v2 as sev2
 
 def get_config_paths():
-	hostName = socket.gethostname()
-	pths     = edict()
-	if 'ivb' in hostName:
-		pass
-	else:
-		pths.mainDataDr = '/data0/pulkitag/data_sets/streetview'
-	pths.folderProc = osp.join(pths.mainDataDr, 'proc2', '%s')
-	pths.cwd = osp.dirname(osp.abspath(__file__))
-	return pths
-
+	return cfg.pths
 
 def save_cropped_image_unaligned(inNames, outNames, rawImSz=256, 
 											isForceWrite=False):
@@ -51,21 +44,6 @@ def save_cropped_image_unaligned(inNames, outNames, rawImSz=256,
 		scm.imsave(outNames[i], imSave)
 
 	
-def get_trainval_split_prms(**kwargs):
-	dArgs = edict()
-	dArgs.trnPct = 85
-	dArgs.valPct = 5
-	dArgs.tePct  = 10
-	assert (dArgs.trnPct + dArgs.valPct + dArgs.tePct == 100)
-	#The minimum distance between groups belonging to two sets
-	#in meters (m)
-	dArgs.minDist = 100
-	dArgs = ou.get_defaults(kwargs, dArgs, True)
-	dArgs.pStr = 'trn%d_val%d_te%d_dist%d' % (dArgs.trnPct, dArgs.valPct,
-                dArgs.tePct, dArgs.minDist)
-	return dArgs	
-
-
 def get_distance_between_groups(grp1, grp2):
 	lb1, lb2 = grp1.data[0], grp2.data[0]
 	tPt1  = lb1.label.pts.target
@@ -424,62 +402,6 @@ class StreetGroupList(object):
 			bBins.append((0,y))
 			bBins.append((nX-1,y))
 		bBins = list(set(bBins))	
-		'''
-		#Slowly prune the groups
-		minY, maxY = 0, 1
-		minX, maxX = 0, 1
-		#Current y and x locations
-		cy,  cx    = 0, 0
-		self._gridCount_ = 0
-		gBins      = []
-		while True:
-			for cy in range(minY, maxY):
-				gBins.append((cx, cy))
-				breakFlag = self._update_grid_count(cx, cy, mxCount)
-				if breakFlag:
-					break
-			if breakFlag:
-				break
-			cy = min(nY - 1, maxY)
-			for x	in range(0, maxX):
-				gBins.append((cx, cy))
-				breakFlag = self._update_grid_count(cx, cy, mxCount)
-				cx += 1
-				if breakFlag:
-					break
-			if breakFlag:
-				break
-			for y	in range(maxY, -1,-1):
-				gBins.append((cx, cy))
-				breakFlag = self._update_grid_count(cx, cy, mxCount)
-				cy -= 1
-				if breakFlag:
-					break
-			if breakFlag:
-				break
-			cy   = min(nY, maxY + 1)
-			minY = cy
-			cx = 0
-			maxX = min(nX, maxX + 1)
-			maxY = min(nY, maxY + 1)
-			if maxX == nX or maxY == nY:
-				print ('THIS CODE IS NOT TESTED when nX==maxX or ny == maxY,\
-					it works with a assumption that grid is square or rectangular\
-					CANNOT Trust code ..so raising exception')
-				raise Exception('###### EXITING #####')
-		#Find the bordering bins
-		bBins = []
-		#Find the bins along the x-axis
-		for x in range(0, cx+2):
-			bBins.append((x, min(nY-1, maxY+1)))
-		if cx < maxX:
-			for x in range(cx, maxX+1):
-				bBins.append((x, min(nY-1, maxY)))
-		for y in range(maxY, cy-1, -1):
-			bBins.append((min(maxX + 1, nX-1), y))
-		for y in range(cy, -1, -1):
-			bBins.append((min(maxX, nX-1), y))
-		'''
 		return gBins, bBins
 
 	def get_split_groups(self, splitCount):
@@ -545,7 +467,7 @@ class StreetFolder(object):
 		self.id_      = fStore.get_id(name)
 		self.name_    = name
 		if splitPrms is None:
-			self.splitPrms_ = get_trainval_split_prms() 
+			self.splitPrms_ = sev2.get_trainval_split_prms() 
 		#folder paths
 		self._paths()
 		#Prefixes

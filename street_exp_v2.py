@@ -5,28 +5,11 @@ import socket
 from easydict import EasyDict as edict
 import other_utils as ou
 import my_pycaffe_utils as mpu
+import street_config as cfg
+import street_label_utils as slu
 
-REAL_PATH = os.path.dirname(os.path.realpath(__file__))
-HOST_NAME = socket.gethostname()
-DEF_DB    = osp.join(REAL_PATH, 'exp-data/db-store/default-%s-%s-db.sqlite')
-if 'ivb' in HOST_NAME:
-	HOST_STR = 'nvCluster'
-else:
-	HOST_STR = HOST_NAME
-DEF_DB    = DEF_DB % (HOST_STR, '%s')
-
-##
-#data directories depending on the host
-def get_datadirs():
-	if HOST_NAME == 'anakin':
-		expDir  = '/data0/pulkitag/projBaxter/exp'
-		dataDir = '/data0/pulkitag/data_sets/baxter_data/' 
-	elif 'ivb' in HOST_NAME:
-		expDir  = '/data/shared/pulkitag/projBaxter/exp'
-		dataDir = '/data/shared/pulkitag/data_sets/baxter_data/' 
-	else:
-		raise Exception('Host not recognized')
-	return expDir, dataDir
+REAL_PATH = cfg.REAL_PATH
+DEF_DB    = cfg.DEF_DB % 'default'
 
 ##
 #get the mean file name
@@ -45,7 +28,7 @@ def get_mean_file(muPrefix):
 def get_paths(dPrms=None):
 	if dPrms is None:
 		dPrms = data_prms()
-	expDir, dataDir = get_datadirs()
+	expDir, dataDir = cfg.expDir, cfg.mainDataDr
 	ou.mkdir(expDir)
 	pth        = edict()
 	#All the experiment paths
@@ -61,11 +44,32 @@ def get_paths(dPrms=None):
 	pth.baseProto = osp.join(REAL_PATH, 'base_files', '%s.prototxt')
 	return pth	
 
+#Forming the trainval splits
+def get_trainval_split_prms(**kwargs):
+	dArgs = edict()
+	dArgs.trnPct = 85
+	dArgs.valPct = 5
+	dArgs.tePct  = 10
+	assert (dArgs.trnPct + dArgs.valPct + dArgs.tePct == 100)
+	#The minimum distance between groups belonging to two sets
+	#in meters (m)
+	dArgs.minDist = 100
+	dArgs = ou.get_defaults(kwargs, dArgs, True)
+	dArgs.pStr = 'trn%d_val%d_te%d_dist%d' % (dArgs.trnPct, dArgs.valPct,
+								dArgs.tePct, dArgs.minDist)
+	return dArgs	
+
 ##
 #Parameters that govern what data is being used
-def get_data_prms(dbFile=DEF_DB % 'data', **kwargs):
+def get_data_prms(dbFile=DEF_DB % 'data', lbPrms=None, tvPrms=None, **kwargs):
+	if lbPrms is None:
+		lbPrms = slu.PosePrms()
+	if tvPrms is None:
+		tvPrms = get_trainval_split_prms()
 	dArgs   = mec.edict()
 	dArgs.dataset = 'dc-v2'
+	dArgs.lbStr   = lbPrms.get_lbstr()
+	dArgs.tvStr   = tvPrms.pStr
 	allKeys = dArgs.keys()  
 	dArgs   = mpu.get_defaults(kwargs, dArgs)	
 	dArgs['expStr'] = mec.get_sql_id(dbFile, dArgs)
@@ -98,6 +102,18 @@ def net_prms(dbFile=DEF_DB % 'net', **kwargs):
 	return dArgs, allKeys
 
 
+##
+#Process the data and net parameters
+def process_net_prms(**kwargs):
+	'''
+		net_prms_fn: The function to obtain net parameters
+	'''
+	nPrms, nKeys = net_prms(**kwargs)
+	#Verify that no spurious keys have been added
+	nKeysIp = [k for k in nPrms.keys() if not k == 'expStr']
+	assert set(nKeys)==set(nKeysIp), 'There are some spurious keys'
+	return nPrms 
+
 class ProcessPrms(object):
 	def __init__(self, net_prms_fn):
 		self.fn_ = net_prms_fn
@@ -109,17 +125,6 @@ class ProcessPrms(object):
 		assert set(nKeys)==set(nKeysIp), 'There are some spurious keys'
 		return nPrms 
 
-##
-#Process the data and net parameters
-def process_prms(**kwargs):
-	'''
-		net_prms_fn: The function to obtain net parameters
-	'''
-	nPrms, nKeys = net_prms(**kwargs)
-	#Verify that no spurious keys have been added
-	nKeysIp = [k for k in nPrms.keys() if not k == 'expStr']
-	assert set(nKeys)==set(nKeysIp), 'There are some spurious keys'
-	return nPrms 
 
 ##
 #Make the net def
@@ -158,8 +163,9 @@ def make_net_def(dPrms, nPrms, **kwargs):
 		  	
 
 def setup_experiment_demo():
-	dPrms   = get_data_prms()
-	nwFn    = process_prms
+	posePrms = slu.PosePrms()
+	dPrms   = get_data_prms(lbPrms=posePrms)
+	nwFn    = process_net_prms
 	nwArgs  = {}
 	solFn   = mec.get_default_solver_prms
 	solArgs = {'dbFile': DEF_DB % 'sol'}
@@ -168,3 +174,12 @@ def setup_experiment_demo():
 	exp     = mec.CaffeSolverExperiment(dPrms, cPrms,
 					  netDefFn=make_net_def) 
 	return exp 	 				
+
+
+def make_group_list_file(dPrms):
+	fName = osp.join(REAL_PATH, 'geofence', '%s_list.txt')
+	fName = fName % dPrms['dataset']
+	fid   = open(fName, 'r')
+	fList = [l.strip() for l in fid.readlines()]
+	fid.close()
+		
