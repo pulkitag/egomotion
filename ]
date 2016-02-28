@@ -672,9 +672,9 @@ class StreetFolder(object):
 		#Make a list of groups
 		gList = StreetGroupList.from_dict(grps, gKeys)
 		trnKeys, oKeys = gList.get_split_groups(nVal + nTe)
-		print (N, len(trnKeys) + len(oKeys))
+		print (len(trnKey) + len(oKeys))
 		print ('Num-Train: %d, Num-Others: %d, Total: %d' %
-           (len(trnKeys), len(oKeys), len(gKeys)))
+           len(trnKeys), len(oKeys), len(gKeys))
 		return	
 
 		firstValIdx  = nTrn + numSafety
