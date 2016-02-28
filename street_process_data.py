@@ -386,7 +386,42 @@ class StreetGroupList(object):
 
 	#Divide the group into two halves such that
 	def divide_group_counts(self, mxCount):
+		'''
+			This has been engineered to the use case of splitting the data
+			into train/val splits. Therefore we leave out all elements in 
+			the first/last row/col - to avoid any conflicts with elements in 
+      other groups.
+			The groups are chosen in row-major fashion starting at (1,1) 
+		'''
 		nX, nY = len(self.binList), len(self.binList[0])
+		self._gridCount_ = 0
+		#Select the groups
+		gBins      = []
+		for cy in range(1, nY-1):
+			for cx in range(1, nX-1):
+				gBins.append((cx, cy))
+				breakFlag = self._update_grid_count(cx, cy, mxCount)
+				if breakFlag:
+					break
+			if breakFlag:
+				break
+		#Select a border of groups so that groups in two
+		#sets are seperated by 100m. 
+		bBins = []
+		for x in range(cx+1, nX-1):
+			bBins.append((x, cy))
+		for x in range(0, cx+1):
+			bBins.append((x, cy+1))
+		#Include the top and bottom border
+		for x in range(nX):
+			bBins.append((x, 0))
+			bBins.append((x, nY-1))
+		#Include the left and right border
+		for y in range(nY):
+			bBins.append((0,y))
+			bBins.append((nX-1,y))
+		bBins = list(set(bBins))	
+		'''
 		#Slowly prune the groups
 		minY, maxY = 0, 1
 		minX, maxX = 0, 1
@@ -441,6 +476,7 @@ class StreetGroupList(object):
 			bBins.append((min(maxX + 1, nX-1), y))
 		for y in range(cy, -1, -1):
 			bBins.append((min(maxX, nX-1), y))
+		'''
 		return gBins, bBins
 
 	def get_split_groups(self, splitCount):
