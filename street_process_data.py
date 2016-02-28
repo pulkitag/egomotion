@@ -652,6 +652,10 @@ class StreetFolder(object):
 		
 	#save the target group data
 	def _save_target_groups(self, forceWrite=False):
+		if osp.exists(self.paths_.targetGrps) and not forceWrite:
+			print ('Group file %s exists, NOT recomputing' % self.paths_.targetGrps)
+			return
+		print ('Computing group file %s' % self.paths_.targetGrps)
 		imNames, lbNames = self.get_im_label_files()
 		preCountPerGrp   = self.get_num_prefix_per_target_group()
 		grps  = edict()
@@ -712,11 +716,12 @@ class StreetFolder(object):
 			grps  = self.get_target_groups()
 		gKeys = self.get_target_group_list()
 		N     = len(gKeys)
+		nTrn  = int(np.floor((sPrms.trnPct/100.0 * (N))))
 		nVal  = int(np.floor((sPrms.valPct/100.0 * (N))))
 		nTe   = int(np.floor((sPrms.tePct/100.0 * (N))))
 		#Make a list of groups
 		gList = StreetGroupList.from_dict(grps, gKeys)
-		oKeys, trnKeys = gList.get_split_groups(nVal + nTe)
+		trnKeys, oKeys = gList.get_split_groups(nTrn)
 		oL     = len(oKeys)
 		tL     = len(trnKeys)
 		assert N >= tL + oL
@@ -742,15 +747,19 @@ class StreetFolder(object):
 
 def save_processed_data(folderName):
 	sf = StreetFolder(folderName)		
-	#print ('Saving groups for %s' % folderName)
-	#sf._save_target_groups()
-	#print ('Saving splits for %s' % folderName)
+	print ('Saving groups for %s' % folderName)
+	sf._save_target_groups()
+	print ('Saving splits for %s' % folderName)
 	sf.split_trainval_sets()
 
 
 def save_processed_data_multiple():
-	fNames = ['0001', '0002', '0003', '0004', '0005']
-	inArgs = [osp.join('raw', f) for f in fNames]
+	#fNames = ['0001', '0002', '0003', '0004', '0005']
+	#inArgs = [osp.join('raw', f) for f in fNames]
+	listFile = 'geofence/dc-v2_list.txt'
+	fid      = open(listFile, 'r')
+	inArgs   = [l.strip() for l in fid.readlines()]
+	fid.close()
 	for f in inArgs:
 		sf = StreetFolder(f)		
 	pool   = Pool(processes=6)
