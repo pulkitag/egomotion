@@ -754,8 +754,12 @@ def save_processed_data(folderName):
 
 
 def save_processed_data_multiple():
-	fNames = ['0001', '0002', '0003', '0004', '0005']
-	inArgs = [osp.join('raw', f) for f in fNames]
+	#fNames = ['0001', '0002', '0003', '0004', '0005']
+	#inArgs = [osp.join('raw', f) for f in fNames]
+	listFile = 'geofence/dc-v2_list.txt'
+	fid      = open(listFile, 'r')
+	inArgs   = [l.strip() for l in fid.readlines()]
+	fid.close()
 	for f in inArgs:
 		sf = StreetFolder(f)		
 	pool   = Pool(processes=6)
