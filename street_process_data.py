@@ -377,7 +377,7 @@ class StreetGroupList(object):
 		print ('Number of groups: %d' % np.sum(self.gridBinCount))
 
 	def _update_grid_count(self, cx, cy, mxCount):
-		print (cx, cy, self._gridCount_)
+		#print (cx, cy, self._gridCount_)
 		self._gridCount_ += len(self.binList[cx][cy])
 		breakFlag   = False
 		if self._gridCount_ >= mxCount:
@@ -425,8 +425,8 @@ class StreetGroupList(object):
 			maxX = min(nX, maxX + 1)
 			maxY = min(nY, maxY + 1)
 			if maxX == nX or maxY == nY:
-				print ('THIS CODE IS NOT TESTED when nX==maxX or ny == maxY,
-					it works with a assumption that grid is square or rectangular
+				print ('THIS CODE IS NOT TESTED when nX==maxX or ny == maxY,\
+					it works with a assumption that grid is square or rectangular\
 					CANNOT Trust code ..so raising exception')
 				raise Exception('###### EXITING #####')
 		#Find the bordering bins
@@ -666,6 +666,8 @@ class StreetFolder(object):
 	#Split into train/test/val
 	def split_trainval_sets(self, grps=None):
 		sPrms = self.splitPrms_
+		assert sPrms.minDist == 100, 'Modify StreetGroupList gridding to\
+       work for other distance values'
 		if grps is None:
 			print ('Reading Groups')
 			grps  = self.get_target_groups()
@@ -676,51 +678,21 @@ class StreetFolder(object):
 		nTe   = int(np.floor((sPrms.tePct/100.0 * (N))))
 		#Make a list of groups
 		gList = StreetGroupList.from_dict(grps, gKeys)
-		trnKeys, oKeys = gList.get_split_groups(nVal + nTe)
-		print (N, len(trnKeys) + len(oKeys))
+		oKeys, trnKeys = gList.get_split_groups(nVal + nTe)
+		assert N >= len(trnKeys) + len(oKeys)
 		print ('Num-Train: %d, Num-Others: %d, Total: %d' %
            (len(trnKeys), len(oKeys), len(gKeys)))
-		return	
-
-		firstValIdx  = nTrn + numSafety
-		lastTrainGrp = grps[gKeys[nTrn]]
-		print ('Determining validation groups')
-		for n in range(firstValIdx, N):
-			tDist = get_distance_between_groups(lastTrainGrp.grp, grps[gKeys[n]].grp)
-			print (tDist)
-			if tDist > sPrms.minDist:
-				break
-		firstValIdx = n+1
-		trnKeys = [gKeys[i] for i in  range(0, nTrn)] 
-		valKeys = [gKeys[i] for i in  range(firstValIdx, N)]
-		print ('Num-Train: %d, Num-Val: %d' % 
-           (len(trnKeys), len(valKeys)))
-		print ('Pruning validation keys')
-		setKeys['val']   = prune_groups(grps, trnKeys[::-1], valKeys, sPrms.minDist)
-		return
-	
-		print ('Determining test groups')
-		lastVal = n + nVal 
-		last    = grps[gKeys[lastVal]]
-		for n in range(lastVal + 1, N):
-			tDist = get_distance_between_groups(last.grp, grps[gKeys[n]].grp)
-			if tDist > sPrms.minDist:
-				break
-		teKeys  = [gKeys[i] for i in range(n, N)]
-		print ('Num-Train: %d, Num-Val: %d, Num-Test: %d' % 
-           (len(trnKeys), len(valKeys), len(teKeys)))
-		#Greedily remove the common groups
-		#train-val, train-test, val-test
-		print ('Pruning validation keys')
+		oL     = len(oKeys)
+		valIdx  = int(oL * (float(sPrms.valPct)/(sPrms.valPct + sPrms.tePct))) 
 		setKeys = edict()
 		setKeys['train'] = trnKeys
-		setKeys['val']   = prune_groups(grps, trnKeys[::-1], valKeys, sPrms.minDist)
-		print ('Pruning test keys')
-		setKeys['test']  = prune_groups(grps, setKeys['val'][::-1], teKeys, sPrms.minDist)
-		print ('Pruning test keys, phase 2')
-		setKeys['test'] = prune_groups(grps, trnKeys[::-1], setKeys['test'], sPrms.minDist)
+		setKeys['val']   = [k for k in oKeys[0:valIdx]]
+		setKeys['test']  = [k for k in oKeys[valIdx:]] 
 		print ('Num-Train: %d, Num-Val: %d, Num-Test: %d' % 
-           (len(setKeys['train']), len(setKeys['val']), len(setKeys['test'])))
+				 (len(setKeys['train']), len(setKeys['val']), len(setKeys['test'])))
+		#Sanity checks
+		assert len(set(setKeys['train']).intersection(set(setKeys['val']))) == 0
+		assert len(set(setKeys['train']).intersection(set(setKeys['test']))) == 0
 		#Save the split keys
 		pickle.dump({'setKeys': setKeys, 'splitPrms': self.splitPrms_},
                open(self.paths_.trainvalSplit, 'w')) 
