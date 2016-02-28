@@ -424,6 +424,11 @@ class StreetGroupList(object):
 			cx = 0
 			maxX = min(nX, maxX + 1)
 			maxY = min(nY, maxY + 1)
+			if maxX == nX or maxY == nY:
+				print ('THIS CODE IS NOT TESTED when nX==maxX or ny == maxY,
+					it works with a assumption that grid is square or rectangular
+					CANNOT Trust code ..so raising exception')
+				raise Exception('###### EXITING #####')
 		#Find the bordering bins
 		bBins = []
 		#Find the bins along the x-axis
@@ -443,10 +448,10 @@ class StreetGroupList(object):
 		gBins, ignoreBins = self.divide_group_counts(splitCount)
 		keys1, keys2 = [], []
 		for g in gBins:
-			keys1.append(self.get_groups_in_gridxy(g))
+			keys1 = keys1 + self.get_groups_in_gridxy(g)
 		igKeys = []
 		for g in ignoreBins:
-			igKeys.append(self.get_groups_in_gridxy(g))
+			igKeys = igKeys + self.get_groups_in_gridxy(g)
 		igKeys = igKeys + keys1
 		keys2  = [gk for gk in self.gKeys if gk not in igKeys]
 		return keys1, keys2
