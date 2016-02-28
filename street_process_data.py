@@ -673,16 +673,16 @@ class StreetFolder(object):
 			grps  = self.get_target_groups()
 		gKeys = self.get_target_group_list()
 		N     = len(gKeys)
-		nTrn  = int(np.floor((sPrms.trnPct/100.0 * (N))))
 		nVal  = int(np.floor((sPrms.valPct/100.0 * (N))))
 		nTe   = int(np.floor((sPrms.tePct/100.0 * (N))))
 		#Make a list of groups
 		gList = StreetGroupList.from_dict(grps, gKeys)
 		oKeys, trnKeys = gList.get_split_groups(nVal + nTe)
-		assert N >= len(trnKeys) + len(oKeys)
-		print ('Num-Train: %d, Num-Others: %d, Total: %d' %
-           (len(trnKeys), len(oKeys), len(gKeys)))
 		oL     = len(oKeys)
+		tL     = len(trnKeys)
+		assert N >= tL + oL
+		print ('FolderId: %s, Num-Train: %d, Num-Others: %d, NumLost: %d' %
+           (self.id_, tL, oL, N - (tL + oL)))
 		valIdx  = int(oL * (float(sPrms.valPct)/(sPrms.valPct + sPrms.tePct))) 
 		setKeys = edict()
 		setKeys['train'] = trnKeys
