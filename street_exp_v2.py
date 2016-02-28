@@ -23,6 +23,32 @@ def get_mean_file(muPrefix):
 		raise Exception('%s prefix for mean not recognized' % muPrefix)
 	return muFile	
 
+
+def get_folder_paths(folderId, splitPrms):
+	cPaths   = cfg.paths 
+	paths    = edict()
+	paths.dr = cPaths.folderProc % folderId
+	ou.mkdir(paths.dr)
+	paths.prefix     = osp.join(paths.dr, 'prefix.pkl')
+	paths.prePerGrp  = osp.join(paths.dr, 'prePerGrp.pkl')
+	#List of targetgroups in ordered format - necessary as ordering matters
+	#ordering can be used to split the data into train/val/test as points
+	#closer in the ordering are physically close to each other
+	paths.targetGrpList = osp.join(paths.dr, 'targetGrpList.pkl')
+	paths.targetGrps = osp.join(paths.dr, 'targetGrps.pkl')
+	#path for storing the cropped images
+	paths.crpImStr   = 'imCrop/imSz%s' % '%d'
+	paths.crpImPath  = osp.join(paths.dr, paths.crpImStr)
+	#Split the sets
+	paths.trainvalSplit = osp.join(paths.dr, 
+									 'splits-%s.pkl' % splitPrms_.pStr)
+	paths.grpSplits  = edict()
+	for s in ['train', 'val', 'test']:
+		paths.grpSplits[s]  = osp.join(paths.dr, 
+										 'groups_%s_%s.pkl' % (s, splitPrms_.pStr))
+	return paths
+
+
 ##
 #Paths that are required for reading the data
 def get_paths(dPrms=None):
@@ -74,6 +100,8 @@ def get_data_prms(dbFile=DEF_DB % 'data', lbPrms=None, tvPrms=None, **kwargs):
 	dArgs   = mpu.get_defaults(kwargs, dArgs)	
 	dArgs['expStr'] = mec.get_sql_id(dbFile, dArgs)
 	dArgs['paths']  = get_paths(dArgs) 
+	dArgs['splitPrms'] = tvPrms
+	dArgs['lbPrms']    = lbPrms
 	return dArgs
 
 ##
@@ -177,9 +205,12 @@ def setup_experiment_demo():
 
 
 def make_group_list_file(dPrms):
-	fName = osp.join(REAL_PATH, 'geofence', '%s_list.txt')
-	fName = fName % dPrms['dataset']
-	fid   = open(fName, 'r')
-	fList = [l.strip() for l in fid.readlines()]
+	fName  = osp.join(REAL_PATH, 'geofence', '%s_list.txt')
+	fName  = fName % dPrms['dataset']
+	fid    = open(fName, 'r')
+	fList  = [l.strip() for l in fid.readlines()]
 	fid.close()
-		
+	fPaths = dPrms['splitPrms']
+	fStore = spd.FolderStore()
+	for f in fList: 		
+		assert fStore.is_present(f)

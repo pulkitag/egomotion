@@ -476,31 +476,13 @@ class StreetFolder(object):
 
 	#
 	def _paths(self):
-		cPaths        = get_config_paths() 
+		pths     = sev2.get_folder_paths(self.id_, self.splitPrms_)
+		cPaths   = get_config_paths() 
 		#raw data
 		self.dirName_ = osp.join(cPaths.mainDataDr, self.name_)
-		self.paths_   = edict()
-		self.paths_.dr = cPaths.folderProc % self.id_
-		ou.mkdir(self.paths_.dr)
-		self.paths_.prefix     = osp.join(self.paths_.dr, 'prefix.pkl')
-		self.paths_.prePerGrp  = osp.join(self.paths_.dr, 'prePerGrp.pkl')
-		#List of targetgroups in ordered format - necessary as ordering matters
-		#ordering can be used to split the data into train/val/test as points
-		#closer in the ordering are physically close to each other
-		self.paths_.targetGrpList = osp.join(self.paths_.dr, 'targetGrpList.pkl')
-		self.paths_.targetGrps = osp.join(self.paths_.dr, 'targetGrps.pkl')
-		#path for storing the cropped images
-		self.paths_.crpImStr   = 'imCrop/imSz%s' % '%d'
-		self.paths_.crpImPath  = osp.join(self.paths_.dr, self.paths_.crpImStr)
-		#Split the sets
-		self.paths_.trainvalSplit = osp.join(self.paths_.dr, 
-                     'splits-%s.pkl' % self.splitPrms_.pStr)
-		self.paths_.grpSplits  = edict()
-		for s in ['train', 'val', 'test']:
-			self.paths_.grpSplits[s]  = osp.join(self.paths_.dr, 
-											 'groups_%s_%s.pkl' % (s, self.splitPrms_.pStr))
-
-
+		self.paths_   = pths
+	
+	
 	#Save all prefixes in the folder
 	def _save_prefixes(self):
 		allNames = os.listdir(self.dirName_)
