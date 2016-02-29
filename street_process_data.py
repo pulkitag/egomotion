@@ -662,12 +662,12 @@ class StreetFolder(object):
 def save_processed_data(folderName):
 	sf = StreetFolder(folderName)		
 	print ('Saving groups for %s' % folderName)
-	sf._save_target_groups(isForceWrite=False)
+	sf._save_target_groups()
 	print ('Saving splits for %s' % folderName)
 	sf.split_trainval_sets()
 
 
-def save_processed_data_multiple():
+def parallel_save_processed_data():
 	fNames = ['0070', '0071']
 	inArgs = [osp.join('raw', f) for f in fNames]
 	#listFile = 'geofence/dc-v2_list.txt'
@@ -681,7 +681,6 @@ def save_processed_data_multiple():
 	res    = jobs.get()
 	del pool
 
-
 def recompute(folderName):
 	sf = StreetFolder(folderName)		
 	print ('Recomputing prefix')
@@ -689,16 +688,34 @@ def recompute(folderName):
 	print ('Recomputing Group Counts')
 	sf._save_target_group_counts()
 	print ('Recomputing Groups')
-	sf._save_target_groups(forceCompute=True)	
+	sf._save_target_groups(forceWrite=True)	
 	print ('Recomputing Splits')
 	sf.split_trainval_sets()
 
-def recompute_all():
+def parallel_recompute():
 	fNames = ['0070', '0071']
 	inArgs = [osp.join('raw', f) for f in fNames]
 	for f in inArgs:
 		print (f)
 	pool   = Pool(processes=6)
 	jobs   = pool.map_async(recompute, inArgs)
+	res    = jobs.get()
+	del pool
+
+
+def save_cropped_ims(folderName):
+	sf = StreetFolder(folderName)	
+	disp('Saving cropped images %s' % folderName)
+	sf.save_cropped_images()
+
+
+#Run functions in parallel that except a single argument folderName
+def run_parallel(fnName):
+	listFile = 'geofence/dc-v2_list.txt'
+	fid      = open(listFile, 'r')
+	inArgs   = [l.strip() for l in fid.readlines()]
+	fid.close()
+	pool   = Pool(processes=6)
+	jobs   = pool.map_async(fnName, inArgs)
 	res    = jobs.get()
 	del pool
