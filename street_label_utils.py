@@ -22,7 +22,8 @@ class PosePrms(LabelPrms):
 		LabelPrms.__init__(self)
 		self.lb['type']      = 'pose'
 		self.lb['angleType'] = angleType
-		self.lb['dof']       = dof 
+		self.lb['dof']       = dof
+		self.lb['maxRot']    = None 
 
 	def get_lbsz(self):
 		if self.lb.angleType == 'euler':

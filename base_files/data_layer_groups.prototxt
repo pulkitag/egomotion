@@ -1,0 +1,30 @@
+name: "StreetNet"
+layer {
+	name: "window_data"
+	top:  "pair_data"
+	top:  "pair_label"
+	type: "Python"
+	python_param {
+		module: "python_window_data_rots"
+		layer: "PythonGroupDataRotsLayer"
+		param_str: ""
+	}
+	include {
+		phase: TRAIN
+	}
+}
+layer {
+	name: "window_data"
+	top:  "pair_data"
+	top:  "pair_label"
+	type: "Python"
+	python_param {
+		module: "python_window_data_rots"
+		layer: "PythonGroupDataRotsLayer"
+		param_str: ""
+	}
+	include {
+		phase: TEST
+	}
+}
+

@@ -9,6 +9,7 @@ import street_config as cfg
 import street_label_utils as slu
 import street_process_data as spd
 import pickle
+import copy
 
 REAL_PATH = cfg.REAL_PATH
 DEF_DB    = cfg.DEF_DB % ('default', '%s')
@@ -108,9 +109,9 @@ def get_data_prms(dbFile=DEF_DB % 'data', lbPrms=None, tvPrms=None, **kwargs):
 	allKeys = dArgs.keys()  
 	dArgs   = mpu.get_defaults(kwargs, dArgs)	
 	dArgs['expStr'] = mec.get_sql_id(dbFile, dArgs)
-	dArgs['paths']  = get_paths(dArgs) 
 	dArgs['splitPrms'] = tvPrms
 	dArgs['lbPrms']    = lbPrms
+	dArgs['paths']  = get_paths(dArgs) 
 	return dArgs
 
 ##
@@ -118,8 +119,12 @@ def get_data_prms(dbFile=DEF_DB % 'data', lbPrms=None, tvPrms=None, **kwargs):
 def net_prms(dbFile=DEF_DB % 'net', **kwargs):
 	dArgs = mec.get_siamese_net_prms(dbFile, **kwargs)
 	del dArgs['expStr']
-	#Modify the baseNetDefProto
-	dArgs.baseNetDefProto = 'smallnet_v5_window_siamese_fc5'
+	#The data NetDefProto
+	dArgs.dataNetDefProto = 'data_layer_groups' 
+	#the basic network architecture: baseNetDefProto
+	dArgs.baseNetDefProto = 'smallnet-v5_window_siamese_fc5'
+	#the loss layers:
+	dArgs.lossNetDefProto = 'pose_loss_log_l1_layers'
 	if dArgs.batchSize is None:
 		dArgs.batchSize = 128 
 	#The amount of jitter in both the images
@@ -163,12 +168,22 @@ class ProcessPrms(object):
 		assert set(nKeys)==set(nKeysIp), 'There are some spurious keys'
 		return nPrms 
 
-
 ##
-#Make the net def
-def make_net_def(dPrms, nPrms, **kwargs):
-	#Read the basefile and construct a net
-	baseFile  = dPrms.paths.baseProto % nPrms.baseNetDefProto
+#Merge the definition of multiple layers
+def _merge_defs(defs): 
+	allDef = copy.deepcopy(defs[0])
+	for d in defs[1:]:
+		setNames = ['TRAIN', 'TEST']
+		for s in setNames:
+			trNames = d.get_all_layernames(phase=s)
+			for t in trNames:
+				trLayer = d.get_layer(t, phase=s)		
+				allDef.add_layer(t, trLayer, phase=s)
+	return allDef
+
+
+def make_data_layers_proto(dPrms, nPrms, **kwargs):
+	baseFile  = dPrms.paths.baseProto % nPrms.dataNetDefProto
 	netDef    = mpu.ProtoDef(baseFile)
 	#If net needs to be resumed
 	if kwargs.has_key('resumeIter'):
@@ -179,25 +194,67 @@ def make_net_def(dPrms, nPrms, **kwargs):
 	batchSz  = [nPrms.batchSize, 50]
 	meanFile = get_mean_file(nPrms.meanFile) 
 	for s, b in zip(['TRAIN', 'TEST'], batchSz):
+		#Make the label info file
+		lbInfo = dPrms['lbPrms']
+		lbFile = dPrms.paths.exp.other.lbInfo % lbInfo.get_lbstr()
+		pickle.dump({'lbInfo': lbInfo}, open(lbFile, 'w'))
+		#The group files
+		if s == 'TEST':
+			grpListFile = dPrms.paths.exp.other.grpList % 'val'
+		else:
+			grpListFile = dPrms.paths.exp.other.grpList % 'train'
+		#The python parameters	
 		prmStr = ou.make_python_param_str({'batch_size': b, 
-							'im_root_folder': dPrms.paths.data,
-							'grplist_file': dPrms.paths.other.grpList,
-						  'lbinfo_file':  
+							'im_root_folder': dPrms.paths.data.dr,
+							'grplist_file': grpListFile,
+						  'lbinfo_file':  lbFile, 
 							'crop_size'  : nPrms.crpSz,
-							'im_size'    : nPrms.ipImSz 
-              'max_jitter' : nPrms.maxJitter,
+							'im_size'    : nPrms.ipImSz, 
+              'jitter_amt' : nPrms.maxJitter,
 							'resume_iter': resumeIter, 
-							'mean_file': meanFile, 
-              'mean_type': nPrms.meanType})
-		netDef.set_layer_property('data', ['python_param', 'param_str'], 
+							'mean_file': meanFile})
+		netDef.set_layer_property('window_data', ['python_param', 'param_str'], 
 						'"%s"' % prmStr, phase=s)
+		#Rename the top corresponding to the labels
+		lbName = '"%s_label"' % lbInfo.lb['type']
+		top2 = mpu.make_key('top', ['top'])
+		netDef.set_layer_property('window_data', top2, lbName, phase=s)
+	#Split the pair data according to the labels
+	baseFile  = dPrms.paths.baseProto % '%s_layers'
+	baseFile  = baseFile % lbInfo.lb['type']
+	splitDef  = mpu.ProtoDef(baseFile)
+	return _merge_defs([netDef, splitDef])
 
+
+def make_base_layers_proto(dPrms, nPrms, **kwargs):
+	#Read the basefile and construct a net
+	baseFile  = dPrms.paths.baseProto % nPrms.baseNetDefProto
+	netDef    = mpu.ProtoDef(baseFile)
 	if nPrms.fcSz is not None:
 		netDef.set_layer_property(nPrms.fcName,
        ['inner_product_param', 'num_output'],
 				'%d' % (nPrms.fcSz), phase='TRAIN')
 	return netDef 
-		  	
+
+
+def make_loss_layers_proto(dPrms, nPrms, **kwargs):
+	#Read the basefile and construct a net
+	baseFile  = dPrms.paths.baseProto % nPrms.lossNetDefProto
+	netDef    = mpu.ProtoDef(baseFile)
+	return netDef 
+
+##
+#Make the net def
+def make_net_def(dPrms, nPrms, **kwargs):
+	#Data protodef
+	dataDef  = make_data_layers_proto(dPrms, nPrms, **kwargs)
+	#Base net protodef
+	baseDef  = make_base_layers_proto(dPrms, nPrms, **kwargs)
+	#Loss protodef
+	lossDef  = make_loss_layers_proto(dPrms, nPrms, **kwargs)
+	#Merge al the protodefs
+	return _merge_defs([dataDef, baseDef, lossDef]) 
+			  	
 
 def setup_experiment_demo():
 	posePrms = slu.PosePrms()
