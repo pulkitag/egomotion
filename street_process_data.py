@@ -238,18 +238,23 @@ class StreetGroup(object):
 	@classmethod
 	def from_raw(cls, folderId, gId, prefix, lbNames, crpImNames):
 		grp = edict()
-		grp.num  = len(prefix)
-		grp.prefix   = prefix
-		grp.crpImNames    = crpImNames
 		grp.data     = []
 		grp.folderId = folderId
 		grp.gid      = gId
+		grp.prefix     = []
+		grp.crpImNames = []
+		grp.num        = 0
 		for i,p in enumerate(prefix):
 			bsName = osp.basename(lbNames[i]).split('.')[0]
 			bsGid  = bsName.split('_')[3]
 			assert bsName == p, 'bsName:%s, p: %s'% (bsName,p)
 			assert bsGid  == gId, 'Group name mismatch: %s, %s' % (bsGid, gid)
-			grp.data.append(StreetLabel.from_file(lbNames[i]))
+			slb = StreetLabel.from_file(lbNames[i])
+			if slb is not None:
+				grp.data.append(slb)
+				grp.prefix.append(p)
+				grp.crpImNames.append(crpImNames[i])
+				grp.num += 1
 		return cls(grp)
 
 	def distance_from_other(self, grp2):
@@ -494,7 +499,12 @@ class StreetFolder(object):
 			if i>= len(lbNames):
 				continue
 			if imn in lbNames[i]:
-				prefixStr = prefixStr + [imn] 
+				#Determine that the labelfile is not empty
+				lbDat = StreetLabel.from_file(osp.join(self.dirName_, lbNames[i]))
+				if lbDat is None:
+					print ('%s has no label info' % lbNames[i])
+					continue
+				prefixStr = prefixStr + [imn]
 		pickle.dump({'prefixStr': prefixStr}, open(self.paths_.prefix, 'w'))
 
 
@@ -657,16 +667,55 @@ def save_processed_data(folderName):
 	sf.split_trainval_sets()
 
 
-def save_processed_data_multiple():
-	#fNames = ['0001', '0002', '0003', '0004', '0005']
-	#inArgs = [osp.join('raw', f) for f in fNames]
-	listFile = 'geofence/dc-v2_list.txt'
-	fid      = open(listFile, 'r')
-	inArgs   = [l.strip() for l in fid.readlines()]
-	fid.close()
+def parallel_save_processed_data():
+	fNames = ['0070', '0071']
+	inArgs = [osp.join('raw', f) for f in fNames]
+	#listFile = 'geofence/dc-v2_list.txt'
+	#fid      = open(listFile, 'r')
+	#inArgs   = [l.strip() for l in fid.readlines()]
+	#fid.close()
 	for f in inArgs:
 		sf = StreetFolder(f)		
 	pool   = Pool(processes=6)
 	jobs   = pool.map_async(save_processed_data, inArgs)
 	res    = jobs.get()
-	del pool	
+	del pool
+
+def recompute(folderName):
+	sf = StreetFolder(folderName)		
+	print ('Recomputing prefix')
+	sf._save_prefixes()
+	print ('Recomputing Group Counts')
+	sf._save_target_group_counts()
+	print ('Recomputing Groups')
+	sf._save_target_groups(forceWrite=True)	
+	print ('Recomputing Splits')
+	sf.split_trainval_sets()
+
+def parallel_recompute():
+	fNames = ['0070', '0071']
+	inArgs = [osp.join('raw', f) for f in fNames]
+	for f in inArgs:
+		print (f)
+	pool   = Pool(processes=6)
+	jobs   = pool.map_async(recompute, inArgs)
+	res    = jobs.get()
+	del pool
+
+
+def save_cropped_ims(folderName):
+	sf = StreetFolder(folderName)	
+	print ('Saving cropped images %s' % folderName)
+	sf.save_cropped_images()
+
+
+#Run functions in parallel that except a single argument folderName
+def run_parallel(fnName):
+	listFile = 'geofence/dc-v2_list.txt'
+	fid      = open(listFile, 'r')
+	inArgs   = [l.strip() for l in fid.readlines()]
+	fid.close()
+	pool   = Pool(processes=6)
+	jobs   = pool.map_async(fnName, inArgs)
+	res    = jobs.get()
+	del pool

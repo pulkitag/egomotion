@@ -7,9 +7,11 @@ import other_utils as ou
 import my_pycaffe_utils as mpu
 import street_config as cfg
 import street_label_utils as slu
+import street_process_data as spd
+import pickle
 
 REAL_PATH = cfg.REAL_PATH
-DEF_DB    = cfg.DEF_DB % 'default'
+DEF_DB    = cfg.DEF_DB % ('default', '%s')
 
 ##
 #get the mean file name
@@ -25,7 +27,7 @@ def get_mean_file(muPrefix):
 
 
 def get_folder_paths(folderId, splitPrms):
-	cPaths   = cfg.paths 
+	cPaths   = cfg.pths 
 	paths    = edict()
 	paths.dr = cPaths.folderProc % folderId
 	ou.mkdir(paths.dr)
@@ -41,20 +43,19 @@ def get_folder_paths(folderId, splitPrms):
 	paths.crpImPath  = osp.join(paths.dr, paths.crpImStr)
 	#Split the sets
 	paths.trainvalSplit = osp.join(paths.dr, 
-									 'splits-%s.pkl' % splitPrms_.pStr)
+									 'splits-%s.pkl' % splitPrms.pStr)
 	paths.grpSplits  = edict()
 	for s in ['train', 'val', 'test']:
 		paths.grpSplits[s]  = osp.join(paths.dr, 
-										 'groups_%s_%s.pkl' % (s, splitPrms_.pStr))
+										 'groups_%s_%s.pkl' % (s, splitPrms.pStr))
 	return paths
-
 
 ##
 #Paths that are required for reading the data
 def get_paths(dPrms=None):
 	if dPrms is None:
 		dPrms = data_prms()
-	expDir, dataDir = cfg.expDir, cfg.mainDataDr
+	expDir, dataDir = cfg.pths.expDir, cfg.pths.mainDataDr
 	ou.mkdir(expDir)
 	pth        = edict()
 	#All the experiment paths
@@ -65,14 +66,16 @@ def get_paths(dPrms=None):
 	pth.exp.snapshot.dr = osp.join(pth.exp.dr, 'snapshot')
 	ou.mkdir(pth.exp.snapshot.dr)
 	#group lists
-	pth.exp.others        = edict()
+	pth.exp.other         = edict()
 	pth.exp.other.dr      = osp.join(pth.exp.dr, 'others')
-	pth.exp.other.grpList = osp.join(pth.exp.other.dr, 'group_list_%s_%s.pkl') 
+	pth.exp.other.grpList = osp.join(pth.exp.other.dr,
+        'group_list_%s_%s.pkl' % (dPrms['splitPrms']['pStr'], '%s')) 
 	ou.mkdir(pth.exp.other.dr)
+	pth.exp.other.lbInfo  = osp.join(pth.exp.other.dr, 'label_info_%s.str')
 	
 	#Data files
 	pth.data    = edict()
-	pth.data.dr = osp.join(dataDir, dPrms.dataFolder)
+	pth.data.dr  = dataDir
 	pth.baseProto = osp.join(REAL_PATH, 'base_files', '%s.prototxt')
 	return pth	
 
@@ -176,24 +179,23 @@ def make_net_def(dPrms, nPrms, **kwargs):
 	batchSz  = [nPrms.batchSize, 50]
 	meanFile = get_mean_file(nPrms.meanFile) 
 	for s, b in zip(['TRAIN', 'TEST'], batchSz):
-		prmStr = ou.make_python_param_str({'batch_size': b, 'before': 'image_before',
-								'after': 'image_after', 'poke': 'pixel', 
-								'root_folder': osp.join(dPrms.paths.data.dr, s.lower()),
-								'crop_size'  : nPrms.crpSz, 'max_jitter': nPrms.maxJitter,
-								'resume_iter': resumeIter, 
-								'mean_file': meanFile, 'mean_type': nPrms.meanType,
-								'poke_tfm_type': nPrms.pokeTfmType,
-								'poke_nxGrid': nPrms.pokeNxGrid, 'poke_nyGrid': nPrms.pokeNyGrid,
-								'poke_thGrid': nPrms.pokeThGrid})
+		prmStr = ou.make_python_param_str({'batch_size': b, 
+							'im_root_folder': dPrms.paths.data,
+							'grplist_file': dPrms.paths.other.grpList,
+						  'lbinfo_file':  
+							'crop_size'  : nPrms.crpSz,
+							'im_size'    : nPrms.ipImSz 
+              'max_jitter' : nPrms.maxJitter,
+							'resume_iter': resumeIter, 
+							'mean_file': meanFile, 
+              'mean_type': nPrms.meanType})
 		netDef.set_layer_property('data', ['python_param', 'param_str'], 
 						'"%s"' % prmStr, phase=s)
 
-	if nPrms.pokeTfmType == 'gridCls':
-		netDef.set_layer_property('pred_loc', ['inner_product_param', 'num_output'],
-				 '%d' % (nPrms.pokeNxGrid * nPrms.pokeNyGrid), phase='TRAIN')
-		netDef.set_layer_property('pred_th', ['inner_product_param', 'num_output'],
-				 '%d' % nPrms.pokeThGrid, phase='TRAIN')
-
+	if nPrms.fcSz is not None:
+		netDef.set_layer_property(nPrms.fcName,
+       ['inner_product_param', 'num_output'],
+				'%d' % (nPrms.fcSz), phase='TRAIN')
 	return netDef 
 		  	
 
@@ -220,13 +222,26 @@ def make_group_list_file(dPrms):
 	fStore = spd.FolderStore()
 	setNames = ['train', 'val', 'test']
 	for s in setNames: 	
-		grpFileName = dPrms['paths'].exp.other.grpList
-		grpFileName = grpFileName % (dPrms['splitPrms']['pStr'], s)
+		grpListFileName = dPrms['paths'].exp.other.grpList
+		grpListFileName = grpListFileName % (dPrms['splitPrms']['pStr'], s)
+		print ('Saving to %s' % grpListFileName)
 		grpFiles    = []
 		for f in fList: 		
 			assert fStore.is_present(f)
 			folderId   = fStore.get_id(f)
-			folderPath = get_folder_path(folderId, dPrms['splitPrms']) 
+			folderPath = get_folder_paths(folderId, dPrms['splitPrms']) 
 			grpFiles.append(folderPath.grpSplits[s])
-		pickle.dump({'grpFiles': grpFiles}, open(grpFileName, 'w'))
-			 
+		pickle.dump({'grpFiles': grpFiles}, open(grpListFileName, 'w'))
+
+
+#Check if all group files are present or not
+def verify_group_list_files(dPrms):
+	setNames = ['train', 'val', 'test']
+	for s in setNames: 	
+		grpListFileName = dPrms['paths'].exp.other.grpList % s
+		data = pickle.load(open(grpListFileName, 'r'))
+		for fName in data['grpFiles']:
+			if not osp.exists(fName):
+				print ('%s doesnot exists' % fName)
+			
+			
