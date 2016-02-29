@@ -1,5 +1,6 @@
 from easydict import EasyDict as edict
 import street_config as cfg
+import my_exp_config as mec
 
 class LabelPrms(object):
 	dbName = cfg.DEF_DB % ('label', 'default') 
@@ -11,6 +12,7 @@ class LabelPrms(object):
 		return 1	
 
 	def get_lbstr(self):
+		print (self.dbName)
 		return mec.get_sql_id(self.dbName, self.lb)
 
 
