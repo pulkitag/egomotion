@@ -64,6 +64,12 @@ def get_paths(dPrms=None):
 	pth.exp.snapshot    = edict()
 	pth.exp.snapshot.dr = osp.join(pth.exp.dr, 'snapshot')
 	ou.mkdir(pth.exp.snapshot.dr)
+	#group lists
+	pth.exp.others        = edict()
+	pth.exp.other.dr      = osp.join(pth.exp.dr, 'others')
+	pth.exp.other.grpList = osp.join(pth.exp.other.dr, 'group_list_%s_%s.pkl') 
+	ou.mkdir(pth.exp.other.dr)
+	
 	#Data files
 	pth.data    = edict()
 	pth.data.dr = osp.join(dataDir, dPrms.dataFolder)
@@ -210,7 +216,16 @@ def make_group_list_file(dPrms):
 	fid    = open(fName, 'r')
 	fList  = [l.strip() for l in fid.readlines()]
 	fid.close()
-	fPaths = dPrms['splitPrms']
 	fStore = spd.FolderStore()
-	for f in fList: 		
-		assert fStore.is_present(f)
+	setNames = ['train', 'val', 'test']
+	for s in setNames: 	
+		grpFileName = dPrms['paths'].exp.other.grpList
+		grpFileName = grpFileName % (dPrms['splitPrms']['pStr'], s)
+		grpFiles    = []
+		for f in fList: 		
+			assert fStore.is_present(f)
+			folderId   = fStore.get_id(f)
+			folderPath = get_folder_path(folderId, dPrms['splitPrms']) 
+			grpFiles.append(folderPath.grpSplits[s])
+		pickle.dump({'grpFiles': grpFiles}, open(grpFileName, 'w'))
+			 
