@@ -127,6 +127,7 @@ def net_prms(dbFile=DEF_DB % 'net', **kwargs):
 	dArgs.ipImSz    = 101
 	#The size of the fc layer if present
 	dArgs.fcSz      = None
+	dArgs.fcName    = 'fc5'
 	##The mean file
 	dArgs.meanFile  = ''
 	dArgs.meanType  = None
