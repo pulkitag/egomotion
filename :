@@ -69,8 +69,7 @@ def get_paths(dPrms=None):
 	#group lists
 	pth.exp.other         = edict()
 	pth.exp.other.dr      = osp.join(pth.exp.dr, 'others')
-	pth.exp.other.grpList = osp.join(pth.exp.other.dr,
-        'group_list_%s_%s.pkl' % (dPrms['splitPrms']['pStr'], '%s')) 
+	pth.exp.other.grpList = osp.join(pth.exp.other.dr, 'group_list_%s_%s.pkl') 
 	ou.mkdir(pth.exp.other.dr)
 	
 	#Data files
@@ -179,22 +178,23 @@ def make_net_def(dPrms, nPrms, **kwargs):
 	meanFile = get_mean_file(nPrms.meanFile) 
 	for s, b in zip(['TRAIN', 'TEST'], batchSz):
 		prmStr = ou.make_python_param_str({'batch_size': b, 
-							'im_root_folder': dPrms.paths.data,
-							'grplist_file': dPrms.paths.other.grpList,
-						  'lbinfo_file':  
-							'crop_size'  : nPrms.crpSz,
-							'im_size'    : nPrms.ipImSz 
-              'max_jitter' : nPrms.maxJitter,
-							'resume_iter': resumeIter, 
-							'mean_file': meanFile, 
-              'mean_type': nPrms.meanType})
+								'im_root_folder': dPrms.paths.data,
+                'grplist_file': dPrms.
+								'crop_size'  : nPrms.crpSz, 'max_jitter': nPrms.maxJitter,
+								'resume_iter': resumeIter, 
+								'mean_file': meanFile, 'mean_type': nPrms.meanType,
+								'poke_tfm_type': nPrms.pokeTfmType,
+								'poke_nxGrid': nPrms.pokeNxGrid, 'poke_nyGrid': nPrms.pokeNyGrid,
+								'poke_thGrid': nPrms.pokeThGrid})
 		netDef.set_layer_property('data', ['python_param', 'param_str'], 
 						'"%s"' % prmStr, phase=s)
 
-	if nPrms.fcSz is not None:
-		netDef.set_layer_property(nPrms.fcName,
-       ['inner_product_param', 'num_output'],
-				'%d' % (nPrms.fcSz), phase='TRAIN')
+	if nPrms.pokeTfmType == 'gridCls':
+		netDef.set_layer_property('pred_loc', ['inner_product_param', 'num_output'],
+				 '%d' % (nPrms.pokeNxGrid * nPrms.pokeNyGrid), phase='TRAIN')
+		netDef.set_layer_property('pred_th', ['inner_product_param', 'num_output'],
+				 '%d' % nPrms.pokeThGrid, phase='TRAIN')
+
 	return netDef 
 		  	
 
@@ -237,7 +237,8 @@ def make_group_list_file(dPrms):
 def verify_group_list_files(dPrms):
 	setNames = ['train', 'val', 'test']
 	for s in setNames: 	
-		grpListFileName = dPrms['paths'].exp.other.grpList % s
+		grpListFileName = dPrms['paths'].exp.other.grpList
+		grpListFileName = grpListFileName % (dPrms['splitPrms']['pStr'], s)
 		data = pickle.load(open(grpListFileName, 'r'))
 		for fName in data['grpFiles']:
 			if not osp.exists(fName):
