@@ -50,7 +50,6 @@ def get_folder_paths(folderId, splitPrms):
 										 'groups_%s_%s.pkl' % (s, splitPrms.pStr))
 	return paths
 
-
 ##
 #Paths that are required for reading the data
 def get_paths(dPrms=None):
@@ -72,6 +71,7 @@ def get_paths(dPrms=None):
 	pth.exp.other.grpList = osp.join(pth.exp.other.dr,
         'group_list_%s_%s.pkl' % (dPrms['splitPrms']['pStr'], '%s')) 
 	ou.mkdir(pth.exp.other.dr)
+	pth.exp.other.lbInfo  = osp.join(pth.exp.other.dr, 'label_info_%s.str')
 	
 	#Data files
 	pth.data    = edict()
@@ -244,6 +244,3 @@ def verify_group_list_files(dPrms):
 				print ('%s doesnot exists' % fName)
 			
 			
-
-
-			 
