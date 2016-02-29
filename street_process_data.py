@@ -705,7 +705,7 @@ def parallel_recompute():
 
 def save_cropped_ims(folderName):
 	sf = StreetFolder(folderName)	
-	disp('Saving cropped images %s' % folderName)
+	print ('Saving cropped images %s' % folderName)
 	sf.save_cropped_images()
 
 
