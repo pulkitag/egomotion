@@ -231,4 +231,20 @@ def make_group_list_file(dPrms):
 			folderPath = get_folder_paths(folderId, dPrms['splitPrms']) 
 			grpFiles.append(folderPath.grpSplits[s])
 		pickle.dump({'grpFiles': grpFiles}, open(grpListFileName, 'w'))
+
+
+#Check if all group files are present or not
+def verify_group_list_files(dPrms):
+	setNames = ['train', 'val', 'test']
+	for s in setNames: 	
+		grpListFileName = dPrms['paths'].exp.other.grpList
+		grpListFileName = grpListFileName % (dPrms['splitPrms']['pStr'], s)
+		data = pickle.load(open(grpListFileName, 'r'))
+		for fName in data['grpFiles']:
+			if not osp.exists(fName):
+				print ('%s doesnot exists' % fName)
+			
+			
+
+
 			 
