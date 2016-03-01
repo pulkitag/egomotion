@@ -138,7 +138,6 @@ def smallnetv5_fc5_pose_euler_crp192_rawImSz256_lossl1(isRun=False, numTrain=1e+
 	return prms, cPrms	
 
 
-
 #Classifying Euler Angles
 def smallnetv5_pool4_pose_classify_euler_crp192_rawImSz256(isRun=False, numTrain=1e+7, 
 										deviceId=[0], isPythonLayer=True, isGray=False,

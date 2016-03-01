@@ -16,6 +16,8 @@ import matplotlib.path as mplPath
 import re
 import street_utils as su
 
+STREET_PKG_PATH = osp.dirname(osp.realpath(__file__))
+
 def _mkdir(fName):
 	if not osp.exists(fName):
 		os.makedirs(fName)
@@ -132,6 +134,8 @@ def get_paths():
 	_mkdir(paths.exp.window.dr) 
 	paths.exp.window.tr = osp.join(paths.exp.window.dr, 'train-%s.txt')
 	paths.exp.window.te = osp.join(paths.exp.window.dr, 'test-%s.txt')
+	#Normalization data
+	paths.exp.window.nrmlz = osp.join(STREET_PKG_PATH, 'exp-data' , 'nrmlz-%s.pkl')
 	#Folderwise window dir
 	paths.exp.window.folderDr   = osp.join(paths.exp.dr, 'folder-window-files')
 	_mkdir(paths.exp.window.folderDr)
@@ -188,6 +192,10 @@ def get_label_size(labelClass, labelType):
 		elif labelType in ['euler']:
 			#One of the angles is always 0
 			lSz = 2
+		elif labelType in ['euler-5dof']:
+			lSz = 5
+		elif labelType in ['euler-6dof']:
+			lSz = 6
 		else:
 			raise Exception('%s,%s not recognized' % (labelClass, labelType))
 	else:
@@ -212,7 +220,7 @@ class LabelNLoss(object):
 		self.isMultiLabel = isMultiLabel
 		self.numBins_ = numBins
 		self.binType_ = binType
-		assert self.loss_ in ['l2', 'classify', 'l1'], self.loss_
+		assert self.loss_ in ['l2', 'classify', 'l1', 'logl1'], self.loss_
 		#augLbSz_ - augmented labelSz to include the ignore label option
 		self.augLbSz_, self.lbSz_  = self.get_label_sz()
 		self.lbStr_       = '%s-%s' % (self.label_, self.labelType_)
@@ -316,7 +324,8 @@ def get_prms(isAligned=True,
 						 ptchPosFrac=0.5, maxEulerRot=None, 
 						 geoFence='dc-v1', rawImSz=640,
 						 splitDist=None, splitVer='v1',
-						 nrmlMakeUni=0.002, mxPtchRot=None):
+						 nrmlMakeUni=0.002, mxPtchRot=None,
+						 isV2=False):
 	'''
 		labels    : What labels to use - make it a list for multiple
 								kind of labels
@@ -344,7 +353,8 @@ def get_prms(isAligned=True,
 									if splitDist is specified teGap is overriden
 		ptchPosFrac : The fraction of the positive patches in the matching
 		nrmlMakeUni :	nrmls are highly skewed - so this tries to make the normals uniformly
-									distributed. 
+									distributed.
+		isV2        : The version from Feb16 which is free of errors in rotation computation 
 
 		NOTES
 		I have tried to form prms so that they have enough information to specify
@@ -405,6 +415,7 @@ def get_prms(isAligned=True,
 	prms['crpSz']   = crpSz
 	prms['trnSeq']  = trnSeq
 	prms.geoPoly    = None 	
+	prms.isV2 = isV2
 
 	prms.splits = edict()
 	if splitDist is not None:
@@ -451,10 +462,19 @@ def get_prms(isAligned=True,
 	prms.mxPtchRot = mxPtchRot
 	if mxPtchRot is not None:
 		expStr = expStr + ('_mxPtchRot-%d' % mxPtchRot) 
+	
+	#expName2 is used to influence folderwise window file, which should be
+	#unaffected by label normalization
+	expName2  = '%s_crpSz%d%s' % (expStr, crpSz, imStr)
+	if prms.lbNrmlz is not None:
+		expStr = expStr + '_lbNrmlz-%s' % prms.lbNrmlz
 
 	expName   = '%s_crpSz%d_nTr-%.2e%s' % (expStr, crpSz, numTrain, imStr)
 	teExpName = '%s_crpSz%d_nTe-%.2e%s' % (expStr, crpSz, numTest, imStr)
-	expName2  = '%s_crpSz%d%s' % (expStr, crpSz, imStr) 
+	if prms.isV2:
+		expName  = '%s_%s' % (expName, 'exp-V2')
+		teExpName  = '%s_%s' % (teExpName, 'exp-V2')
+		expName2 = '%s_%s' % (expName2, 'exp-V2')
 	prms['expName'] = expName
 
 	#Form the window files
@@ -467,6 +487,7 @@ def get_prms(isAligned=True,
 	paths['windowFile']['train'] = osp.join(windowDir, 'train_%s.txt' % expName)
 	paths['windowFile']['test']  = osp.join(windowDir, 'test_%s.txt'  % teExpName)
 	paths.exp.window.folderFile  = paths.exp.window.folderFile  %  ('%s', expName2)
+	paths.exp.window.nrmlz   = paths.exp.window.nrmlz % expStr
 
 	#Files for saving the geolocalized groups
 	if prms.geoPoly is not None:
@@ -482,10 +503,6 @@ def get_prms(isAligned=True,
 	paths.proc.im.folder.keyFile  = paths.proc.im.folder.keyFile % (rawImSz, '%s')
 
 	prms['paths'] = paths
-	#Get the pose stats
-	prms['poseStats'] = {}
-	#prms['poseStats']['mu'], prms['poseStats']['sd'], prms['poseStats']['scale'] =\
-	#					get_pose_stats(prms)
 	ltStr = ''
 	ltFlag = False
 	for lt in lossType:
@@ -494,7 +511,6 @@ def get_prms(isAligned=True,
 			ltStr = 'loss-l1'
 	if ltFlag:
 		prms['expName'] = '%s_%s' % (prms['expName'], ltStr)
-
 	return prms
 
 ##

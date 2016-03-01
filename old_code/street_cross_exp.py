@@ -33,6 +33,21 @@ def train_pose_using_ptch(isRun=False, deviceId=[0]):
 		exp.run()
 	return exp
 
+def train_ptch_using_pose_fc5(isRun=False, deviceId=[0]):
+	poPrms, poCPrms = mepo.smallnetv5_fc5_pose_euler_crp192_rawImSz256(numFc5=512, 
+											isPythonLayer=True)
+	ptPrms, ptCPrms = mept.smallnetv5_fc5_ptch_crp192_rawImSz256(numFc5=512,
+													isPythonLayer=True, lrAbove='common_fc', deviceId=deviceId)
+	exp, modelFile = se.setup_experiment_from_previous(poPrms, poCPrms,
+																 ptPrms, ptCPrms, srcModelIter=60000)
+	#Rename common_fc so that it is initialized randomly
+	exp.expFile_.netDef_.rename_layer('common_fc', 'common_fc_new') 
+	if isRun:
+		exp.make(modelFile=modelFile)
+		exp.run()
+	return exp
+
+
 def train_ptch_using_ptch_lt5(isRun=False, deviceId=[0]):
 	#The target experiment is to peform ptch matching on general angles
 	tgtPrms, tgtCPrms = mept.smallnetv5_fc5_ptch_crp192_rawImSz256(isPythonLayer=True, 
