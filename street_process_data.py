@@ -94,10 +94,11 @@ def find_bin_index(bins, val):
 ##
 #Geo distance calculations
 class GeoCoordinate(object):
-	def __init__(self, latitude, longitude, z=0):
-		#In radians
-		self.lat_  = np.pi * latitude/180.
-		self.long_ = np.pi * longitude/180.
+	def __init__(self, latitude, longitude, z=0, isRadian=False):
+		#convert radians
+		if not isRadian:
+			self.lat_  = np.pi * latitude/180.
+			self.long_ = np.pi * longitude/180.
 		self.z_    = z
 		#in meters
 		self.earthRadius = 6371.0088 * 1000
@@ -116,6 +117,17 @@ class GeoCoordinate(object):
 	def get_xy(self):
 		x, y, z = self.get_xyz()
 		return x, y
+
+	def get_displacement_vector(self, pt2):
+	'''
+		pt2: the point to which displacement vector
+         is to be planned
+	'''	
+	y = R * (pt2.lat_ - self.lat_)
+	x = R * (pt2.long_ - self.long_) * math.acos((self.lat_ + pt2.lat_)/2.0)
+	z = pt2.z_ - pt1.z_
+	return x, y, z
+
 
 
 #Mantains a list of folders that have been processed
