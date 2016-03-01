@@ -703,7 +703,7 @@ def tar_folder_data(folderName):
 	trFile  = sf.paths_.tarFile
 	if not osp.exists(trFile):
 		print ('Making %s' % trFile)
-		subprocess.check_call(['tar -cf %s %s' % (trFile, drName)],shell=True)
+		subprocess.check_call(['tar -cf %s -C %s .' % (trFile, drName)],shell=True)
 		return True
 	else:
 		print ('Already exists %s' % trFile)
