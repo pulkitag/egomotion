@@ -15,6 +15,7 @@ from matplotlib import cm as cmap
 import matplotlib.pyplot as plt
 import street_config as cfg
 import street_exp_v2 as sev2
+import subprocess
 
 def get_config_paths():
 	return cfg.pths
