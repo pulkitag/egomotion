@@ -245,6 +245,11 @@ def make_loss_layers_proto(dPrms, nPrms, **kwargs):
 	#Read the basefile and construct a net
 	baseFile  = dPrms.paths.baseProto % nPrms.lossNetDefProto
 	netDef    = mpu.ProtoDef(baseFile)
+	fcLayerName = '%s_fc' % dPrms.lbPrms.lb['type']
+	lbSz        = dPrms.lbPrms.get_lbsz()
+	netDef.set_layer_property(fcLayerName,
+            ['inner_product_param', 'num_output'], '%d' % lbSz, phase='TRAIN')
+	
 	return netDef 
 
 ##
