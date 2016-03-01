@@ -74,7 +74,7 @@ def get_paths(dPrms=None):
 	pth.exp.other.grpList = osp.join(pth.exp.other.dr,
         'group_list_%s_%s.pkl' % (dPrms['splitPrms']['pStr'], '%s')) 
 	ou.mkdir(pth.exp.other.dr)
-	pth.exp.other.lbInfo  = osp.join(pth.exp.other.dr, 'label_info_%s.str')
+	pth.exp.other.lbInfo  = osp.join(pth.exp.other.dr, 'label_info_%s.pkl')
 	
 	#Data files
 	pth.data    = edict()
@@ -198,8 +198,10 @@ def make_data_layers_proto(dPrms, nPrms, **kwargs):
 	for s, b in zip(['TRAIN', 'TEST'], batchSz):
 		#Make the label info file
 		lbInfo = dPrms['lbPrms']
+		lbDict = copy.deepcopy(lbInfo.lb)
+		lbDict['lbSz'] = lbInfo.get_lbsz()
 		lbFile = dPrms.paths.exp.other.lbInfo % lbInfo.get_lbstr()
-		pickle.dump({'lbInfo': lbInfo}, open(lbFile, 'w'))
+		pickle.dump({'lbInfo': lbDict}, open(lbFile, 'w'))
 		#The group files
 		if s == 'TEST':
 			grpListFile = dPrms.paths.exp.other.grpList % 'val'
