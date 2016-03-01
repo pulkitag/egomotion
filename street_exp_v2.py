@@ -282,7 +282,7 @@ def make_group_list_file(dPrms):
 	setNames = ['train', 'val', 'test']
 	for s in setNames: 	
 		grpListFileName = dPrms['paths'].exp.other.grpList
-		grpListFileName = grpListFileName % (dPrms['splitPrms']['pStr'], s)
+		grpListFileName = grpListFileName %  s
 		print ('Saving to %s' % grpListFileName)
 		grpFiles    = []
 		for f in fList: 		
