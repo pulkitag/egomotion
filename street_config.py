@@ -16,6 +16,7 @@ else:
 DEF_DB    = DEF_DB % ('%s',HOST_STR, '%s')
 
 #Other paths
-pths.folderProc = osp.join(pths.mainDataDr, 'proc2', '%s')
+pths.folderProc    = osp.join(pths.mainDataDr, 'proc2', '%s')
+pths.folderProcTar = osp.join(pths.mainDataDr, 'proc2-tar', '%s.tar')
 pths.cwd = osp.dirname(osp.abspath(__file__))
 

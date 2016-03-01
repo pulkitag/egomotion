@@ -32,6 +32,8 @@ def get_folder_paths(folderId, splitPrms):
 	paths    = edict()
 	paths.dr = cPaths.folderProc % folderId
 	ou.mkdir(paths.dr)
+	paths.tarFile = cPaths.folderProcTar % folderId
+	ou.mkdir(osp.dirname(paths.tarFile))
 	paths.prefix     = osp.join(paths.dr, 'prefix.pkl')
 	paths.prePerGrp  = osp.join(paths.dr, 'prePerGrp.pkl')
 	#List of targetgroups in ordered format - necessary as ordering matters
@@ -301,4 +303,5 @@ def verify_group_list_files(dPrms):
 			if not osp.exists(fName):
 				print ('%s doesnot exists' % fName)
 			
-			
+
+	

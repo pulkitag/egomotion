@@ -692,21 +692,24 @@ def recompute(folderName):
 	print ('Recomputing Splits')
 	sf.split_trainval_sets()
 
-def parallel_recompute():
-	fNames = ['0070', '0071']
-	inArgs = [osp.join('raw', f) for f in fNames]
-	for f in inArgs:
-		print (f)
-	pool   = Pool(processes=6)
-	jobs   = pool.map_async(recompute, inArgs)
-	res    = jobs.get()
-	del pool
-
 
 def save_cropped_ims(folderName):
 	sf = StreetFolder(folderName)	
 	print ('Saving cropped images %s' % folderName)
 	sf.save_cropped_images()
+
+
+def tar_folder_data(folderName):
+	sf = StreetFolder(folderName)	
+	drName  = sf.paths_.dr
+	trFile  = sf.paths_.tarFile
+	if not osp.exists(trFile):
+		print ('Making %s' % trFile)
+		subprocess.check_call(['tar -cf %s %s' % (trFile, drName)],shell=True)
+		return True
+	else:
+		print ('Already exists %s' % trFile)
+		return False
 
 
 #Run functions in parallel that except a single argument folderName
