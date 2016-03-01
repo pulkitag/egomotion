@@ -141,9 +141,10 @@ def net_prms(dbFile=DEF_DB % 'net', **kwargs):
 	##The mean file
 	dArgs.meanFile  = ''
 	dArgs.meanType  = None
+	dArgs.ncpu      = 0
 	dArgs   = mpu.get_defaults(kwargs, dArgs, False)
 	allKeys = dArgs.keys()	
-	dArgs['expStr'] = mec.get_sql_id(dbFile, dArgs)
+	dArgs['expStr'] = mec.get_sql_id(dbFile, dArgs, ignoreKeys=['ncpu'])
 	return dArgs, allKeys
 
 
@@ -194,7 +195,8 @@ def make_data_layers_proto(dPrms, nPrms, **kwargs):
 							'im_size'    : nPrms.ipImSz, 
               'jitter_amt' : nPrms.maxJitter,
 							'resume_iter': resumeIter, 
-							'mean_file': meanFile})
+							'mean_file': meanFile,
+              'ncpu': nPrms.ncpu})
 		netDef.set_layer_property('window_data', ['python_param', 'param_str'], 
 						'"%s"' % prmStr, phase=s)
 		#Rename the top corresponding to the labels
@@ -251,9 +253,8 @@ def process_net_prms(**kwargs):
 	'''
 	nPrms, nKeys = net_prms(**kwargs)
 	#Verify that no spurious keys have been added
-	nKeysIp = [k for k in nPrms.keys() if not k in ['expStr', 'debugMode']]
+	nKeysIp = [k for k in nPrms.keys() if not k in ['expStr']]
 	assert set(nKeys)==set(nKeysIp), 'There are some spurious keys'
-	nPrms['debugMode'] = kwargs['debugMode']	
 	return nPrms 
 
 class ProcessPrms(object):
@@ -268,7 +269,7 @@ class ProcessPrms(object):
 		return nPrms 
 
 
-def setup_experiment_demo(debugMode=False):
+def setup_experiment_demo(debugMode=False, isRun=False):
 	posePrms = slu.PosePrms()
 	dPrms   = get_data_prms(lbPrms=posePrms)
 	nwFn    = process_net_prms
@@ -278,7 +279,10 @@ def setup_experiment_demo(debugMode=False):
 	cPrms   = mec.get_caffe_prms(nwFn=nwFn, nwPrms=nwArgs,
 									 solFn=solFn, solPrms=solArgs)
 	exp     = mec.CaffeSolverExperiment(dPrms, cPrms,
-					  netDefFn=make_net_def) 
+					  netDefFn=make_net_def, isLog=False)
+	if isRun:
+		exp.make()
+		exp.run() 
 	return exp 	 				
 
 
