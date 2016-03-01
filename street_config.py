@@ -9,6 +9,8 @@ HOST_NAME = socket.gethostname()
 DEF_DB    = osp.join(REAL_PATH, 'exp-data/db-store/%s-%s-%s-db.sqlite')
 if 'ivb' in HOST_NAME:
 	HOST_STR = 'nvCluster'
+	pths.mainDataDr = '/scratch/pulkitag/data_sets/streetview'
+	pths.expDir     = '/scratch/pulkitag/streetview/exp'
 else:
 	pths.mainDataDr = '/data0/pulkitag/data_sets/streetview'
 	pths.expDir     = '/data0/pulkitag/streetview/exp'

@@ -74,7 +74,7 @@ def get_paths(dPrms=None):
 	pth.exp.other.grpList = osp.join(pth.exp.other.dr,
         'group_list_%s_%s.pkl' % (dPrms['splitPrms']['pStr'], '%s')) 
 	ou.mkdir(pth.exp.other.dr)
-	pth.exp.other.lbInfo  = osp.join(pth.exp.other.dr, 'label_info_%s.str')
+	pth.exp.other.lbInfo  = osp.join(pth.exp.other.dr, 'label_info_%s.pkl')
 	
 	#Data files
 	pth.data    = edict()
@@ -141,34 +141,13 @@ def net_prms(dbFile=DEF_DB % 'net', **kwargs):
 	##The mean file
 	dArgs.meanFile  = ''
 	dArgs.meanType  = None
+	dArgs.ncpu      = 0
 	dArgs   = mpu.get_defaults(kwargs, dArgs, False)
 	allKeys = dArgs.keys()	
-	dArgs['expStr'] = mec.get_sql_id(dbFile, dArgs)
+	dArgs['expStr'] = mec.get_sql_id(dbFile, dArgs, ignoreKeys=['ncpu'])
 	return dArgs, allKeys
 
 
-##
-#Process the data and net parameters
-def process_net_prms(**kwargs):
-	'''
-		net_prms_fn: The function to obtain net parameters
-	'''
-	nPrms, nKeys = net_prms(**kwargs)
-	#Verify that no spurious keys have been added
-	nKeysIp = [k for k in nPrms.keys() if not k == 'expStr']
-	assert set(nKeys)==set(nKeysIp), 'There are some spurious keys'
-	return nPrms 
-
-class ProcessPrms(object):
-	def __init__(self, net_prms_fn):
-		self.fn_ = net_prms_fn
-
-	def process(self, **kwargs):
-		nPrms, nKeys = self.fn_(**kwargs)
-		#Verify that no spurious keys have been added
-		nKeysIp = [k for k in nPrms.keys() if not k == 'expStr']
-		assert set(nKeys)==set(nKeysIp), 'There are some spurious keys'
-		return nPrms 
 
 ##
 #Merge the definition of multiple layers
@@ -198,13 +177,15 @@ def make_data_layers_proto(dPrms, nPrms, **kwargs):
 	for s, b in zip(['TRAIN', 'TEST'], batchSz):
 		#Make the label info file
 		lbInfo = dPrms['lbPrms']
+		lbDict = copy.deepcopy(lbInfo.lb)
+		lbDict['lbSz'] = lbInfo.get_lbsz()
 		lbFile = dPrms.paths.exp.other.lbInfo % lbInfo.get_lbstr()
-		pickle.dump({'lbInfo': lbInfo}, open(lbFile, 'w'))
+		pickle.dump({'lbInfo': lbDict}, open(lbFile, 'w'))
 		#The group files
 		if s == 'TEST':
 			grpListFile = dPrms.paths.exp.other.grpList % 'val'
 		else:
-			grpListFile = dPrms.paths.exp.other.grpList % 'train'
+			grpListFile = dPrms.paths.exp.other.grpList % 'test'
 		#The python parameters	
 		prmStr = ou.make_python_param_str({'batch_size': b, 
 							'im_root_folder': dPrms.paths.data.dr,
@@ -214,7 +195,8 @@ def make_data_layers_proto(dPrms, nPrms, **kwargs):
 							'im_size'    : nPrms.ipImSz, 
               'jitter_amt' : nPrms.maxJitter,
 							'resume_iter': resumeIter, 
-							'mean_file': meanFile})
+							'mean_file': meanFile,
+              'ncpu': nPrms.ncpu})
 		netDef.set_layer_property('window_data', ['python_param', 'param_str'], 
 						'"%s"' % prmStr, phase=s)
 		#Rename the top corresponding to the labels
@@ -243,6 +225,11 @@ def make_loss_layers_proto(dPrms, nPrms, **kwargs):
 	#Read the basefile and construct a net
 	baseFile  = dPrms.paths.baseProto % nPrms.lossNetDefProto
 	netDef    = mpu.ProtoDef(baseFile)
+	fcLayerName = '%s_fc' % dPrms.lbPrms.lb['type']
+	lbSz        = dPrms.lbPrms.get_lbsz()
+	netDef.set_layer_property(fcLayerName,
+            ['inner_product_param', 'num_output'], '%d' % lbSz, phase='TRAIN')
+	
 	return netDef 
 
 ##
@@ -258,17 +245,44 @@ def make_net_def(dPrms, nPrms, **kwargs):
 	return _merge_defs([dataDef, baseDef, lossDef]) 
 			  	
 
-def setup_experiment_demo():
+##
+#Process the data and net parameters
+def process_net_prms(**kwargs):
+	'''
+		net_prms_fn: The function to obtain net parameters
+	'''
+	nPrms, nKeys = net_prms(**kwargs)
+	#Verify that no spurious keys have been added
+	nKeysIp = [k for k in nPrms.keys() if not k in ['expStr']]
+	assert set(nKeys)==set(nKeysIp), 'There are some spurious keys'
+	return nPrms 
+
+class ProcessPrms(object):
+	def __init__(self, net_prms_fn):
+		self.fn_ = net_prms_fn
+
+	def process(self, **kwargs):
+		nPrms, nKeys = self.fn_(**kwargs)
+		#Verify that no spurious keys have been added
+		nKeysIp = [k for k in nPrms.keys() if not k == 'expStr']
+		assert set(nKeys)==set(nKeysIp), 'There are some spurious keys'
+		return nPrms 
+
+
+def setup_experiment_demo(debugMode=False, isRun=False):
 	posePrms = slu.PosePrms()
 	dPrms   = get_data_prms(lbPrms=posePrms)
 	nwFn    = process_net_prms
-	nwArgs  = {}
+	nwArgs  = {'debugMode': debugMode}
 	solFn   = mec.get_default_solver_prms
 	solArgs = {'dbFile': DEF_DB % 'sol'}
 	cPrms   = mec.get_caffe_prms(nwFn=nwFn, nwPrms=nwArgs,
 									 solFn=solFn, solPrms=solArgs)
 	exp     = mec.CaffeSolverExperiment(dPrms, cPrms,
-					  netDefFn=make_net_def) 
+					  netDefFn=make_net_def, isLog=False)
+	if isRun:
+		exp.make()
+		exp.run() 
 	return exp 	 				
 
 
@@ -282,7 +296,7 @@ def make_group_list_file(dPrms):
 	setNames = ['train', 'val', 'test']
 	for s in setNames: 	
 		grpListFileName = dPrms['paths'].exp.other.grpList
-		grpListFileName = grpListFileName % (dPrms['splitPrms']['pStr'], s)
+		grpListFileName = grpListFileName %  s
 		print ('Saving to %s' % grpListFileName)
 		grpFiles    = []
 		for f in fList: 		

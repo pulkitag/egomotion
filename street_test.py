@@ -318,10 +318,10 @@ def get_ptch_test_results_conv4():
 def get_ptch_test_results_fc5(protoType='gt5'):
 	#numFc5    = [32, 64, 128, 256, 384, 512, 1024]
 	#runNum    = [0, 0, 0, 1, 0, 0, 0]
-	numFc5    = [128, 256, 384, 512, 1024]
-	runNum    = [0, 1, 0, 0, 0]
-	#numFc5    = [512]
-	#runNum    = [0]
+	#numFc5    = [128, 256, 384, 512, 1024]
+	#runNum    = [0, 1, 0, 0, 0]
+	numFc5    = [512, 1024]
+	runNum    = [0,0]
 	modelIter = 72000
 	fpr       = {}
 	for n,r in zip(numFc5, runNum):
@@ -332,6 +332,7 @@ def get_ptch_test_results_fc5(protoType='gt5'):
 				prms, cPrms = mept.smallnetv5_fc5_ptch_crp192_rawImSz256(numFc5=n, runNum=r)
 			gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, 
 																		protoType=protoType)
+			#return gtLabel, pdScore
 			fpr['num-%d' % n] = get_fpr(0.95, pdScore, gtLabel)
 		except:
 			print ('Not found for %d' % n)
@@ -339,9 +340,9 @@ def get_ptch_test_results_fc5(protoType='gt5'):
 
 ##
 #Get the results with the constrain that maximum allowed rotation is 90
-def get_ptch_test_results_fc5_mxRot90():
-	#numFc5    = [128, 256, 384, 512, 1024]
-	numFc5    = [384, 512, 1024]
+def get_ptch_test_results_fc5_mxRot90(protoType='mxRot90'):
+	numFc5    = [128, 256, 384, 512, 1024]
+	#numFc5    = [384, 512, 1024]
 	runNum    = [0, 0, 0, 0, 0]
 	modelIter = 72000
 	fpr       = {}
@@ -351,8 +352,8 @@ def get_ptch_test_results_fc5_mxRot90():
 			prms, cPrms = mept.ptch_from_ptch_pose_euler_mx90_smallnetv5_fc5_exp1(numFc5=n)
 			print ('Here')
 			exp = se.setup_experiment(prms, cPrms)
-			#print(osp.exists(exp.get_snapshotname(modelIter)))
-			gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, isLiberty=False)
+			print(osp.exists(exp.get_snapshot_name(modelIter)))
+			gtLabel, pdScore = test_ptch(prms, cPrms, modelIter, protoType=protoType)
 			fpr['num-%d' % n] = get_fpr(0.95, pdScore, gtLabel)
 		except:
 			print ('Not found for %d' % n)
@@ -367,19 +368,19 @@ def get_multiloss_on_ptch_results(protoType='mx90'):
 	#fpr.append(get_fpr(0.95, pdScore, gtLabel))
 
 	#With Fc5 
-	numFc = [128, 256, 384, 512, 1024]
-	#numFc = [384, 1024]
-	numFc = [512]
+	#numFc = [128, 256, 384, 512, 1024]
+	numFc = [384, 512, 1024]
+	#numFc = [512]
 	for n in numFc:
-		#prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v5_fc5_exp1(numFc5=n)
-		prms, cPrms = mev2.ptch_pose_euler_smallnet_v5_fc5_exp1_lossl1(numFc5=None)
+		prms, cPrms = mev2.ptch_pose_euler_mx90_smallnet_v5_fc5_exp1(numFc5=n)
+		#prms, cPrms = mev2.ptch_pose_euler_smallnet_v5_fc5_exp1_lossl1(numFc5=None)
 		#prms, cPrms = mev2.ptch_pose_euler_(numFc5=None)
-		#try:
-		gtLabel, pdScore = test_ptch(prms, cPrms, modelIter,
-												protoType=protoType)
-		fpr['num-%d' % n] = get_fpr(0.95, pdScore, gtLabel)
-		#except:
-		print ('Not found for %d' % n)
+		try:
+			gtLabel, pdScore = test_ptch(prms, cPrms, modelIter,
+													protoType=protoType)
+			fpr['num-%d' % n] = get_fpr(0.95, pdScore, gtLabel)
+		except:
+			print ('Not found for %d' % n)
 	return fpr
 
 def get_pose_on_pose_results():
@@ -407,7 +408,7 @@ def test_linear_pose_from_ptch():
 
 def test_linear_ptch_from_pose(protoType='gt5'):
 	exp = sce.train_ptch_using_pose()
-	modelIter=26000		
+	modelIter=72000		
 	gt, pd   = test_ptch(exp, None, modelIter, protoType=protoType)
 	return get_fpr(0.95, pd, gt)
 
