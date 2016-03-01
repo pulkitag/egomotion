@@ -53,7 +53,7 @@ def get_pose_delta(lbInfo, rot1, rot2, pt1=None, pt2=None, isRadian=False):
 				lb = (yaw, pitch, dx, dy, dz)
 			else:
 				lb = (yaw, pitch, roll, dx, dy, dz)
-	elif lbInfo.'angleType'] == 'quat':
+	elif lbInfo['angleType'] == 'quat':
 		quat = t3eu.euler2quat(pitch, yaw, roll, axes='szxy')
 		q1, q2, q3, q4 = quat
 		lb = (q1, q2, q3, q4)

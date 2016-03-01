@@ -119,14 +119,14 @@ class GeoCoordinate(object):
 		return x, y
 
 	def get_displacement_vector(self, pt2):
-	'''
-		pt2: the point to which displacement vector
-         is to be planned
-	'''	
-	y = R * (pt2.lat_ - self.lat_)
-	x = R * (pt2.long_ - self.long_) * math.acos((self.lat_ + pt2.lat_)/2.0)
-	z = pt2.z_ - pt1.z_
-	return x, y, z
+		'''
+			pt2: the point to which displacement vector
+					 is to be planned
+		'''	
+		y = R * (pt2.lat_ - self.lat_)
+		x = R * (pt2.long_ - self.long_) * math.acos((self.lat_ + pt2.lat_)/2.0)
+		z = pt2.z_ - pt1.z_
+		return x, y, z
 
 
 

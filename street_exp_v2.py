@@ -147,28 +147,6 @@ def net_prms(dbFile=DEF_DB % 'net', **kwargs):
 	return dArgs, allKeys
 
 
-##
-#Process the data and net parameters
-def process_net_prms(**kwargs):
-	'''
-		net_prms_fn: The function to obtain net parameters
-	'''
-	nPrms, nKeys = net_prms(**kwargs)
-	#Verify that no spurious keys have been added
-	nKeysIp = [k for k in nPrms.keys() if not k == 'expStr']
-	assert set(nKeys)==set(nKeysIp), 'There are some spurious keys'
-	return nPrms 
-
-class ProcessPrms(object):
-	def __init__(self, net_prms_fn):
-		self.fn_ = net_prms_fn
-
-	def process(self, **kwargs):
-		nPrms, nKeys = self.fn_(**kwargs)
-		#Verify that no spurious keys have been added
-		nKeysIp = [k for k in nPrms.keys() if not k == 'expStr']
-		assert set(nKeys)==set(nKeysIp), 'There are some spurious keys'
-		return nPrms 
 
 ##
 #Merge the definition of multiple layers
@@ -206,7 +184,7 @@ def make_data_layers_proto(dPrms, nPrms, **kwargs):
 		if s == 'TEST':
 			grpListFile = dPrms.paths.exp.other.grpList % 'val'
 		else:
-			grpListFile = dPrms.paths.exp.other.grpList % 'train'
+			grpListFile = dPrms.paths.exp.other.grpList % 'test'
 		#The python parameters	
 		prmStr = ou.make_python_param_str({'batch_size': b, 
 							'im_root_folder': dPrms.paths.data.dr,
@@ -265,11 +243,36 @@ def make_net_def(dPrms, nPrms, **kwargs):
 	return _merge_defs([dataDef, baseDef, lossDef]) 
 			  	
 
-def setup_experiment_demo():
+##
+#Process the data and net parameters
+def process_net_prms(**kwargs):
+	'''
+		net_prms_fn: The function to obtain net parameters
+	'''
+	nPrms, nKeys = net_prms(**kwargs)
+	#Verify that no spurious keys have been added
+	nKeysIp = [k for k in nPrms.keys() if not k in ['expStr', 'debugMode']]
+	assert set(nKeys)==set(nKeysIp), 'There are some spurious keys'
+	nPrms['debugMode'] = kwargs['debugMode']	
+	return nPrms 
+
+class ProcessPrms(object):
+	def __init__(self, net_prms_fn):
+		self.fn_ = net_prms_fn
+
+	def process(self, **kwargs):
+		nPrms, nKeys = self.fn_(**kwargs)
+		#Verify that no spurious keys have been added
+		nKeysIp = [k for k in nPrms.keys() if not k == 'expStr']
+		assert set(nKeys)==set(nKeysIp), 'There are some spurious keys'
+		return nPrms 
+
+
+def setup_experiment_demo(debugMode=False):
 	posePrms = slu.PosePrms()
 	dPrms   = get_data_prms(lbPrms=posePrms)
 	nwFn    = process_net_prms
-	nwArgs  = {}
+	nwArgs  = {'debugMode': debugMode}
 	solFn   = mec.get_default_solver_prms
 	solArgs = {'dbFile': DEF_DB % 'sol'}
 	cPrms   = mec.get_caffe_prms(nwFn=nwFn, nwPrms=nwArgs,
