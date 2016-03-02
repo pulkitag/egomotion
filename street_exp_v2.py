@@ -141,7 +141,7 @@ def net_prms(dbFile=DEF_DB % 'net', **kwargs):
 	##The mean file
 	dArgs.meanFile  = ''
 	dArgs.meanType  = None
-	dArgs.ncpu      = 0
+	dArgs.ncpu      = 2
 	dArgs   = mpu.get_defaults(kwargs, dArgs, False)
 	allKeys = dArgs.keys()	
 	dArgs['expStr'] = mec.get_sql_id(dbFile, dArgs, ignoreKeys=['ncpu'])
@@ -188,7 +188,7 @@ def make_data_layers_proto(dPrms, nPrms, **kwargs):
 			grpListFile = dPrms.paths.exp.other.grpList % 'test'
 		#The python parameters	
 		prmStr = ou.make_python_param_str({'batch_size': b, 
-							'im_root_folder': dPrms.paths.data.dr,
+							'im_root_folder': osp.join(cfg.pths.folderProc, 'imCrop' , 'imSz256'),
 							'grplist_file': grpListFile,
 						  'lbinfo_file':  lbFile, 
 							'crop_size'  : nPrms.crpSz,
