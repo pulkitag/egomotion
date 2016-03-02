@@ -701,7 +701,8 @@ def tar_folder_data(folderName):
 	sf = StreetFolder(folderName)	
 	drName  = sf.paths_.dr
 	trFile  = sf.paths_.tarFile
-	if not osp.exists(trFile):
+	forceWrite = True
+	if not osp.exists(trFile) or forceWrite:
 		print ('Making %s' % trFile)
 		subprocess.check_call(['tar -cf %s -C %s .' % (trFile, drName)],shell=True)
 		return True
