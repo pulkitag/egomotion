@@ -321,7 +321,7 @@ class StreetGroup(object):
 			grp.crpImNames.append(self.grp.crpImNames[i])
 			grp.prefix.append(self.grp.prefix[i])
 			grp.data.append(copy.deepcopy(self.grp.data[i]))
-		return grp
+		return StreetGroup(grp)
 			
 	#Get a subset of only aligned data
 	def subset_aligned(self):
@@ -701,8 +701,8 @@ class StreetFolder(object):
 				alignGrps[gk] = alGrp
 				for p in alGrp.grp.prefix:
 					alignPrefixList.append(p)
-		print ('Folder: %d, number of groups: %d, number of align: %d' %
-           self.id_, len(allGrpList), len(alignGrpList))
+		print ('Folder: %s, number of groups: %d, number of align: %d' %
+           (self.id_, len(allGrpList), len(alignGrpList)))
 		pickle.dump({'grpList': alignGrpList}, open(self.paths_.targetGrpListAlign, 'w'))
 		pickle.dump({'groups': alignGrps}, open(self.paths_.targetGrpsAlign, 'w'))	
 		pickle.dump({'prefixStr': alignPrefixList}, open(self.paths_.prefixAlign, 'w'))	
