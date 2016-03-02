@@ -45,8 +45,8 @@ def save_cropped_image_unaligned(inNames, outNames, rawImSz=256,
 		scm.imsave(outNames[i], imSave)
 
 
-def save_cropped_image_aligned(inNames, outNames, rawImSz=256, 
-										imCenter,	isForceWrite=False):
+def save_cropped_image_aligned(inNames, outNames, imCenter,
+            rawImSz=256, isForceWrite=False):
 	N = len(inNames)
 	assert N == len(outNames)
 	for i in range(N):
@@ -629,34 +629,7 @@ class StreetFolder(object):
 		pickle.dump(grps, open(self.paths_.prePerGrp, 'w'))
 		pickle.dump({'grpList': tgtList}, open(self.paths_.targetGrpList, 'w'))
 
-	#Save the counts of aligned groups
-	def _save_target_group_aligned(self):
-		assert self.isAlign_, 'Align_ is set to False'
-		self.isAlign_ = False
-		if not osp.exists(self.paths_.targetGrpList):
-			self._save_target_group_counts()
-		allGrpList = self.get_target_group_list()
-		allGrps    = self.get_target_groups()
-		alignGrpList = []
-		alignGrps       = edict()
-		alignPrefixList = []
-		for gk in allGrpList:	
-			grp = allGrps[gk]
-			for n in range(grp.num):
-				alGrp = grp.subset_aligned()
-				if alGrp is not None:
-					alignGrpList.append(gk)
-					alignGrps[gk] = alGrp
-					for p in alGrp.grp.prefix:
-						alignPrefixList.append(p)
-		print ('Folder: %d, number of groups: %d, number of align: %d' %
-           self.id_, len(allGrpList), len(alignGrpList))
-		pickle.dump({'grpList': alignGrpList}, open(self.paths_.targetGrpListAlign, 'w'))
-		pickle.dump({'groups': alignGrps}, open(self.paths_.targetGrpsAlign, 'w'))	
-		pickle.dump({'prefixStr': alignPrefixList}, open(self.paths_.prefixAlign, 'w'))	
-		self.isAlign_ = True
-		
-
+	
 	#get all the target group counts
 	def get_num_prefix_per_target_group(self, forceCompute=False):
 		if not forceCompute and osp.exists(self.paths_.prePerGrp):
@@ -675,6 +648,9 @@ class StreetFolder(object):
 		
 	#save the target group data
 	def _save_target_groups(self, forceWrite=False):
+		if self.isAlign_:
+			self._save_target_groups_aligned(forceWrite=forceWrite)
+			return
 		if osp.exists(self.paths_.targetGrps) and not forceWrite:
 			print ('Group file %s exists, NOT recomputing' % self.paths_.targetGrps)
 			return
@@ -700,6 +676,38 @@ class StreetFolder(object):
 		print ('SAVING to %s' % self.paths_.targetGrps)
 		pickle.dump({'groups': grps}, open(self.paths_.targetGrps, 'w'))	
 
+	#Save the counts of aligned groups
+	def _save_target_groups_aligned(self, forceWrite=False):
+		assert self.isAlign_, 'Align_ is set to False'
+		self.isAlign_ = False
+		#Check is the original groups have been saved
+		if not osp.exists(self.paths_.targetGrpList):
+			self._save_target_group_counts()
+		#Check if the aligned groups have already been saved
+		if osp.exists(self.paths_.targetGrpsAlign) and not forceWrite:
+			print ('Group file %s exists, NOT recomputing' % self.paths_.targetGrpsAlign)
+			return
+		print ('%s loading all groups' % self.id_)
+		allGrpList = self.get_target_group_list()
+		allGrps    = self.get_target_groups()
+		alignGrpList = []
+		alignGrps       = edict()
+		alignPrefixList = []
+		print ('%s filtering aligned groups' % self.id_)
+		for gk in allGrpList:	
+			alGrp = allGrps[gk].subset_aligned()
+			if alGrp is not None:
+				alignGrpList.append(gk)
+				alignGrps[gk] = alGrp
+				for p in alGrp.grp.prefix:
+					alignPrefixList.append(p)
+		print ('Folder: %d, number of groups: %d, number of align: %d' %
+           self.id_, len(allGrpList), len(alignGrpList))
+		pickle.dump({'grpList': alignGrpList}, open(self.paths_.targetGrpListAlign, 'w'))
+		pickle.dump({'groups': alignGrps}, open(self.paths_.targetGrpsAlign, 'w'))	
+		pickle.dump({'prefixStr': alignPrefixList}, open(self.paths_.prefixAlign, 'w'))	
+		self.isAlign_ = True
+		
 	#get groups
 	def get_target_groups(self):
 		if self.isAlign_:
@@ -832,7 +840,7 @@ def tar_folder_data(folderName):
 
 def save_groups(args):
 	folderName, isAligned = args
-	sf = StreetFolder(folderName, isAligned=isAligned)		
+	sf = StreetFolder(folderName, isAlign=isAligned)		
 	print ('Saving groups for %s' % folderName)
 	sf._save_target_groups()
 
