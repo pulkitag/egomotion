@@ -31,15 +31,17 @@ def get_pose_delta(lbInfo, rot1, rot2, pt1=None, pt2=None,
 		pt1,  pt2 : the location of cameras expressed as (lat, long, height)
 		the output labels are provided in radians
 	'''
+	#rotOrder = 'szxy'
+	rotOrder = 'syxz'
 	if not isRadian:
 		y1, x1, z1 = map(lambda x: x*np.pi/180., rot1)
 		y2, x2, z2 = map(lambda x: x*np.pi/180., rot2)
-	rMat1      = t3eu.euler2mat(x1, y1, z1, 'szxy')
-	rMat2      = t3eu.euler2mat(x2, y2, z2, 'szxy')
+	rMat1      = t3eu.euler2mat(x1, y1, z1, rotOrder)
+	rMat2      = t3eu.euler2mat(x2, y2, z2, rotOrder)
 	dRot       = np.dot(rMat2, rMat1.transpose())
 	#pitch, yaw, roll are rotations around x, y, z axis
-	pitch, yaw, roll = t3eu.mat2euler(dRot, 'szxy')
-	_, thRot  = t3eu.euler2axangle(pitch, yaw, roll, 'szxy')
+	pitch, yaw, roll = t3eu.mat2euler(dRot, rotOrder)
+	_, thRot  = t3eu.euler2axangle(pitch, yaw, roll, rotOrder)
 	lb = None
 	#Figure out if the rotation is within or outside the limits
 	if lbInfo.maxRot is not None:
@@ -58,7 +60,7 @@ def get_pose_delta(lbInfo, rot1, rot2, pt1=None, pt2=None,
 			else:
 				lb = (yaw, pitch, roll, dx, dy, dz)
 	elif lbInfo['angleType'] == 'quat':
-		quat = t3eu.euler2quat(pitch, yaw, roll, axes='szxy')
+		quat = t3eu.euler2quat(pitch, yaw, roll, axes=rotOrder)
 		q1, q2, q3, q4 = quat
 		lb = (q1, q2, q3, q4)
 	else:
@@ -66,7 +68,7 @@ def get_pose_delta(lbInfo, rot1, rot2, pt1=None, pt2=None,
 	if not debugMode:	
 		return lb
 	else:
-		dRotEst = t3eu.euler2mat(pitch, yaw, roll, 'szxy')
+		dRotEst = t3eu.euler2mat(pitch, yaw, roll, rotOrder)
 		print (get_mat_dist(dRot, dRotEst))
 		rot2Est = np.dot(dRotEst, rMat1)
 		print (get_mat_dist(rMat2, rot2Est))
