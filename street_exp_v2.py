@@ -30,17 +30,22 @@ def get_mean_file(muPrefix):
 def get_folder_paths(folderId, splitPrms):
 	cPaths   = cfg.pths 
 	paths    = edict()
-	paths.dr = cPaths.folderProc % folderId
+	paths.dr   = cPaths.folderProc % folderId
+	#paths.imDr =  
 	ou.mkdir(paths.dr)
 	paths.tarFile = cPaths.folderProcTar % folderId
 	ou.mkdir(osp.dirname(paths.tarFile))
 	paths.prefix     = osp.join(paths.dr, 'prefix.pkl')
-	paths.prePerGrp  = osp.join(paths.dr, 'prePerGrp.pkl')
+	paths.prefixAlign = osp.join(paths.dr, 'prefixAlign.pkl')
+	paths.prePerGrp   = osp.join(paths.dr, 'prePerGrp.pkl')
 	#List of targetgroups in ordered format - necessary as ordering matters
 	#ordering can be used to split the data into train/val/test as points
 	#closer in the ordering are physically close to each other
 	paths.targetGrpList = osp.join(paths.dr, 'targetGrpList.pkl')
 	paths.targetGrps = osp.join(paths.dr, 'targetGrps.pkl')
+	#List of aligned stuff
+	paths.targetGrpListAlign = osp.join(paths.dr, 'targetGrpListAlign.pkl')
+	paths.targetGrpsAlign    = osp.join(paths.dr, 'targetGrpsAlign.pkl')
 	#path for storing the cropped images
 	paths.crpImStr   = 'imCrop/imSz%s' % '%d'
 	paths.crpImPath  = osp.join(paths.dr, paths.crpImStr)
@@ -51,6 +56,10 @@ def get_folder_paths(folderId, splitPrms):
 	for s in ['train', 'val', 'test']:
 		paths.grpSplits[s]  = osp.join(paths.dr, 
 										 'groups_%s_%s.pkl' % (s, splitPrms.pStr))
+	#The derived directory for storing derived info
+	paths.deriv = edict()
+	paths.deriv.grps = cfg.pths.folderDerivDir % ('grpStore', osp.join('%s', '%s'))
+
 	return paths
 
 ##
@@ -275,11 +284,11 @@ def setup_experiment_demo(debugMode=False, isRun=False):
 	nwFn    = process_net_prms
 	nwArgs  = {'debugMode': debugMode}
 	solFn   = mec.get_default_solver_prms
-	solArgs = {'dbFile': DEF_DB % 'sol'}
+	solArgs = {'dbFile': DEF_DB % 'sol', 'clip_gradients': 10}
 	cPrms   = mec.get_caffe_prms(nwFn=nwFn, nwPrms=nwArgs,
 									 solFn=solFn, solPrms=solArgs)
 	exp     = mec.CaffeSolverExperiment(dPrms, cPrms,
-					  netDefFn=make_net_def, isLog=False)
+					  netDefFn=make_net_def, isLog=True)
 	if isRun:
 		exp.make()
 		exp.run() 
