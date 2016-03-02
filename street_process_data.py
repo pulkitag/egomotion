@@ -569,6 +569,8 @@ class StreetFolder(object):
 			self.paths_.grpSplits[s] = self.paths_.grpSplits[s] % (alignStr, self.id_)
 			dirName = osp.dirname(self.paths_.grpSplits[s])	
 			ou.mkdir(dirName)
+		self.paths_.trainvalSplitGrpKeys = self.paths_.trainvalSplitGrpKeys % \
+                          (alignStr, self.id_)
 	
 	#Save all prefixes in the folder
 	def _save_prefixes(self):
@@ -802,16 +804,15 @@ class StreetFolder(object):
 		assert len(set(setKeys['train']).intersection(set(setKeys['test']))) == 0
 		#Save the split keys
 		pickle.dump({'setKeys': setKeys, 'splitPrms': self.splitPrms_},
-               open(self.paths_.trainvalSplit, 'w')) 
+               open(self.paths_.trainvalSplitGrpKeys, 'w')) 
 		for s in ['train', 'val', 'test']:
 			sGroups = [grps[gk].as_dict() for gk in setKeys[s]]
 			pickle.dump({'groups': sGroups}, open(self.paths_.grpSplits[s], 'w')) 	
 	
 
-def save_processed_data(folderName):
-	sf = StreetFolder(folderName)		
-	#print ('Saving groups for %s' % folderName)
-	#sf._save_target_groups()
+def save_trainval_splits(args):
+	folderName, isAligned = args
+	sf = StreetFolder(folderName, isAlign=isAligned)		
 	print ('Saving splits for %s' % folderName)
 	sf.split_trainval_sets()
 

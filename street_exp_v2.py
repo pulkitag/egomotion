@@ -54,8 +54,6 @@ def get_folder_paths(folderId, splitPrms=None):
 	paths.crpImPath  = osp.join(paths.dr, paths.crpImStr)
 	paths.crpImPathAlign  = osp.join(paths.dr, paths.crpImStrAlign)
 	#Split the sets
-	paths.trainvalSplit = osp.join(paths.dr, 
-									 'splits-%s.pkl' % splitPrms.pStr)
 	paths.grpSplits  = edict()
 	#The derived directory for storing derived info
 	paths.deriv = edict()
@@ -64,6 +62,8 @@ def get_folder_paths(folderId, splitPrms=None):
 	for s in ['train', 'val', 'test']:
 		paths.grpSplits[s]  = osp.join(paths.deriv.grps % (splitPrms.pStr, '%s', '%s'), 
 										 'groups_%s.pkl' % s)
+	paths.trainvalSplitGrpKeys = osp.join(paths.deriv.grps %(splitPrms.pStr, '%s', '%s'), 
+									 'splits-keys.pkl')
 	return paths
 
 ##
