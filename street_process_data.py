@@ -561,7 +561,14 @@ class StreetFolder(object):
 		#raw data
 		self.dirName_ = osp.join(cPaths.mainDataDr, self.name_)
 		self.paths_   = pths
-	
+		if self.isAlign_:
+			alignStr = 'aligned'
+		else:
+			alignStr = 'unaligned'
+		for s in self.paths_.grpSplits.keys():
+			self.paths_.grpSplits[s] = self.paths_.grpSplits[s] % (alignStr, self.id_)
+			dirName = osp.dirname(self.paths_.grpSplits[s])	
+			ou.mkdir(dirName)
 	
 	#Save all prefixes in the folder
 	def _save_prefixes(self):
@@ -735,6 +742,7 @@ class StreetFolder(object):
 
 	def save_cropped_images_aligned(self, imSz=256, isForceWrite=False):
 		assert self.isAlign_, 'self.Align_ must be True'
+		print('%s, loading groups' % self.id_)
 		grpList = self.get_target_group_list() 
 		grps    = self.get_target_groups()
 		count   = 0
@@ -742,9 +750,9 @@ class StreetFolder(object):
 			g = grps[gk]
 			for n in range(g.grp.num):
 				prf = g.grp.prefix[n]
-				loc = g.grp.data[n].align.loc
+				loc = g.grp.data[n].label.align.loc
 				inName    = osp.join(self.dirName_, prf + '.jpg')
-				outName   = osp.join(self.paths_.crpImPath % imSz, 
+				outName   = osp.join(self.paths_.crpImPathAlign % imSz, 
 									 self._idx2cropname(count))
 				#Save the image
 				save_cropped_image_aligned([inName], [outName], loc,
@@ -819,8 +827,9 @@ def recompute_all(folderName):
 	sf.split_trainval_sets()
 
 
-def save_cropped_ims(folderName):
-	sf = StreetFolder(folderName)	
+def save_cropped_ims(args):
+	folderName, isAligned = args
+	sf = StreetFolder(folderName, isAlign=isAligned)	
 	print ('Saving cropped images %s' % folderName)
 	sf.save_cropped_images()
 

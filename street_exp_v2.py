@@ -27,7 +27,9 @@ def get_mean_file(muPrefix):
 	return muFile	
 
 
-def get_folder_paths(folderId, splitPrms):
+def get_folder_paths(folderId, splitPrms=None):
+	if splitPrms is None:
+		splitPrms = get_trainval_split_prms()	
 	cPaths   = cfg.pths 
 	paths    = edict()
 	paths.dr   = cPaths.folderProc % folderId
@@ -48,18 +50,20 @@ def get_folder_paths(folderId, splitPrms):
 	paths.targetGrpsAlign    = osp.join(paths.dr, 'targetGrpsAlign.pkl')
 	#path for storing the cropped images
 	paths.crpImStr   = 'imCrop/imSz%s' % '%d'
+	paths.crpImStrAlign   = 'imCrop/imSz%s-align' % '%d'
 	paths.crpImPath  = osp.join(paths.dr, paths.crpImStr)
+	paths.crpImPathAlign  = osp.join(paths.dr, paths.crpImStrAlign)
 	#Split the sets
 	paths.trainvalSplit = osp.join(paths.dr, 
 									 'splits-%s.pkl' % splitPrms.pStr)
 	paths.grpSplits  = edict()
-	for s in ['train', 'val', 'test']:
-		paths.grpSplits[s]  = osp.join(paths.dr, 
-										 'groups_%s_%s.pkl' % (s, splitPrms.pStr))
 	#The derived directory for storing derived info
 	paths.deriv = edict()
-	paths.deriv.grps = cfg.pths.folderDerivDir % ('grpStore', osp.join('%s', '%s'))
-
+	#3 %s correspond to - splitPrms.pStr, aligned/nonaligned, folderId
+	paths.deriv.grps = cfg.pths.folderDerivDir % ('grpSplitStore', osp.join('%s', '%s', '%s'))
+	for s in ['train', 'val', 'test']:
+		paths.grpSplits[s]  = osp.join(paths.deriv.grps % (splitPrms.pStr, '%s', '%s'), 
+										 'groups_%s.pkl' % s)
 	return paths
 
 ##
