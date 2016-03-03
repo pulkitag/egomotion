@@ -27,19 +27,18 @@ def get_mean_file(muPrefix):
 	return muFile	
 
 
-def get_folder_paths(folderId, splitPrms=None, isAlign=False):
+def get_folder_paths(folderId, splitPrms=None, isAlign=False, hostName=None):
 	if isAlign:
 		alignStr = 'aligned'
 	else:
 		alignStr = 'unaligned'
 	if splitPrms is None:
 		splitPrms = get_trainval_split_prms()	
-	cPaths   = cfg.pths 
+	cPaths,_   = cfg.get_paths(hostName) 
 	paths    = edict()
 	paths.dr   = cPaths.folderProc % folderId
-	#paths.imDr =  
 	ou.mkdir(paths.dr)
-	paths.tarFile = cPaths.folderProcTar % folderId
+	paths.procTarDr = cPaths.folderProcTar % folderId
 	ou.mkdir(osp.dirname(paths.tarFile))
 	paths.prefix     = osp.join(paths.dr, 'prefix.pkl')
 	paths.prefixAlign = osp.join(paths.dr, 'prefixAlign.pkl')
@@ -57,6 +56,8 @@ def get_folder_paths(folderId, splitPrms=None, isAlign=False):
 	paths.crpImStrAlign   = 'imCrop/imSz%s-align' % '%d'
 	paths.crpImPath  = osp.join(paths.dr, paths.crpImStr)
 	paths.crpImPathAlign  = osp.join(paths.dr, paths.crpImStrAlign)
+	paths.crpImPathTar    = osp.join(paths.procTarDr, paths.crpImStr) + '.tar'
+	paths.crpImPathAlignTar  = osp.join(paths.procTarDr, paths.crpImStrAlign) + '.tar'
 	#Split the sets
 	paths.grpSplits  = edict()
 	#The derived directory for storing derived info

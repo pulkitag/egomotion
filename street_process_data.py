@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import street_config as cfg
 import street_exp_v2 as sev2
 import subprocess
+import scp_utils as scput
 
 def get_config_paths():
 	return cfg.pths
@@ -799,14 +800,79 @@ class StreetFolder(object):
 			sGroups = [grps[gk].as_dict() for gk in setKeys[s]]
 			pickle.dump({'groups': sGroups}, open(self.paths_.grpSplits[s], 'w')) 	
 
-	def tar_trainval_splits(self):
+	def tar_trainval_splits(self, forceWrite=False):
 		drName  = self.paths_.deriv.grps
-		trFile  = sf.paths_.deriv.grpsTar
-		forceWrite = True
+		trFile  = self.paths_.deriv.grpsTar
 		if not osp.exists(trFile) or forceWrite:
 			print ('Making %s' % trFile)
 			subprocess.check_call(['tar -cf %s -C %s .' % (trFile, drName)],shell=True)
+		else:
+			print ('TAR file already exists')
 
+	#untar the files in the correct directory
+	def untar_trainval_splits(self):
+		drName  = self.paths_.deriv.grps
+		ou.mkdir(drName)
+		trFile  = self.paths_.deriv.grpsTar
+		subprocess.check_call(['tar -xf %s -C %s' % (trFile, drName)],shell=True)
+
+	def tar_cropped_images(self, forceWrite=False):
+		if self.isAlign_:
+			drName  = self.paths_.crpImPathAlign
+			trFile  = self.paths_.crpImPathAlignTar
+		else:
+			drName  = self.paths_.crpImPath
+			trFile  = self.paths_.crpImPathTar
+		if not osp.exists(trFile) or forceWrite:
+			print ('Making %s' % trFile)
+			subprocess.check_call(['tar -cf %s -C %s .' % (trFile, drName)],shell=True)
+		else:
+			print ('TAR file already exists')
+
+	#Transfer the trainval splits to a host
+	def scp_trainval_splits(self, hostName):
+		fPaths  = sev2.get_folder_paths(self.id_, self.splitPrms_,
+              self.isAlign_, hostName)
+		srcPath = self.paths_.deriv.grpsTar
+		tgHost  = scput.get_hostaddr(hostName)
+		tgPath  = tgHost + fPaths.deriv.grpsTar	
+		print (tgPath) 
+		subprocess.check_call(['rsync -ravz %s %s' % (srcPath, tgPath)],shell=True)
+
+	#Fetch trainval splits from a host
+	def fetch_scp_trainval_splits(self, hostName):
+		fPaths  = sev2.get_folder_paths(self.id_, self.splitPrms_,
+              self.isAlign_, hostName)
+		tgPath  = self.paths_.deriv.grpsTar
+		srcHost  = scput.get_hostaddr(hostName)
+		srcPath  = srcHost + fPaths.deriv.grpsTar	
+		print (srcPath) 
+		subprocess.check_call(['rsync -ravz %s %s' % (srcPath, tgPath)],shell=True)
+
+	#Transfer the cropped images to a host
+	def fetch_scp_cropped_images(self, hostName):
+		print ('I AM HERE')
+		fPaths  = sev2.get_folder_paths(self.id_, self.splitPrms_,
+              self.isAlign_, hostName)
+		srcHost  = scput.get_hostaddr(hostName)
+		if self.isAlign_:
+			tgPath  = self.paths_.crpImPathAlignTar
+			srcPath = srcHost + fPaths.crpImPathAlignTar
+		else:
+			tgPath  = self.paths_.crpImPathTar
+			srcPath = srcHost + fPaths.crpImPathTar
+		print (srcPath) 
+		subprocess.check_call(['rsync -ravz %s %s' % (srcPath, tgPath)],shell=True)
+
+	def untar_cropped_images(self):
+		if self.isAlign_:
+			trFile  = self.paths_.crpImPathAlignTar
+			drName  = self.paths_.crpImPathAlign
+		else:
+			trFile  = self.paths_.crpImPathTar
+			drName  = self.paths_.crpImPath
+		ou.mkdir(drName)
+		subprocess.check_call(['tar -xf %s -C %s' % (trFile, drName)],shell=True)
 
 
 def recompute_all(folderName):
@@ -862,17 +928,30 @@ def tar_trainval_splits(args):
 	print ('Saving splits for %s' % folderName)
 	sf.tar_trainval_splits()
 
+def scp_trainval_splits(args):
+	folderName, isAligned, hostName = args
+	sf = StreetFolder(folderName, isAlign=isAligned)		
+	print ('Sending splits for %s' % folderName)
+	sf.scp_trainval_splits(hostName)
+
 
 #Run functions in parallel that except a single argument folderName
-def run_parallel(fnName, debugMode=False, isAligned=False):
-	if debugMode:
-		fNames = ['0070', '0071']
-		inArgs = [[osp.join('raw', f), isAligned] for f in fNames]
+def run_parallel(fnName, *args, **kwargs):
+	dArgs = edict()
+	dArgs.debugMode=False
+	dArgs.isAligned=False
+	kwargs = ou.get_defaults(kwargs, dArgs, True)
+	args = list(args)
+	if kwargs['debugMode']:
+		#fNames = ['0070', '0071']
+		fNames = ['0001', '0002']
+		inArgs = [[osp.join('raw', f), kwargs['isAligned']] + args for f in fNames]
 	else:
 		listFile = 'geofence/dc-v2_list.txt'
 		fid      = open(listFile, 'r')
-		inArgs   = [[l.strip(), isAligned] for l in fid.readlines()]
+		inArgs   = [[l.strip(), kwargs['isAligned']] + args for l in fid.readlines()]
 		fid.close()
+	print inArgs
 	pool   = Pool(processes=6)
 	jobs   = pool.map_async(fnName, inArgs)
 	res    = jobs.get()
