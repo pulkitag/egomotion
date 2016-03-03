@@ -556,22 +556,12 @@ class StreetFolder(object):
 
 	#
 	def _paths(self):
-		pths     = sev2.get_folder_paths(self.id_, self.splitPrms_)
+		pths     = sev2.get_folder_paths(self.id_, self.splitPrms_, self.isAlign_)
 		cPaths   = get_config_paths() 
 		#raw data
 		self.dirName_ = osp.join(cPaths.mainDataDr, self.name_)
 		self.paths_   = pths
-		if self.isAlign_:
-			alignStr = 'aligned'
-		else:
-			alignStr = 'unaligned'
-		for s in self.paths_.grpSplits.keys():
-			self.paths_.grpSplits[s] = self.paths_.grpSplits[s] % (alignStr, self.id_)
-			dirName = osp.dirname(self.paths_.grpSplits[s])	
-			ou.mkdir(dirName)
-		self.paths_.trainvalSplitGrpKeys = self.paths_.trainvalSplitGrpKeys % \
-                          (alignStr, self.id_)
-	
+			
 	#Save all prefixes in the folder
 	def _save_prefixes(self):
 		allNames = os.listdir(self.dirName_)
@@ -808,13 +798,16 @@ class StreetFolder(object):
 		for s in ['train', 'val', 'test']:
 			sGroups = [grps[gk].as_dict() for gk in setKeys[s]]
 			pickle.dump({'groups': sGroups}, open(self.paths_.grpSplits[s], 'w')) 	
-	
 
-def save_trainval_splits(args):
-	folderName, isAligned = args
-	sf = StreetFolder(folderName, isAlign=isAligned)		
-	print ('Saving splits for %s' % folderName)
-	sf.split_trainval_sets()
+	def tar_trainval_splits(self):
+		drName  = self.paths_.deriv.grps
+		trFile  = sf.paths_.deriv.grpsTar
+		forceWrite = True
+		if not osp.exists(trFile) or forceWrite:
+			print ('Making %s' % trFile)
+			subprocess.check_call(['tar -cf %s -C %s .' % (trFile, drName)],shell=True)
+
+
 
 def recompute_all(folderName):
 	sf = StreetFolder(folderName)		
@@ -848,11 +841,26 @@ def tar_folder_data(folderName):
 		print ('Already exists %s' % trFile)
 		return False
 
+#First form the groups
 def save_groups(args):
 	folderName, isAligned = args
 	sf = StreetFolder(folderName, isAlign=isAligned)		
 	print ('Saving groups for %s' % folderName)
 	sf._save_target_groups()
+
+#Second, save the splits
+def save_trainval_splits(args):
+	folderName, isAligned = args
+	sf = StreetFolder(folderName, isAlign=isAligned)		
+	print ('Saving splits for %s' % folderName)
+	sf.split_trainval_sets()
+
+#Thid, tar the trainval splits
+def save_trainval_splits(args):
+	folderName, isAligned = args
+	sf = StreetFolder(folderName, isAlign=isAligned)		
+	print ('Saving splits for %s' % folderName)
+	sf.split_trainval_sets()
 
 
 #Run functions in parallel that except a single argument folderName
@@ -869,3 +877,4 @@ def run_parallel(fnName, debugMode=False, isAligned=False):
 	jobs   = pool.map_async(fnName, inArgs)
 	res    = jobs.get()
 	del pool
+

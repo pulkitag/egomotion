@@ -31,8 +31,8 @@ def get_pose_delta(lbInfo, rot1, rot2, pt1=None, pt2=None,
 		pt1,  pt2 : the location of cameras expressed as (lat, long, height)
 		the output labels are provided in radians
 	'''
-	#rotOrder = 'szxy'
-	rotOrder = 'syxz'
+	rotOrder = 'szxy'
+	#rotOrder = 'syxz'
 	if not isRadian:
 		y1, x1, z1 = map(lambda x: x*np.pi/180., rot1)
 		y2, x2, z2 = map(lambda x: x*np.pi/180., rot2)

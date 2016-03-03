@@ -27,7 +27,11 @@ def get_mean_file(muPrefix):
 	return muFile	
 
 
-def get_folder_paths(folderId, splitPrms=None):
+def get_folder_paths(folderId, splitPrms=None, isAlign=False):
+	if isAlign:
+		alignStr = 'aligned'
+	else:
+		alignStr = 'unaligned'
 	if splitPrms is None:
 		splitPrms = get_trainval_split_prms()	
 	cPaths   = cfg.pths 
@@ -58,11 +62,19 @@ def get_folder_paths(folderId, splitPrms=None):
 	#The derived directory for storing derived info
 	paths.deriv = edict()
 	#3 %s correspond to - splitPrms.pStr, aligned/nonaligned, folderId
-	paths.deriv.grps = cfg.pths.folderDerivDir % ('grpSplitStore', osp.join('%s', '%s', '%s'))
+	paths.deriv.grps  = cfg.pths.folderDerivDir %\
+            ('grpSplitStore', osp.join(splitPrms.pStr, alignStr,
+             folderId))
+	paths.deriv.grpsTar = cfg.pths.folderDerivDirTar % \
+            ('grpSplitStore', osp.join(splitPrms.pStr,  alignStr, folderId + '.tar'))
+	dirName = osp.basename(paths.deriv.grpsTar)
+	ou.mkdir(dirName)
 	for s in ['train', 'val', 'test']:
-		paths.grpSplits[s]  = osp.join(paths.deriv.grps % (splitPrms.pStr, '%s', '%s'), 
-										 'groups_%s.pkl' % s)
-	paths.trainvalSplitGrpKeys = osp.join(paths.deriv.grps %(splitPrms.pStr, '%s', '%s'), 
+		paths.grpSplits[s]  = osp.join(paths.deriv.grps, 
+						'groups_%s.pkl' % s)
+		dirName = osp.basename(paths.grpSplits[s])
+		ou.mkdir(dirName)
+	paths.trainvalSplitGrpKeys = osp.join(paths.deriv.grps, 
 									 'splits-keys.pkl')
 	return paths
 
