@@ -809,8 +809,28 @@ class StreetFolder(object):
 		else:
 			print ('TAR file already exists')
 
+	#untar the files in the correct directory
+	def untar_trainval_splits(self):
+		drName  = self.paths_.deriv.grps
+		ou.mkdir(drName)
+		trFile  = self.paths_.deriv.grpsTar
+		subprocess.check_call(['tar -xf %s -C %s' % (trFile, drName)],shell=True)
+
+	def tar_cropped_images(self, forceWrite=False):
+		if self.isAlign_:
+			drName  = self.paths_.crpImPathAlign
+			trFile  = self.paths_.crpImPathAlignTar
+		else:
+			drName  = self.paths_.crpImPath
+			trFile  = self.paths_.crpImPathTar
+		if not osp.exists(trFile) or forceWrite:
+			print ('Making %s' % trFile)
+			subprocess.check_call(['tar -cf %s -C %s .' % (trFile, drName)],shell=True)
+		else:
+			print ('TAR file already exists')
+
+	#Transfer the trainval splits to a host
 	def scp_trainval_splits(self, hostName):
-		print ('I AM HERE')
 		fPaths  = sev2.get_folder_paths(self.id_, self.splitPrms_,
               self.isAlign_, hostName)
 		srcPath = self.paths_.deriv.grpsTar
@@ -818,6 +838,42 @@ class StreetFolder(object):
 		tgPath  = tgHost + fPaths.deriv.grpsTar	
 		print (tgPath) 
 		subprocess.check_call(['rsync -ravz %s %s' % (srcPath, tgPath)],shell=True)
+
+	#Fetch trainval splits from a host
+	def fetch_scp_trainval_splits(self, hostName):
+		fPaths  = sev2.get_folder_paths(self.id_, self.splitPrms_,
+              self.isAlign_, hostName)
+		tgPath  = self.paths_.deriv.grpsTar
+		srcHost  = scput.get_hostaddr(hostName)
+		srcPath  = srcHost + fPaths.deriv.grpsTar	
+		print (srcPath) 
+		subprocess.check_call(['rsync -ravz %s %s' % (srcPath, tgPath)],shell=True)
+
+	#Transfer the cropped images to a host
+	def fetch_scp_cropped_images(self, hostName):
+		print ('I AM HERE')
+		fPaths  = sev2.get_folder_paths(self.id_, self.splitPrms_,
+              self.isAlign_, hostName)
+		srcHost  = scput.get_hostaddr(hostName)
+		if self.isAlign_:
+			tgPath  = self.paths_.crpImPathAlignTar
+			srcPath = srcHost + fPaths.crpImPathAlignTar
+		else:
+			tgPath  = self.paths_.crpImPathTar
+			srcPath = srcHost + fPaths.crpImPathTar
+		print (srcPath) 
+		subprocess.check_call(['rsync -ravz %s %s' % (srcPath, tgPath)],shell=True)
+
+	def untar_cropped_images(self):
+		if self.isAlign_:
+			trFile  = self.paths_.crpImPathAlignTar
+			drName  = self.paths_.crpImPathAlign
+		else:
+			trFile  = self.paths_.crpImPathTar
+			drName  = self.paths_.crpImPath
+		ou.mkdir(drName)
+		subprocess.check_call(['tar -xf %s -C %s' % (trFile, drName)],shell=True)
+
 
 def recompute_all(folderName):
 	sf = StreetFolder(folderName)		

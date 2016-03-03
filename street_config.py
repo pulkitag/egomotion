@@ -25,7 +25,7 @@ def get_paths(hostName=None):
 	pths.folderDerivDir = osp.join(pths.mainDataDr, 'proc2-deriv', '%s', '%s')
 	pths.folderDerivDirTar = osp.join(pths.mainDataDr, 'proc2-deriv-tar', '%s', '%s')
 	pths.folderProc    = osp.join(pths.mainDataDr, 'proc2', '%s')
-	pths.folderProcTar = osp.join(pths.mainDataDr, 'proc2-tar', '%s.tar')
+	pths.folderProcTar = osp.join(pths.mainDataDr, 'proc2-tar', '%s')
 	pths.cwd = osp.dirname(osp.abspath(__file__))
 	return pths, DEF_DB
 
