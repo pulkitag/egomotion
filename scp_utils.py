@@ -11,6 +11,8 @@ def get_hostaddr(hostName):
 		addr   = 'pulkitag@psi.millennium.berkeley.edu:/work5/pulkitag/data_sets/streetview/'
 	elif hostName == 'nvidia':
 		addr  = 'pagrawal@psglogin.nvidia.com:/puresan/shared/pulkitag/data_sets/streetview/'
+	elif hostName == 'anakin':
+		addr  = 'pulkitag@anakin.banatao.berkeley.edu:'
 	else:
 		raise Exception('Not found %s' % hostName)
 	return addr
