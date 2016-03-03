@@ -27,14 +27,14 @@ def get_mean_file(muPrefix):
 	return muFile	
 
 
-def get_folder_paths(folderId, splitPrms=None, isAlign=False):
+def get_folder_paths(folderId, splitPrms=None, isAlign=False, hostName=None):
 	if isAlign:
 		alignStr = 'aligned'
 	else:
 		alignStr = 'unaligned'
 	if splitPrms is None:
 		splitPrms = get_trainval_split_prms()	
-	cPaths   = cfg.pths 
+	cPaths,_   = cfg.get_paths(hostName) 
 	paths    = edict()
 	paths.dr   = cPaths.folderProc % folderId
 	#paths.imDr =  

@@ -799,18 +799,22 @@ class StreetFolder(object):
 			sGroups = [grps[gk].as_dict() for gk in setKeys[s]]
 			pickle.dump({'groups': sGroups}, open(self.paths_.grpSplits[s], 'w')) 	
 
-	def tar_trainval_splits(self):
+	def tar_trainval_splits(self, forceWrite=False):
 		drName  = self.paths_.deriv.grps
-		trFile  = sf.paths_.deriv.grpsTar
-		forceWrite = True
+		trFile  = self.paths_.deriv.grpsTar
 		if not osp.exists(trFile) or forceWrite:
 			print ('Making %s' % trFile)
 			subprocess.check_call(['tar -cf %s -C %s .' % (trFile, drName)],shell=True)
+		else:
+			print ('TAR file already exists')
 
 	def scp_trainval_splits(self, hostName):
-		fPaths  = cfg.get_paths(hostName)
-		srcPath = sf.paths_.deriv.grpsTar
-		tgPath  = fPaths.paths_.deriv.grpsTar	 
+		print ('I AM HERE')
+		fPaths  = sev2.get_folder_paths(self.id_, self.splitPrms_,
+              self.isAlign_, hostName)
+		srcPath = self.paths_.deriv.grpsTar
+		tgPath  = fPaths.deriv.grpsTar	
+		print (tgPath) 
 		subprocess.check_call(['rsync -ravz %s %s' % (srcPath, tgPath)],shell=True)
 
 def recompute_all(folderName):
@@ -869,22 +873,27 @@ def tar_trainval_splits(args):
 def scp_trainval_splits(args):
 	folderName, isAligned, hostName = args
 	sf = StreetFolder(folderName, isAlign=isAligned)		
-	print ('Saving splits for %s' % folderName)
+	print ('Sending splits for %s' % folderName)
 	sf.scp_trainval_splits(hostName)
 
 
 #Run functions in parallel that except a single argument folderName
-def run_parallel(fnName, debugMode=False, isAligned=False, *args):
+def run_parallel(fnName, *args, **kwargs):
+	dArgs = edict()
+	dArgs.debugMode=False
+	dArgs.isAligned=False
+	kwargs = ou.get_defaults(kwargs, dArgs, True)
 	args = list(args)
-	if debugMode:
+	if kwargs['debugMode']:
 		#fNames = ['0070', '0071']
-		fNames = ['0000', '0001']
-		inArgs = [[osp.join('raw', f), isAligned] + args for f in fNames]
+		fNames = ['0001', '0002']
+		inArgs = [[osp.join('raw', f), kwargs['isAligned']] + args for f in fNames]
 	else:
 		listFile = 'geofence/dc-v2_list.txt'
 		fid      = open(listFile, 'r')
-		inArgs   = [[l.strip(), isAligned] + args for l in fid.readlines()]
+		inArgs   = [[l.strip(), kwargs['isAligned']] + args for l in fid.readlines()]
 		fid.close()
+	print inArgs
 	pool   = Pool(processes=6)
 	jobs   = pool.map_async(fnName, inArgs)
 	res    = jobs.get()
