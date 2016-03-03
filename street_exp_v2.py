@@ -39,7 +39,7 @@ def get_folder_paths(folderId, splitPrms=None, isAlign=False, hostName=None):
 	paths.dr   = cPaths.folderProc % folderId
 	ou.mkdir(paths.dr)
 	paths.procTarDr = cPaths.folderProcTar % folderId
-	ou.mkdir(osp.dirname(paths.tarFile))
+	ou.mkdir(paths.procTarDr)
 	paths.prefix     = osp.join(paths.dr, 'prefix.pkl')
 	paths.prefixAlign = osp.join(paths.dr, 'prefixAlign.pkl')
 	paths.prePerGrp   = osp.join(paths.dr, 'prePerGrp.pkl')
