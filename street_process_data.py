@@ -856,11 +856,11 @@ def save_trainval_splits(args):
 	sf.split_trainval_sets()
 
 #Thid, tar the trainval splits
-def save_trainval_splits(args):
+def tar_trainval_splits(args):
 	folderName, isAligned = args
 	sf = StreetFolder(folderName, isAlign=isAligned)		
 	print ('Saving splits for %s' % folderName)
-	sf.split_trainval_sets()
+	sf.tar_trainval_splits()
 
 
 #Run functions in parallel that except a single argument folderName
