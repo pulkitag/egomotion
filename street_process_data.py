@@ -881,13 +881,13 @@ class StreetFolder(object):
 		print (tgPath) 
 		subprocess.check_call(['rsync -ravz %s %s' % (srcPath, tgPath)],shell=True)
 
-	def untar_cropped_images(self):
+	def untar_cropped_images(self, imSz=256):
 		if self.isAlign_:
-			trFile  = self.paths_.crpImPathAlignTar
-			drName  = self.paths_.crpImPathAlign
+			trFile  = self.paths_.crpImPathAlignTar % imSz
+			drName  = self.paths_.crpImPathAlign % imSz
 		else:
-			trFile  = self.paths_.crpImPathTar
-			drName  = self.paths_.crpImPath
+			trFile  = self.paths_.crpImPathTar % imSz
+			drName  = self.paths_.crpImPath % imSz
 		ou.mkdir(drName)
 		subprocess.check_call(['tar -xf %s -C %s' % (trFile, drName)],shell=True)
 
