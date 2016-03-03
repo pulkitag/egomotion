@@ -866,6 +866,21 @@ class StreetFolder(object):
 		print (srcPath) 
 		subprocess.check_call(['rsync -ravz %s %s' % (srcPath, tgPath)],shell=True)
 
+	#Transfer the cropped images to a host
+	def scp_cropped_images(self, hostName, imSz=256):
+		print ('I AM HERE')
+		fPaths  = sev2.get_folder_paths(self.id_, self.splitPrms_,
+              self.isAlign_, hostName)
+		tgHost  = scput.get_hostaddr(hostName)
+		if self.isAlign_:
+			srcPath  = self.paths_.crpImPathAlignTar % imSz
+			tgPath   = tgHost + fPaths.crpImPathAlignTar % imSz
+		else:
+			srcPath  = self.paths_.crpImPathTar % imSz
+			tgPath   = tgHost + fPaths.crpImPathTar % imSz
+		print (srcPath) 
+		subprocess.check_call(['rsync -ravz %s %s' % (srcPath, tgPath)],shell=True)
+
 	def untar_cropped_images(self):
 		if self.isAlign_:
 			trFile  = self.paths_.crpImPathAlignTar
@@ -907,19 +922,11 @@ def fetch_cropped_ims(args):
 	print ('Saving cropped images %s' % folderName)
 	sf.fetch_scp_cropped_images(hostName, imSz=imSz)
 
-
-def tar_folder_data(folderName):
-	sf = StreetFolder(folderName)	
-	drName  = sf.paths_.dr
-	trFile  = sf.paths_.tarFile
-	forceWrite = True
-	if not osp.exists(trFile) or forceWrite:
-		print ('Making %s' % trFile)
-		subprocess.check_call(['tar -cf %s -C %s .' % (trFile, drName)],shell=True)
-		return True
-	else:
-		print ('Already exists %s' % trFile)
-		return False
+def send_cropped_ims(args):
+	folderName, isAligned, hostName, imSz = args
+	sf = StreetFolder(folderName, isAlign=isAligned)	
+	print ('Saving cropped images %s' % folderName)
+	sf.scp_cropped_images(hostName, imSz=imSz)
 
 #First form the groups
 def save_groups(args):
@@ -942,12 +949,11 @@ def tar_trainval_splits(args):
 	print ('Saving splits for %s' % folderName)
 	sf.tar_trainval_splits()
 
-def scp_trainval_splits(args):
+def send_trainval_splits(args):
 	folderName, isAligned, hostName = args
 	sf = StreetFolder(folderName, isAlign=isAligned)		
 	print ('Sending splits for %s' % folderName)
 	sf.scp_trainval_splits(hostName)
-
 
 #Run functions in parallel that except a single argument folderName
 def run_parallel(fnName, *args, **kwargs):
@@ -974,4 +980,20 @@ def run_parallel(fnName, *args, **kwargs):
 		raise Exception('Keyboard Interrupt')
 		
 	del pool
+
+
+#### OLD NOT REQUIRED ####
+def tar_folder_data(folderName):
+	sf = StreetFolder(folderName)	
+	drName  = sf.paths_.dr
+	trFile  = sf.paths_.tarFile
+	forceWrite = True
+	if not osp.exists(trFile) or forceWrite:
+		print ('Making %s' % trFile)
+		subprocess.check_call(['tar -cf %s -C %s .' % (trFile, drName)],shell=True)
+		return True
+	else:
+		print ('Already exists %s' % trFile)
+		return False
+
 
