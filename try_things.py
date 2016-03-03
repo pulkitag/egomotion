@@ -12,7 +12,9 @@ import matplotlib.pyplot as plt
 import rot_utils as ru
 from scipy import linalg as linalg
 import nibabel.quaternions as nq
-from transforms3d.transforms3d import euler as eu
+#from transforms3d.transforms3d import euler as eu
+from multiprocessing import Pool, Array
+import street_process_data as spd
 
 def get_mat(head, pitch, roll, isRadian=False):
 	if not isRadian:
@@ -158,4 +160,36 @@ def read_normals_fronal(isSave=False,
 			inp = raw_input('Press a key to continue')
 			if inp=='q':
 				return
-	
+
+def _parallel_group_load(args):
+	return True
+
+
+def try_group_load(data=None):
+	if data is None:
+		fName = 'tmp/targetGrps.pkl'	
+		data  = pickle.load(open(fName, 'r'))
+	keys   = data['groups'].keys()
+	inArgs = [] 
+	for k in keys[0:20]:
+		inArgs.append(data['groups'][k])
+	pool = Pool(processes=1)
+	jobs = pool.map_async(_parallel_group_load, inArgs)
+	res  = jobs.get()
+	del pool
+		
+def try_group_load_v2(data=None):
+	if data is None:
+		fName = 'tmp/targetGrps.pkl'	
+		data  = pickle.load(open(fName, 'r'))
+	keys   = data['groups'].keys()
+	gArr = [data['groups'][k] for k in keys[0:10]] 
+	arr  = Array(spd.StreetGroup, gArr)
+	inArgs = [] 
+	for k in keys[0:20]:
+		inArgs.append((k, arr))
+	pool = Pool(processes=1)
+	jobs = pool.map_async(_parallel_group_load, inArgs)
+	res  = jobs.get()
+	del pool
+

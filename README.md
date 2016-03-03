@@ -4,6 +4,7 @@ Dependencies
 -------------
 - [transforms3d](https://github.com/matthew-brett/transforms3d)
 - [pycaffe_utils](https://github.com/pulkitag/pycaffe-utils)
+- [geopy] (https://pypi.python.org/pypi/geopy)
 
 Creating an Experiment
 ----------------------
