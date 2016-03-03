@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import street_config as cfg
 import street_exp_v2 as sev2
 import subprocess
+import scp_utils as scput
 
 def get_config_paths():
 	return cfg.pths
@@ -813,7 +814,8 @@ class StreetFolder(object):
 		fPaths  = sev2.get_folder_paths(self.id_, self.splitPrms_,
               self.isAlign_, hostName)
 		srcPath = self.paths_.deriv.grpsTar
-		tgPath  = fPaths.deriv.grpsTar	
+		tgHost  = scput.get_hostaddr(hostName)
+		tgPath  = tgHost + fPaths.deriv.grpsTar	
 		print (tgPath) 
 		subprocess.check_call(['rsync -ravz %s %s' % (srcPath, tgPath)],shell=True)
 
