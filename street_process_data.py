@@ -878,7 +878,7 @@ class StreetFolder(object):
 		else:
 			srcPath  = self.paths_.crpImPathTar % imSz
 			tgPath   = tgHost + fPaths.crpImPathTar % imSz
-		print (srcPath) 
+		print (tgPath) 
 		subprocess.check_call(['rsync -ravz %s %s' % (srcPath, tgPath)],shell=True)
 
 	def untar_cropped_images(self):
