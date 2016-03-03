@@ -852,17 +852,17 @@ class StreetFolder(object):
 		subprocess.check_call(['rsync -ravz %s %s' % (srcPath, tgPath)],shell=True)
 
 	#Transfer the cropped images to a host
-	def fetch_scp_cropped_images(self, hostName):
+	def fetch_scp_cropped_images(self, hostName, imSz=256):
 		print ('I AM HERE')
 		fPaths  = sev2.get_folder_paths(self.id_, self.splitPrms_,
               self.isAlign_, hostName)
 		srcHost  = scput.get_hostaddr(hostName)
 		if self.isAlign_:
-			tgPath  = self.paths_.crpImPathAlignTar
-			srcPath = srcHost + fPaths.crpImPathAlignTar
+			tgPath  = self.paths_.crpImPathAlignTar % imSz
+			srcPath = srcHost + fPaths.crpImPathAlignTar % imSz
 		else:
-			tgPath  = self.paths_.crpImPathTar
-			srcPath = srcHost + fPaths.crpImPathTar
+			tgPath  = self.paths_.crpImPathTar % imSz
+			srcPath = srcHost + fPaths.crpImPathTar % imSz
 		print (srcPath) 
 		subprocess.check_call(['rsync -ravz %s %s' % (srcPath, tgPath)],shell=True)
 
@@ -900,6 +900,13 @@ def tar_cropped_ims(args):
 	sf = StreetFolder(folderName, isAlign=isAligned)	
 	print ('Saving cropped images %s' % folderName)
 	sf.tar_cropped_images()
+
+def fetch_cropped_ims(args):
+	folderName, isAligned, hostName, imSz = args
+	sf = StreetFolder(folderName, isAlign=isAligned)	
+	print ('Saving cropped images %s' % folderName)
+	sf.fetch_scp_cropped_images(hostName, imSz=imSz)
+
 
 def tar_folder_data(folderName):
 	sf = StreetFolder(folderName)	
