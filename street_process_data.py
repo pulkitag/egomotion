@@ -807,7 +807,11 @@ class StreetFolder(object):
 			print ('Making %s' % trFile)
 			subprocess.check_call(['tar -cf %s -C %s .' % (trFile, drName)],shell=True)
 
-
+	def scp_trainval_splits(self, hostName):
+		fPaths  = cfg.get_paths(hostName)
+		srcPath = sf.paths_.deriv.grpsTar
+		tgPath  = fPaths.paths_.deriv.grpsTar	 
+		subprocess.check_call(['rsync -ravz %s %s' % (srcPath, tgPath)],shell=True)
 
 def recompute_all(folderName):
 	sf = StreetFolder(folderName)		
@@ -862,16 +866,24 @@ def tar_trainval_splits(args):
 	print ('Saving splits for %s' % folderName)
 	sf.tar_trainval_splits()
 
+def scp_trainval_splits(args):
+	folderName, isAligned, hostName = args
+	sf = StreetFolder(folderName, isAlign=isAligned)		
+	print ('Saving splits for %s' % folderName)
+	sf.scp_trainval_splits(hostName)
+
 
 #Run functions in parallel that except a single argument folderName
-def run_parallel(fnName, debugMode=False, isAligned=False):
+def run_parallel(fnName, debugMode=False, isAligned=False, *args):
+	args = list(args)
 	if debugMode:
-		fNames = ['0070', '0071']
-		inArgs = [[osp.join('raw', f), isAligned] for f in fNames]
+		#fNames = ['0070', '0071']
+		fNames = ['0000', '0001']
+		inArgs = [[osp.join('raw', f), isAligned] + args for f in fNames]
 	else:
 		listFile = 'geofence/dc-v2_list.txt'
 		fid      = open(listFile, 'r')
-		inArgs   = [[l.strip(), isAligned] for l in fid.readlines()]
+		inArgs   = [[l.strip(), isAligned] + args for l in fid.readlines()]
 		fid.close()
 	pool   = Pool(processes=6)
 	jobs   = pool.map_async(fnName, inArgs)

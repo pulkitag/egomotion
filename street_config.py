@@ -6,17 +6,19 @@ from easydict import EasyDict as edict
 REAL_PATH = os.path.dirname(os.path.realpath(__file__))
 HOST_NAME = socket.gethostname()
 
-def get_paths():
+def get_paths(hostName=None):
 	DEF_DB    = osp.join(REAL_PATH, 'exp-data/db-store/%s-%s-%s-db.sqlite')
 	pths = edict()
-	if 'ivb' in HOST_NAME:
+	if hostName is  None:
+		hostName = HOST_NAME
+	if 'ivb' in hostName:
 		HOST_STR = 'nvCluster'
 		pths.mainDataDr = '/scratch/pulkitag/data_sets/streetview'
 		pths.expDir     = '/scratch/pulkitag/streetview/exp'
 	else:
 		pths.mainDataDr = '/data0/pulkitag/data_sets/streetview'
 		pths.expDir     = '/data0/pulkitag/streetview/exp'
-		HOST_STR = HOST_NAME
+		HOST_STR = hostName
 	DEF_DB    = DEF_DB % ('%s',HOST_STR, '%s')
 
 	#Other paths
