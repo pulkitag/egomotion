@@ -816,13 +816,15 @@ class StreetFolder(object):
 		trFile  = self.paths_.deriv.grpsTar
 		subprocess.check_call(['tar -xf %s -C %s' % (trFile, drName)],shell=True)
 
-	def tar_cropped_images(self, forceWrite=False):
+	def tar_cropped_images(self, imSz=256, forceWrite=False):
 		if self.isAlign_:
-			drName  = self.paths_.crpImPathAlign
-			trFile  = self.paths_.crpImPathAlignTar
+			drName  = self.paths_.crpImPathAlign % imSz
+			trFile  = self.paths_.crpImPathAlignTar % imSz
 		else:
-			drName  = self.paths_.crpImPath
-			trFile  = self.paths_.crpImPathTar
+			drName  = self.paths_.crpImPath % imSz
+			trFile  = self.paths_.crpImPathTar % imSz
+		dirName = osp.dirname(trFile)
+		ou.mkdir(dirName)
 		if not osp.exists(trFile) or forceWrite:
 			print ('Making %s' % trFile)
 			subprocess.check_call(['tar -cf %s -C %s .' % (trFile, drName)],shell=True)
@@ -893,6 +895,11 @@ def save_cropped_ims(args):
 	print ('Saving cropped images %s' % folderName)
 	sf.save_cropped_images()
 
+def tar_cropped_ims(args):
+	folderName, isAligned = args
+	sf = StreetFolder(folderName, isAlign=isAligned)	
+	print ('Saving cropped images %s' % folderName)
+	sf.tar_cropped_images()
 
 def tar_folder_data(folderName):
 	sf = StreetFolder(folderName)	
@@ -952,8 +959,12 @@ def run_parallel(fnName, *args, **kwargs):
 		inArgs   = [[l.strip(), kwargs['isAligned']] + args for l in fid.readlines()]
 		fid.close()
 	print inArgs
-	pool   = Pool(processes=6)
-	jobs   = pool.map_async(fnName, inArgs)
-	res    = jobs.get()
+	try:
+		pool   = Pool(processes=6)
+		jobs   = pool.map_async(fnName, inArgs)
+		res    = jobs.get()
+	except KeyboardInterrupt:
+		raise Exception('Keyboard Interrupt')
+		
 	del pool
 
