@@ -27,30 +27,55 @@ def get_mean_file(muPrefix):
 	return muFile	
 
 
-def get_folder_paths(folderId, splitPrms):
+def get_folder_paths(folderId, splitPrms=None, isAlign=False):
+	if isAlign:
+		alignStr = 'aligned'
+	else:
+		alignStr = 'unaligned'
+	if splitPrms is None:
+		splitPrms = get_trainval_split_prms()	
 	cPaths   = cfg.pths 
 	paths    = edict()
-	paths.dr = cPaths.folderProc % folderId
+	paths.dr   = cPaths.folderProc % folderId
+	#paths.imDr =  
 	ou.mkdir(paths.dr)
 	paths.tarFile = cPaths.folderProcTar % folderId
 	ou.mkdir(osp.dirname(paths.tarFile))
 	paths.prefix     = osp.join(paths.dr, 'prefix.pkl')
-	paths.prePerGrp  = osp.join(paths.dr, 'prePerGrp.pkl')
+	paths.prefixAlign = osp.join(paths.dr, 'prefixAlign.pkl')
+	paths.prePerGrp   = osp.join(paths.dr, 'prePerGrp.pkl')
 	#List of targetgroups in ordered format - necessary as ordering matters
 	#ordering can be used to split the data into train/val/test as points
 	#closer in the ordering are physically close to each other
 	paths.targetGrpList = osp.join(paths.dr, 'targetGrpList.pkl')
 	paths.targetGrps = osp.join(paths.dr, 'targetGrps.pkl')
+	#List of aligned stuff
+	paths.targetGrpListAlign = osp.join(paths.dr, 'targetGrpListAlign.pkl')
+	paths.targetGrpsAlign    = osp.join(paths.dr, 'targetGrpsAlign.pkl')
 	#path for storing the cropped images
 	paths.crpImStr   = 'imCrop/imSz%s' % '%d'
+	paths.crpImStrAlign   = 'imCrop/imSz%s-align' % '%d'
 	paths.crpImPath  = osp.join(paths.dr, paths.crpImStr)
+	paths.crpImPathAlign  = osp.join(paths.dr, paths.crpImStrAlign)
 	#Split the sets
-	paths.trainvalSplit = osp.join(paths.dr, 
-									 'splits-%s.pkl' % splitPrms.pStr)
 	paths.grpSplits  = edict()
+	#The derived directory for storing derived info
+	paths.deriv = edict()
+	#3 %s correspond to - splitPrms.pStr, aligned/nonaligned, folderId
+	paths.deriv.grps  = cfg.pths.folderDerivDir %\
+            ('grpSplitStore', osp.join(splitPrms.pStr, alignStr,
+             folderId))
+	paths.deriv.grpsTar = cfg.pths.folderDerivDirTar % \
+            ('grpSplitStore', osp.join(splitPrms.pStr,  alignStr, folderId + '.tar'))
+	dirName = osp.basename(paths.deriv.grpsTar)
+	ou.mkdir(dirName)
 	for s in ['train', 'val', 'test']:
-		paths.grpSplits[s]  = osp.join(paths.dr, 
-										 'groups_%s_%s.pkl' % (s, splitPrms.pStr))
+		paths.grpSplits[s]  = osp.join(paths.deriv.grps, 
+						'groups_%s.pkl' % s)
+		dirName = osp.basename(paths.grpSplits[s])
+		ou.mkdir(dirName)
+	paths.trainvalSplitGrpKeys = osp.join(paths.deriv.grps, 
+									 'splits-keys.pkl')
 	return paths
 
 ##
@@ -141,34 +166,13 @@ def net_prms(dbFile=DEF_DB % 'net', **kwargs):
 	##The mean file
 	dArgs.meanFile  = ''
 	dArgs.meanType  = None
+	dArgs.ncpu      = 2
 	dArgs   = mpu.get_defaults(kwargs, dArgs, False)
 	allKeys = dArgs.keys()	
-	dArgs['expStr'] = mec.get_sql_id(dbFile, dArgs)
+	dArgs['expStr'] = mec.get_sql_id(dbFile, dArgs, ignoreKeys=['ncpu'])
 	return dArgs, allKeys
 
 
-##
-#Process the data and net parameters
-def process_net_prms(**kwargs):
-	'''
-		net_prms_fn: The function to obtain net parameters
-	'''
-	nPrms, nKeys = net_prms(**kwargs)
-	#Verify that no spurious keys have been added
-	nKeysIp = [k for k in nPrms.keys() if not k == 'expStr']
-	assert set(nKeys)==set(nKeysIp), 'There are some spurious keys'
-	return nPrms 
-
-class ProcessPrms(object):
-	def __init__(self, net_prms_fn):
-		self.fn_ = net_prms_fn
-
-	def process(self, **kwargs):
-		nPrms, nKeys = self.fn_(**kwargs)
-		#Verify that no spurious keys have been added
-		nKeysIp = [k for k in nPrms.keys() if not k == 'expStr']
-		assert set(nKeys)==set(nKeysIp), 'There are some spurious keys'
-		return nPrms 
 
 ##
 #Merge the definition of multiple layers
@@ -206,17 +210,18 @@ def make_data_layers_proto(dPrms, nPrms, **kwargs):
 		if s == 'TEST':
 			grpListFile = dPrms.paths.exp.other.grpList % 'val'
 		else:
-			grpListFile = dPrms.paths.exp.other.grpList % 'train'
+			grpListFile = dPrms.paths.exp.other.grpList % 'test'
 		#The python parameters	
 		prmStr = ou.make_python_param_str({'batch_size': b, 
-							'im_root_folder': dPrms.paths.data.dr,
+							'im_root_folder': osp.join(cfg.pths.folderProc, 'imCrop' , 'imSz256'),
 							'grplist_file': grpListFile,
 						  'lbinfo_file':  lbFile, 
 							'crop_size'  : nPrms.crpSz,
 							'im_size'    : nPrms.ipImSz, 
               'jitter_amt' : nPrms.maxJitter,
 							'resume_iter': resumeIter, 
-							'mean_file': meanFile})
+							'mean_file': meanFile,
+              'ncpu': nPrms.ncpu})
 		netDef.set_layer_property('window_data', ['python_param', 'param_str'], 
 						'"%s"' % prmStr, phase=s)
 		#Rename the top corresponding to the labels
@@ -265,17 +270,44 @@ def make_net_def(dPrms, nPrms, **kwargs):
 	return _merge_defs([dataDef, baseDef, lossDef]) 
 			  	
 
-def setup_experiment_demo():
+##
+#Process the data and net parameters
+def process_net_prms(**kwargs):
+	'''
+		net_prms_fn: The function to obtain net parameters
+	'''
+	nPrms, nKeys = net_prms(**kwargs)
+	#Verify that no spurious keys have been added
+	nKeysIp = [k for k in nPrms.keys() if not k in ['expStr']]
+	assert set(nKeys)==set(nKeysIp), 'There are some spurious keys'
+	return nPrms 
+
+class ProcessPrms(object):
+	def __init__(self, net_prms_fn):
+		self.fn_ = net_prms_fn
+
+	def process(self, **kwargs):
+		nPrms, nKeys = self.fn_(**kwargs)
+		#Verify that no spurious keys have been added
+		nKeysIp = [k for k in nPrms.keys() if not k == 'expStr']
+		assert set(nKeys)==set(nKeysIp), 'There are some spurious keys'
+		return nPrms 
+
+
+def setup_experiment_demo(debugMode=False, isRun=False):
 	posePrms = slu.PosePrms()
 	dPrms   = get_data_prms(lbPrms=posePrms)
 	nwFn    = process_net_prms
-	nwArgs  = {}
+	nwArgs  = {'debugMode': debugMode}
 	solFn   = mec.get_default_solver_prms
-	solArgs = {'dbFile': DEF_DB % 'sol'}
+	solArgs = {'dbFile': DEF_DB % 'sol', 'clip_gradients': 10}
 	cPrms   = mec.get_caffe_prms(nwFn=nwFn, nwPrms=nwArgs,
 									 solFn=solFn, solPrms=solArgs)
 	exp     = mec.CaffeSolverExperiment(dPrms, cPrms,
-					  netDefFn=make_net_def) 
+					  netDefFn=make_net_def, isLog=True)
+	if isRun:
+		exp.make()
+		exp.run() 
 	return exp 	 				
 
 

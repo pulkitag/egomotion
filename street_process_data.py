@@ -15,6 +15,7 @@ from matplotlib import cm as cmap
 import matplotlib.pyplot as plt
 import street_config as cfg
 import street_exp_v2 as sev2
+import subprocess
 
 def get_config_paths():
 	return cfg.pths
@@ -42,6 +43,32 @@ def save_cropped_image_unaligned(inNames, outNames, rawImSz=256,
 		dirName, _ = osp.split(outNames[i])
 		ou.mkdir(dirName)
 		scm.imsave(outNames[i], imSave)
+
+
+def save_cropped_image_aligned(inNames, outNames, imCenter,
+            rawImSz=256, isForceWrite=False):
+	N = len(inNames)
+	assert N == len(outNames)
+	for i in range(N):
+		if osp.exists(outNames[i]) and not isForceWrite:
+			continue
+		im         = scm.imread(inNames[i])
+		h, w, ch = im.shape
+		cy, cx = imCenter
+		#Crop
+		hSt = min(h, max(0,int(cy - rawImSz/2)))
+		wSt = min(w, max(0,int(cx - rawImSz/2)))
+		hEn = min(h, int(hSt + rawImSz))
+		wEn = min(w, int(wSt + rawImSz))
+		imSave = np.zeros((rawImSz, rawImSz,3)).astype(np.uint8)
+		hL, wL  = hEn - hSt, wEn - wSt
+		#print hSt, hEn, wSt, wEn
+		imSave[0:hL, 0:wL,:] =  im[hSt:hEn, wSt:wEn, :] 
+		#Save the image
+		dirName, _ = osp.split(outNames[i])
+		ou.mkdir(dirName)
+		scm.imsave(outNames[i], imSave)
+
 
 	
 def get_distance_between_groups(grp1, grp2):
@@ -94,10 +121,11 @@ def find_bin_index(bins, val):
 ##
 #Geo distance calculations
 class GeoCoordinate(object):
-	def __init__(self, latitude, longitude, z=0):
-		#In radians
-		self.lat_  = np.pi * latitude/180.
-		self.long_ = np.pi * longitude/180.
+	def __init__(self, latitude, longitude, z=0, isRadian=False):
+		#convert radians
+		if not isRadian:
+			self.lat_  = np.pi * latitude/180.
+			self.long_ = np.pi * longitude/180.
 		self.z_    = z
 		#in meters
 		self.earthRadius = 6371.0088 * 1000
@@ -116,6 +144,17 @@ class GeoCoordinate(object):
 	def get_xy(self):
 		x, y, z = self.get_xyz()
 		return x, y
+
+	def get_displacement_vector(self, pt2):
+		'''
+			pt2: the point to which displacement vector
+					 is to be planned
+		'''	
+		y = R * (pt2.lat_ - self.lat_)
+		x = R * (pt2.long_ - self.long_) * math.acos((self.lat_ + pt2.lat_)/2.0)
+		z = pt2.z_ - pt1.z_
+		return x, y, z
+
 
 
 #Mantains a list of folders that have been processed
@@ -220,7 +259,13 @@ class StreetLabel(object):
 	@classmethod
 	def from_dict(cls, label):
 		self.label = copy.deepcopy(label)	
-			
+		
+	def is_aligned(self):
+		if self.label.align is not None:
+			return True
+		else:
+			return False
+	
 	def get_rot_euler(self, isRadian=True):
 		pass
 
@@ -259,6 +304,35 @@ class StreetGroup(object):
 
 	def distance_from_other(self, grp2):
 		return get_distance_between_groups(self.grp, grp2.grp)
+
+	#Form a subset using idx
+	def subset(self, idx):
+		'''
+			idx: list of indices
+		'''
+		grp = edict()
+		grp.folderId = self.grp.folderId
+		grp.gid      = self.grp.gid
+		grp.num      = len(idx)
+		grp.crpImNames = []
+		grp.prefix     = []
+		grp.data       = []
+		for i in idx:
+			grp.crpImNames.append(self.grp.crpImNames[i])
+			grp.prefix.append(self.grp.prefix[i])
+			grp.data.append(copy.deepcopy(self.grp.data[i]))
+		return StreetGroup(grp)
+			
+	#Get a subset of only aligned data
+	def subset_aligned(self):
+		idx = []
+		for i,lb in enumerate(self.grp.data):
+			if lb.is_aligned():
+				idx.append(i)
+		if len(idx) == 0:
+			return None
+		else:
+			return self.subset(idx)	
 	
 	def as_dict(self):
 		grpDict = edict()
@@ -268,7 +342,7 @@ class StreetGroup(object):
 			grpDict[k] = self.grp[k]	
 		grpDict['data'] = []
 		for d in self.grp.data:
-			grpDict['data'] = d.label
+			grpDict['data'].append(d.label)
 		return grpDict
 
 
@@ -462,7 +536,7 @@ class StreetFolder(object):
 		prefix: prefix.jpg, prefix.txt define the corresponding image and lbl file
 		target_group: group of images looking at the same target point. 
 	'''
-	def __init__(self, name, splitPrms=None):
+	def __init__(self, name, splitPrms=None, isAlign=False):
 		'''
 			name:  relative path where the raw data in the folder is present
 			svPth: the path where the processed data from the folder should be saved
@@ -471,6 +545,7 @@ class StreetFolder(object):
 		fStore        = FolderStore('streetview')
 		self.id_      = fStore.get_id(name)
 		self.name_    = name
+		self.isAlign_ = isAlign
 		if splitPrms is None:
 			self.splitPrms_ = sev2.get_trainval_split_prms() 
 		#folder paths
@@ -481,13 +556,12 @@ class StreetFolder(object):
 
 	#
 	def _paths(self):
-		pths     = sev2.get_folder_paths(self.id_, self.splitPrms_)
+		pths     = sev2.get_folder_paths(self.id_, self.splitPrms_, self.isAlign_)
 		cPaths   = get_config_paths() 
 		#raw data
 		self.dirName_ = osp.join(cPaths.mainDataDr, self.name_)
 		self.paths_   = pths
-	
-	
+			
 	#Save all prefixes in the folder
 	def _save_prefixes(self):
 		allNames = os.listdir(self.dirName_)
@@ -534,6 +608,9 @@ class StreetFolder(object):
 
 	#Save group of images that look at the same target point. 	
 	def _save_target_group_counts(self):
+		if self.isAlign_:
+			self._save_target_group_counts_aligned()
+			return
 		grps = {}
 		prev     = None
 		count    = 0
@@ -551,6 +628,7 @@ class StreetFolder(object):
 		pickle.dump(grps, open(self.paths_.prePerGrp, 'w'))
 		pickle.dump({'grpList': tgtList}, open(self.paths_.targetGrpList, 'w'))
 
+	
 	#get all the target group counts
 	def get_num_prefix_per_target_group(self, forceCompute=False):
 		if not forceCompute and osp.exists(self.paths_.prePerGrp):
@@ -561,11 +639,17 @@ class StreetFolder(object):
 
 	#ordered list of groups
 	def get_target_group_list(self):
-		data = pickle.load(open(self.paths_.targetGrpList, 'r'))
+		if self.isAlign_:
+			data = pickle.load(open(self.paths_.targetGrpListAlign, 'r'))
+		else:
+			data = pickle.load(open(self.paths_.targetGrpList, 'r'))
 		return data['grpList']	
 		
 	#save the target group data
 	def _save_target_groups(self, forceWrite=False):
+		if self.isAlign_:
+			self._save_target_groups_aligned(forceWrite=forceWrite)
+			return
 		if osp.exists(self.paths_.targetGrps) and not forceWrite:
 			print ('Group file %s exists, NOT recomputing' % self.paths_.targetGrps)
 			return
@@ -591,13 +675,51 @@ class StreetFolder(object):
 		print ('SAVING to %s' % self.paths_.targetGrps)
 		pickle.dump({'groups': grps}, open(self.paths_.targetGrps, 'w'))	
 
+	#Save the counts of aligned groups
+	def _save_target_groups_aligned(self, forceWrite=False):
+		assert self.isAlign_, 'Align_ is set to False'
+		self.isAlign_ = False
+		#Check is the original groups have been saved
+		if not osp.exists(self.paths_.targetGrpList):
+			self._save_target_group_counts()
+		#Check if the aligned groups have already been saved
+		if osp.exists(self.paths_.targetGrpsAlign) and not forceWrite:
+			print ('Group file %s exists, NOT recomputing' % self.paths_.targetGrpsAlign)
+			return
+		print ('%s loading all groups' % self.id_)
+		allGrpList = self.get_target_group_list()
+		allGrps    = self.get_target_groups()
+		alignGrpList = []
+		alignGrps       = edict()
+		alignPrefixList = []
+		print ('%s filtering aligned groups' % self.id_)
+		for gk in allGrpList:	
+			alGrp = allGrps[gk].subset_aligned()
+			if alGrp is not None:
+				alignGrpList.append(gk)
+				alignGrps[gk] = alGrp
+				for p in alGrp.grp.prefix:
+					alignPrefixList.append(p)
+		print ('Folder: %s, number of groups: %d, number of align: %d' %
+           (self.id_, len(allGrpList), len(alignGrpList)))
+		pickle.dump({'grpList': alignGrpList}, open(self.paths_.targetGrpListAlign, 'w'))
+		pickle.dump({'groups': alignGrps}, open(self.paths_.targetGrpsAlign, 'w'))	
+		pickle.dump({'prefixStr': alignPrefixList}, open(self.paths_.prefixAlign, 'w'))	
+		self.isAlign_ = True
+		
 	#get groups
 	def get_target_groups(self):
-		dat = pickle.load(open(self.paths_.targetGrps, 'r'))
+		if self.isAlign_:
+			dat = pickle.load(open(self.paths_.targetGrpsAlign, 'r'))
+		else:
+			dat = pickle.load(open(self.paths_.targetGrps, 'r'))
 		return dat['groups']		
 
 	#crop and save images - that makes it faster to read for training nets
 	def save_cropped_images(self, imSz=256, isForceWrite=False):
+		if self.isAlign_:
+			self.save_cropped_images_aligned(imSz=imSz, isForceWrite=isForceWrite)
+			return
 		cropDirName = self.paths_.crpImPath % imSz
 		ou.mkdir(cropDirName)
 		for i, p in enumerate(self.prefixList_):
@@ -609,6 +731,25 @@ class StreetFolder(object):
 			#Save the image
 			save_cropped_image_unaligned([inName], [outName],
             imSz, isForceWrite)
+
+	def save_cropped_images_aligned(self, imSz=256, isForceWrite=False):
+		assert self.isAlign_, 'self.Align_ must be True'
+		print('%s, loading groups' % self.id_)
+		grpList = self.get_target_group_list() 
+		grps    = self.get_target_groups()
+		count   = 0
+		for gk in grpList:
+			g = grps[gk]
+			for n in range(g.grp.num):
+				prf = g.grp.prefix[n]
+				loc = g.grp.data[n].label.align.loc
+				inName    = osp.join(self.dirName_, prf + '.jpg')
+				outName   = osp.join(self.paths_.crpImPathAlign % imSz, 
+									 self._idx2cropname(count))
+				#Save the image
+				save_cropped_image_aligned([inName], [outName], loc,
+							imSz, isForceWrite)
+				count += 1
 
 	def _idx2cropname(self, idx):
 		lNum  = int(idx/1000)
@@ -653,35 +794,22 @@ class StreetFolder(object):
 		assert len(set(setKeys['train']).intersection(set(setKeys['test']))) == 0
 		#Save the split keys
 		pickle.dump({'setKeys': setKeys, 'splitPrms': self.splitPrms_},
-               open(self.paths_.trainvalSplit, 'w')) 
+               open(self.paths_.trainvalSplitGrpKeys, 'w')) 
 		for s in ['train', 'val', 'test']:
 			sGroups = [grps[gk].as_dict() for gk in setKeys[s]]
 			pickle.dump({'groups': sGroups}, open(self.paths_.grpSplits[s], 'w')) 	
-	
 
-def save_processed_data(folderName):
-	sf = StreetFolder(folderName)		
-	print ('Saving groups for %s' % folderName)
-	sf._save_target_groups()
-	print ('Saving splits for %s' % folderName)
-	sf.split_trainval_sets()
+	def tar_trainval_splits(self):
+		drName  = self.paths_.deriv.grps
+		trFile  = sf.paths_.deriv.grpsTar
+		forceWrite = True
+		if not osp.exists(trFile) or forceWrite:
+			print ('Making %s' % trFile)
+			subprocess.check_call(['tar -cf %s -C %s .' % (trFile, drName)],shell=True)
 
 
-def parallel_save_processed_data():
-	fNames = ['0070', '0071']
-	inArgs = [osp.join('raw', f) for f in fNames]
-	#listFile = 'geofence/dc-v2_list.txt'
-	#fid      = open(listFile, 'r')
-	#inArgs   = [l.strip() for l in fid.readlines()]
-	#fid.close()
-	for f in inArgs:
-		sf = StreetFolder(f)		
-	pool   = Pool(processes=6)
-	jobs   = pool.map_async(save_processed_data, inArgs)
-	res    = jobs.get()
-	del pool
 
-def recompute(folderName):
+def recompute_all(folderName):
 	sf = StreetFolder(folderName)		
 	print ('Recomputing prefix')
 	sf._save_prefixes()
@@ -693,8 +821,9 @@ def recompute(folderName):
 	sf.split_trainval_sets()
 
 
-def save_cropped_ims(folderName):
-	sf = StreetFolder(folderName)	
+def save_cropped_ims(args):
+	folderName, isAligned = args
+	sf = StreetFolder(folderName, isAlign=isAligned)	
 	print ('Saving cropped images %s' % folderName)
 	sf.save_cropped_images()
 
@@ -703,22 +832,49 @@ def tar_folder_data(folderName):
 	sf = StreetFolder(folderName)	
 	drName  = sf.paths_.dr
 	trFile  = sf.paths_.tarFile
-	if not osp.exists(trFile):
+	forceWrite = True
+	if not osp.exists(trFile) or forceWrite:
 		print ('Making %s' % trFile)
-		subprocess.check_call(['tar -cf %s %s' % (trFile, drName)],shell=True)
+		subprocess.check_call(['tar -cf %s -C %s .' % (trFile, drName)],shell=True)
 		return True
 	else:
 		print ('Already exists %s' % trFile)
 		return False
 
+#First form the groups
+def save_groups(args):
+	folderName, isAligned = args
+	sf = StreetFolder(folderName, isAlign=isAligned)		
+	print ('Saving groups for %s' % folderName)
+	sf._save_target_groups()
+
+#Second, save the splits
+def save_trainval_splits(args):
+	folderName, isAligned = args
+	sf = StreetFolder(folderName, isAlign=isAligned)		
+	print ('Saving splits for %s' % folderName)
+	sf.split_trainval_sets()
+
+#Thid, tar the trainval splits
+def save_trainval_splits(args):
+	folderName, isAligned = args
+	sf = StreetFolder(folderName, isAlign=isAligned)		
+	print ('Saving splits for %s' % folderName)
+	sf.split_trainval_sets()
+
 
 #Run functions in parallel that except a single argument folderName
-def run_parallel(fnName):
-	listFile = 'geofence/dc-v2_list.txt'
-	fid      = open(listFile, 'r')
-	inArgs   = [l.strip() for l in fid.readlines()]
-	fid.close()
+def run_parallel(fnName, debugMode=False, isAligned=False):
+	if debugMode:
+		fNames = ['0070', '0071']
+		inArgs = [[osp.join('raw', f), isAligned] for f in fNames]
+	else:
+		listFile = 'geofence/dc-v2_list.txt'
+		fid      = open(listFile, 'r')
+		inArgs   = [[l.strip(), isAligned] for l in fid.readlines()]
+		fid.close()
 	pool   = Pool(processes=6)
 	jobs   = pool.map_async(fnName, inArgs)
 	res    = jobs.get()
 	del pool
+
