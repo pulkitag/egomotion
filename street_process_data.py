@@ -565,6 +565,9 @@ class StreetFolder(object):
 			
 	#Save all prefixes in the folder
 	def _save_prefixes(self):
+		if not osp.exists(self.dirName_):
+			print ('PREFIX CANNOT BE SAVED AS RAW DATA NOT PRESENT')
+			return False
 		allNames = os.listdir(self.dirName_)
 		imNames   = sorted([f for f in allNames if '.jpg' in f], reverse=True)
 		lbNames   = sorted([f for f in allNames if '.txt' in f], reverse=True)
@@ -581,7 +584,7 @@ class StreetFolder(object):
 					continue
 				prefixStr = prefixStr + [imn]
 		pickle.dump({'prefixStr': prefixStr}, open(self.paths_.prefix, 'w'))
-
+		return True
 
 	#Read the prefixes from saved file
 	def _read_prefixes_from_file(self, forceCompute=False):
@@ -593,7 +596,10 @@ class StreetFolder(object):
 			self.prefixList_ = dat['prefixStr']
 			return	
 		print ('Computing prefixes for folderid %s' % self.id_)	
-		self._save_prefixes()	
+		isSave = self._save_prefixes()	
+		if not isSave:
+			print ('PREFIX CANNOT BE READ')
+			return False
 		self._read_prefixes_from_file(forceCompute=False)
 
 
@@ -849,7 +855,10 @@ class StreetFolder(object):
 		srcHost  = scput.get_hostaddr(hostName)
 		srcPath  = srcHost + fPaths.deriv.grpsTar	
 		print (srcPath) 
-		subprocess.check_call(['rsync -ravz %s %s' % (srcPath, tgPath)],shell=True)
+		dirName = osp.dirname(tgPath)
+		ou.mkdir(dirName)
+		#subprocess.check_call(['rsync -ravz %s %s' % (srcPath, tgPath)],shell=True)
+		subprocess.check_call(['scp %s %s' % (srcPath, tgPath)],shell=True)
 
 	#Transfer the cropped images to a host
 	def fetch_scp_cropped_images(self, hostName, imSz=256):
@@ -863,8 +872,13 @@ class StreetFolder(object):
 		else:
 			tgPath  = self.paths_.crpImPathTar % imSz
 			srcPath = srcHost + fPaths.crpImPathTar % imSz
+		dirName = osp.dirname(tgPath)
+		print (dirName)
+		if not osp.exists(dirName):
+			ou.mkdir(dirName)
 		print (srcPath) 
-		subprocess.check_call(['rsync -ravz %s %s' % (srcPath, tgPath)],shell=True)
+		#subprocess.check_call(['rsync -ravz %s %s' % (srcPath, tgPath)],shell=True)
+		subprocess.check_call(['scp %s %s' % (srcPath, tgPath)],shell=True)
 
 	#Transfer the cropped images to a host
 	def scp_cropped_images(self, hostName, imSz=256):
@@ -954,6 +968,12 @@ def send_trainval_splits(args):
 	sf = StreetFolder(folderName, isAlign=isAligned)		
 	print ('Sending splits for %s' % folderName)
 	sf.scp_trainval_splits(hostName)
+
+def fetch_trainval_splits(args):
+	folderName, isAligned, hostName = args
+	sf = StreetFolder(folderName, isAlign=isAligned)		
+	print ('Sending splits for %s' % folderName)
+	sf.fetch_scp_trainval_splits(hostName)
 
 #Run functions in parallel that except a single argument folderName
 def run_parallel(fnName, *args, **kwargs):

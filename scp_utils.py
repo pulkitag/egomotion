@@ -13,6 +13,8 @@ def get_hostaddr(hostName):
 		addr  = 'pagrawal@psglogin.nvidia.com:/puresan/shared/pulkitag/data_sets/streetview/'
 	elif hostName == 'anakin':
 		addr  = 'pulkitag@anakin.banatao.berkeley.edu:'
+	elif hostName == 'server':
+		addr  = '-i "pulkit-key.pem" ubuntu@52.91.22.126:'
 	else:
 		raise Exception('Not found %s' % hostName)
 	return addr
