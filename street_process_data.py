@@ -814,7 +814,9 @@ class StreetFolder(object):
 		drName  = self.paths_.deriv.grps
 		ou.mkdir(drName)
 		trFile  = self.paths_.deriv.grpsTar
-		subprocess.check_call(['tar -xf %s -C %s' % (trFile, drName)],shell=True)
+		cmd = 'tar -xf %s -C %s' % (trFile, drName)
+		print (cmd)
+		subprocess.check_call([cmd] ,shell=True)
 
 	def tar_cropped_images(self, imSz=256, forceWrite=False):
 		if self.isAlign_:
