@@ -816,8 +816,14 @@ class StreetFolder(object):
 			print ('TAR file already exists')
 
 	#untar the files in the correct directory
-	def untar_trainval_splits(self):
-		drName  = self.paths_.deriv.grps
+	def untar_trainval_splits(self, hostName=None):
+		if hostName is None:
+			drName  = self.paths_.deriv.grps
+		else:
+			fPaths  = sev2.get_folder_paths(self.id_, self.splitPrms_,
+								self.isAlign_, hostName)
+			drName  = fPaths.deriv.grps + '/'
+			ou.mkdir(drName)
 		ou.mkdir(drName)
 		trFile  = self.paths_.deriv.grpsTar
 		subprocess.check_call(['tar -xf %s -C %s' % (trFile, drName)],shell=True)
@@ -895,13 +901,18 @@ class StreetFolder(object):
 		print (tgPath) 
 		subprocess.check_call(['rsync -ravz %s %s' % (srcPath, tgPath)],shell=True)
 
-	def untar_cropped_images(self, imSz=256):
+	def untar_cropped_images(self, imSz=256, hostName=None):
+		if hostName is not None:	
+			pth  = sev2.get_folder_paths(self.id_, self.splitPrms_,
+								self.isAlign_, hostName)
+		else:
+			pth = self.paths_
 		if self.isAlign_:
 			trFile  = self.paths_.crpImPathAlignTar % imSz
-			drName  = self.paths_.crpImPathAlign % imSz
+			drName  = pth.crpImPathAlign % imSz
 		else:
 			trFile  = self.paths_.crpImPathTar % imSz
-			drName  = self.paths_.crpImPath % imSz
+			drName  = pth.crpImPath % imSz
 		ou.mkdir(drName)
 		subprocess.check_call(['tar -xf %s -C %s' % (trFile, drName)],shell=True)
 
@@ -942,6 +953,16 @@ def send_cropped_ims(args):
 	print ('Saving cropped images %s' % folderName)
 	sf.scp_cropped_images(hostName, imSz=imSz)
 
+def untar_cropped_ims(args):
+	if len(args) == 4:
+		folderName, isAligned, imSz, hostName = args
+	else:
+		folderName, isAligned, imSz = args
+		hostName = None	
+	sf = StreetFolder(folderName, isAlign=isAligned)		
+	print ('Sending splits for %s' % folderName)
+	sf.untar_cropped_images(imSz, hostName)
+
 #First form the groups
 def save_groups(args):
 	folderName, isAligned = args
@@ -975,6 +996,17 @@ def fetch_trainval_splits(args):
 	print ('Sending splits for %s' % folderName)
 	sf.fetch_scp_trainval_splits(hostName)
 
+def untar_trainval_splits(args):
+	if len(args) == 3:
+		folderName, isAligned, hostName = args
+	else:
+		folderName, isAligned = args
+		hostName = None	
+	sf = StreetFolder(folderName, isAlign=isAligned)		
+	print ('Sending splits for %s' % folderName)
+	sf.untar_trainval_splits(hostName)
+
+
 #Run functions in parallel that except a single argument folderName
 def run_parallel(fnName, *args, **kwargs):
 	dArgs = edict()
@@ -1001,6 +1033,9 @@ def run_parallel(fnName, *args, **kwargs):
 		
 	del pool
 
+
+def cluster_untar_ims():
+	run_parallel(untar_cropped_ims, 256, 'nvNode', debugMode=False, isAligned=True)
 
 #### OLD NOT REQUIRED ####
 def tar_folder_data(folderName):
