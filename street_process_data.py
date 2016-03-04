@@ -785,9 +785,9 @@ class StreetFolder(object):
            (self.id_, tL, oL, N - (tL + oL)))
 		valIdx  = int(oL * (float(sPrms.valPct)/(sPrms.valPct + sPrms.tePct))) 
 		setKeys = edict()
-		setKeys['train'] = trnKeys
-		setKeys['val']   = [k for k in oKeys[0:valIdx]]
-		setKeys['test']  = [k for k in oKeys[valIdx:]] 
+		setKeys['train'] = [k for k in trnKeys if grps[k].grp.num > 1]
+		setKeys['val']   = [k for k in oKeys[0:valIdx] if grps[k].grp.num > 1]
+		setKeys['test']  = [k for k in oKeys[valIdx:] if grps[k].grp.num > 1] 
 		print ('Num-Train: %d, Num-Val: %d, Num-Test: %d' % 
 				 (len(setKeys['train']), len(setKeys['val']), len(setKeys['test'])))
 		#Sanity checks
