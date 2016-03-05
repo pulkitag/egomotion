@@ -18,8 +18,8 @@ import street_exp_v2 as sev2
 import subprocess
 import scp_utils as scput
 
-def get_config_paths():
-	return cfg.pths
+def get_config_paths(hostName=None):
+	return cfg.get_paths(hostName)[0]
 
 def save_cropped_image_unaligned(inNames, outNames, rawImSz=256, 
 											isForceWrite=False):
@@ -537,16 +537,20 @@ class StreetFolder(object):
 		prefix: prefix.jpg, prefix.txt define the corresponding image and lbl file
 		target_group: group of images looking at the same target point. 
 	'''
-	def __init__(self, name, splitPrms=None, isAlign=False):
+	def __init__(self, name, splitPrms=None, isAlign=False, forceHost=None):
 		'''
 			name:  relative path where the raw data in the folder is present
-			svPth: the path where the processed data from the folder should be saved
+			splitPrms: parameters that decide train/val splits
+			isAlign  : use the groups for which alignment information is avail.
+			forceHost: use the host with name forceHost for getting the paths
+			
 		'''
 		#folder id
 		fStore        = FolderStore('streetview')
 		self.id_      = fStore.get_id(name)
 		self.name_    = name
 		self.isAlign_ = isAlign
+		self.forceHost_ = forceHost
 		if splitPrms is None:
 			self.splitPrms_ = sev2.get_trainval_split_prms() 
 		#folder paths
@@ -557,8 +561,9 @@ class StreetFolder(object):
 
 	#
 	def _paths(self):
-		pths     = sev2.get_folder_paths(self.id_, self.splitPrms_, self.isAlign_)
-		cPaths   = get_config_paths() 
+		pths     = sev2.get_folder_paths(self.id_, self.splitPrms_,
+               self.isAlign_, hostName=self.forceHost_)
+		cPaths   = get_config_paths(self.forceHost_) 
 		#raw data
 		self.dirName_ = osp.join(cPaths.mainDataDr, self.name_)
 		self.paths_   = pths
@@ -959,31 +964,39 @@ def tar_cropped_ims(args):
 	sf.tar_cropped_images()
 
 def fetch_cropped_ims(args):
-	folderName, isAligned, hostName, imSz = args
-	sf = StreetFolder(folderName, isAlign=isAligned)	
+	if len(args)==5:
+		folderName, isAligned, imSz, hostName, forceHost = args
+	else:
+		folderName, isAligned, imSz, hostName = args
+		forceHost = None
+	sf = StreetFolder(folderName, isAlign=isAligned, forceHost=forceHost)	
 	print ('Saving cropped images %s' % folderName)
 	sf.fetch_scp_cropped_images(hostName, imSz=imSz)
 
 def send_cropped_ims(args):
-	folderName, isAligned, hostName, imSz = args
+	folderName, isAligned, imSz, hostName = args
 	sf = StreetFolder(folderName, isAlign=isAligned)	
 	print ('Saving cropped images %s' % folderName)
 	sf.scp_cropped_images(hostName, imSz=imSz)
 
 def untar_cropped_ims(args):
-	if len(args) == 4:
-		folderName, isAligned, imSz, hostName = args
+	if len(args) == 5:
+		folderName, isAligned, imSz, hostName, forceHost = args
 	else:
 		folderName, isAligned, imSz = args
-		hostName = None	
-	sf = StreetFolder(folderName, isAlign=isAligned)		
+		hostName, forceHost = None, None
+	sf = StreetFolder(folderName, isAlign=isAligned, forceHost=forceHost)		
 	print ('Sending splits for %s' % folderName)
 	sf.untar_cropped_images(imSz, hostName)
 
 def del_cropped_ims(args):
-	folderName, isAligned, imSz = args
-	sf = StreetFolder(folderName, isAlign=isAligned)		
-	print ('Sending splits for %s' % folderName)
+	if len(args) == 4:
+		folderName, isAligned, imSz, forceHost = args
+	else:
+		folderName, isAligned, imSz = args
+		forceHost=None
+	sf = StreetFolder(folderName, isAlign=isAligned, forceHost=forceHost)		
+	print ('Deleting files for %s' % folderName)
 	sf.del_cropped_images(imSz)
 
 #First form the groups
@@ -1020,15 +1033,32 @@ def fetch_trainval_splits(args):
 	sf.fetch_scp_trainval_splits(hostName)
 
 def untar_trainval_splits(args):
-	if len(args) == 3:
-		folderName, isAligned, hostName = args
+	if len(args) == 4:
+		folderName, isAligned, hostName, forceHost = args
 	else:
 		folderName, isAligned = args
-		hostName = None	
-	sf = StreetFolder(folderName, isAlign=isAligned)		
+		hostName, forceHost = None, None	
+	sf = StreetFolder(folderName, isAlign=isAligned, forceHost=None)		
 	print ('Sending splits for %s' % folderName)
 	sf.untar_trainval_splits(hostName)
 
+def untar_trainval_splits_nvidia(debugMode=False):
+	run_parallel(untar_trainval_splits, 'ivb', 'nvMain',
+         debugMode=debugMode, isAligned=True) 
+
+def fetch_cropped_ims_nvidia(imSz=256, debugMode=False):
+	run_parallel(fetch_cropped_ims, imSz, 'server', 'nvMain', 
+         debugMode=debugMode, isAligned=True)
+
+def untar_cropped_ims_nvidia(imSz=256, debugMode=False):
+	run_parallel(untar_cropped_ims, imSz, 'ivb', 'nvMain', 
+         debugMode=debugMode, isAligned=True)
+
+def del_cropped_ims_nvidia(imSz=256, debugMode=False):
+	run_parallel(del_cropped_ims, imSz, 'ivb', 
+         debugMode=debugMode, isAligned=True)
+	run_parallel(del_cropped_ims, imSz, 'nvMain', 
+         debugMode=debugMode, isAligned=True)
 
 #Run functions in parallel that except a single argument folderName
 def run_parallel(fnName, *args, **kwargs):
@@ -1055,9 +1085,6 @@ def run_parallel(fnName, *args, **kwargs):
 		raise Exception('Keyboard Interrupt')
 	del pool
 
-
-def cluster_untar_ims():
-	run_parallel(untar_cropped_ims, 256, 'nvNode', debugMode=False, isAligned=True)
 
 #### OLD NOT REQUIRED ####
 def tar_folder_data(folderName):
