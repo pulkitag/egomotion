@@ -5,7 +5,7 @@ layer {
 	top:  "pair_label"
 	type: "Python"
 	python_param {
-		module: "python_window_data_rots"
+		module: "streetview_data_group_rots"
 		layer: "PythonGroupDataRotsLayer"
 		param_str: ""
 	}
@@ -19,7 +19,7 @@ layer {
 	top:  "pair_label"
 	type: "Python"
 	python_param {
-		module: "python_window_data_rots"
+		module: "streetview_data_group_rots"
 		layer: "PythonGroupDataRotsLayer"
 		param_str: ""
 	}

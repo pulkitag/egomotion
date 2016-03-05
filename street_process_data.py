@@ -150,10 +150,11 @@ class GeoCoordinate(object):
 		'''
 			pt2: the point to which displacement vector
 					 is to be planned
-		'''	
+		'''
+		R = self.earthRadius	
 		y = R * (pt2.lat_ - self.lat_)
 		x = R * (pt2.long_ - self.long_) * math.acos((self.lat_ + pt2.lat_)/2.0)
-		z = pt2.z_ - pt1.z_
+		z = pt2.z_ - self.z_
 		return x, y, z
 
 

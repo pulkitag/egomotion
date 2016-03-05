@@ -5,6 +5,7 @@ from transforms3d.transforms3d import euler as t3eu
 import numpy as np
 from scipy import linalg as linalg
 import math
+import street_process_data as spd
 
 class LabelPrms(object):
 	dbName = cfg.DEF_DB % ('label', 'default') 
@@ -42,12 +43,16 @@ def get_simple_theta_diff(r1, r2):
 ##
 #Get the difference in pose of two configurations
 def get_pose_delta(lbInfo, rot1, rot2, pt1=None, pt2=None,
-             isInputRadian=False, debugMode=False, rotOrder='szxy'):
+             isInputRadian=False, debugMode=False):
 	'''
 		rot1, rot2: rotations in degrees
 		pt1,  pt2 : the location of cameras expressed as (lat, long, height)
 		the output labels are provided in radians
 	'''
+	if lbInfo['rotOrder'] is None:
+		rotOrder = 'szxy'
+	else:
+		rotOrder = lbInfo['rotOrder']
 	if pt1 is not None and pt2 is not None:
 			g1 = spd.GeoCoordinate.from_point(pt1)
 			g2 = spd.GeoCoordinate.from_point(pt2)
@@ -62,8 +67,8 @@ def get_pose_delta(lbInfo, rot1, rot2, pt1=None, pt2=None,
 		elif lbInfo['dof'] == 3:
 			return theta
 		elif lbInfo['dof'] == 5:
-			return tuple(theta[0:2)] + (dx, dy, dz) 
-		else
+			return tuple(theta[0:2]) + (dx, dy, dz) 
+		else:
 			return theta + (dx, dy, dz) 
 	#Right way of doing rotations with rot-matrices
 	if not isInputRadian:
@@ -116,6 +121,19 @@ class PosePrms(LabelPrms):
 		#If rotation is requested without any rotation matrices
 		#just as e1 - e2  
 		self.lb['simpleRot'] = simpleRot
+		self.lb['rotOrder']  = 'szyx'
+		#Number of rotation degrees
+		if self.lb['dof'] in [2,5]:
+			self.lb['numRot'] =  2
+		else:
+			self.lb['numRot'] = 3
+
+	def get_lbstr(self):
+		print (self.dbName)
+		ignoreKeys = ['numRot']
+		if self.lb['simpleRot']:
+			ignoreKeys.append('rotOrder')
+		return mec.get_sql_id(self.dbName, self.lb, ignoreKeys=ignoreKeys)
 
 	def get_lbsz(self):
 		if self.lb.angleType == 'euler':
