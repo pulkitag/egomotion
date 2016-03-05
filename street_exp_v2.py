@@ -143,6 +143,7 @@ def get_data_prms(dbFile=DEF_DB % 'data', lbPrms=None, tvPrms=None, **kwargs):
 	dArgs.dataset = 'dc-v2'
 	dArgs.lbStr   = lbPrms.get_lbstr()
 	dArgs.tvStr   = tvPrms.pStr
+	dArgs.isAlign = True
 	allKeys = dArgs.keys()  
 	dArgs   = mpu.get_defaults(kwargs, dArgs)	
 	dArgs['expStr'] = mec.get_sql_id(dbFile, dArgs)
@@ -322,6 +323,8 @@ def setup_experiment_demo(debugMode=False, isRun=False):
 
 
 def make_group_list_file(dPrms):
+	if dPrms is None:
+		dPrms = get_data_prms()
 	fName  = osp.join(REAL_PATH, 'geofence', '%s_list.txt')
 	fName  = fName % dPrms['dataset']
 	fid    = open(fName, 'r')
@@ -337,7 +340,8 @@ def make_group_list_file(dPrms):
 		for f in fList: 		
 			assert fStore.is_present(f)
 			folderId   = fStore.get_id(f)
-			folderPath = get_folder_paths(folderId, dPrms['splitPrms']) 
+			folderPath = get_folder_paths(folderId, dPrms['splitPrms'],
+                   isAlign=dPrms['isAlign']) 
 			grpFiles.append(folderPath.grpSplits[s])
 		pickle.dump({'grpFiles': grpFiles}, open(grpListFileName, 'w'))
 

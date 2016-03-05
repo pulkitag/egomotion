@@ -11,13 +11,14 @@ def get_paths(hostName=None):
 	pths = edict()
 	if hostName is  None:
 		hostName = HOST_NAME
-	if 'ivb' in hostName:
+	#if 'ivb' in hostName:
+	if 'nvMain' in hostName:
 		HOST_STR = 'nvCluster'
 		pths.mainDataDr = '/data/shared/pulkitag/data_sets/streetview'
 		pths.expDir     = '/data/shared/pulkitag/streetview/exp'
 		#pths.mainDataDr = '/scratch/pulkitag/data_sets/streetview'
 		#pths.expDir     = '/scratch/pulkitag/streetview/exp'
-	elif hostName in ['nvNode']:
+	elif hostName in ['nvNode', 'ivb110']:
 		HOST_STR = 'nvCluster'
 		pths.mainDataDr = '/scratch/pulkitag/data_sets/streetview'
 		pths.expDir     = '/scratch/pulkitag/streetview/exp'
