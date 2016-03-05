@@ -983,7 +983,6 @@ def untar_cropped_ims(args):
 def del_cropped_ims(args):
 	folderName, isAligned, imSz = args
 	sf = StreetFolder(folderName, isAlign=isAligned)		
-	print ('Sending splits for %s' % folderName)
 	sf.del_cropped_images(imSz)
 
 #First form the groups
