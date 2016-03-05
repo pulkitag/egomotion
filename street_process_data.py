@@ -918,11 +918,11 @@ class StreetFolder(object):
 
 	def del_cropped_images(self, imSz=256):
 		if self.isAlign_:
-			drName = pth.crpImPathAlign % imSz
+			drName = self.paths_.crpImPathAlign % imSz
 		else:
-			drName = pth.crpImPath % imSz
+			drName = self.paths_.crpImPath % imSz
 		if osp.exists(drName):
-			print ('Deleting: %s' drName)
+			print ('Deleting: %s' % drName)
 			subprocess.check_call(['rm -r %s' % drName],shell=True)
 		#Delete the tar file	
 		if self.isAlign_:
@@ -930,7 +930,7 @@ class StreetFolder(object):
 		else:
 			trFile  = self.paths_.crpImPathTar % imSz
 		if osp.exists(trFile):
-			print ('Deleting: %s' trFile)
+			print ('Deleting: %s' % trFile)
 			subprocess.check_call(['rm %s' % trFile],shell=True)
 
 
@@ -979,6 +979,12 @@ def untar_cropped_ims(args):
 	sf = StreetFolder(folderName, isAlign=isAligned)		
 	print ('Sending splits for %s' % folderName)
 	sf.untar_cropped_images(imSz, hostName)
+
+def del_cropped_ims(args):
+	folderName, isAligned, imSz = args
+	sf = StreetFolder(folderName, isAlign=isAligned)		
+	print ('Sending splits for %s' % folderName)
+	sf.del_cropped_images(imSz)
 
 #First form the groups
 def save_groups(args):
