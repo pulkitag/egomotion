@@ -106,8 +106,12 @@ def get_paths(dPrms=None):
 	#group lists
 	pth.exp.other         = edict()
 	pth.exp.other.dr      = osp.join(pth.exp.dr, 'others')
-	pth.exp.other.grpList = osp.join(pth.exp.other.dr,
-        'group_list_%s_%s.pkl' % (dPrms['splitPrms']['pStr'], '%s')) 
+	if dPrms['isAlign']:
+		pth.exp.other.grpList = osp.join(pth.exp.other.dr,
+					'group_list_aligned_%s_%s.pkl' % (dPrms['splitPrms']['pStr'], '%s')) 
+	else:
+		pth.exp.other.grpList = osp.join(pth.exp.other.dr,
+					'group_list_%s_%s.pkl' % (dPrms['splitPrms']['pStr'], '%s')) 
 	ou.mkdir(pth.exp.other.dr)
 	pth.exp.other.lbInfo  = osp.join(pth.exp.other.dr, 'label_info_%s.pkl')
 	
@@ -222,9 +226,13 @@ def make_data_layers_proto(dPrms, nPrms, **kwargs):
 			grpListFile = dPrms.paths.exp.other.grpList % 'val'
 		else:
 			grpListFile = dPrms.paths.exp.other.grpList % 'test'
-		#The python parameters	
+		#The python parameters
+		if dPrms['isAlign']:
+			imFolder = osp.join(cfg.pths.folderProc, 'imCrop', 'imSz256-align')
+		else:
+			imFolder = osp.join(cfg.pths.folderProc, 'imCrop', 'imSz256')
 		prmStr = ou.make_python_param_str({'batch_size': b, 
-							'im_root_folder': osp.join(cfg.pths.folderProc, 'imCrop' , 'imSz256'),
+							'im_root_folder': imFolder,
 							'grplist_file': grpListFile,
 						  'lbinfo_file':  lbFile, 
 							'crop_size'  : nPrms.crpSz,
@@ -309,7 +317,11 @@ def setup_experiment_demo(debugMode=False, isRun=False):
 	posePrms = slu.PosePrms()
 	dPrms   = get_data_prms(lbPrms=posePrms)
 	nwFn    = process_net_prms
-	nwArgs  = {'debugMode': debugMode}
+	if debugMode:
+		ncpu = 0
+	else:
+		ncpu = 2
+	nwArgs  = {'ncpu': ncpu}
 	solFn   = mec.get_default_solver_prms
 	solArgs = {'dbFile': DEF_DB % 'sol', 'clip_gradients': 10}
 	cPrms   = mec.get_caffe_prms(nwFn=nwFn, nwPrms=nwArgs,
@@ -340,8 +352,8 @@ def make_group_list_file(dPrms):
 		for f in fList: 		
 			assert fStore.is_present(f)
 			folderId   = fStore.get_id(f)
-			folderPath = get_folder_paths(folderId, dPrms['splitPrms'],
-                   isAlign=dPrms['isAlign']) 
+			folderPath = get_folder_paths(folderId,
+            dPrms['splitPrms'], isAlign=dPrms['isAlign']) 
 			grpFiles.append(folderPath.grpSplits[s])
 		pickle.dump({'grpFiles': grpFiles}, open(grpListFileName, 'w'))
 
