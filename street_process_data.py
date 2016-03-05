@@ -947,7 +947,7 @@ def tar_trainval_splits(args):
 	folderName, isAligned = args
 	sf = StreetFolder(folderName, isAlign=isAligned)		
 	print ('Saving splits for %s' % folderName)
-	sf.tar_trainval_splits()
+	sf.tar_trainval_splits(forceWrite=True)
 
 def send_trainval_splits(args):
 	folderName, isAligned, hostName = args
@@ -978,7 +978,6 @@ def run_parallel(fnName, *args, **kwargs):
 		res    = jobs.get()
 	except KeyboardInterrupt:
 		raise Exception('Keyboard Interrupt')
-		
 	del pool
 
 
@@ -995,5 +994,3 @@ def tar_folder_data(folderName):
 	else:
 		print ('Already exists %s' % trFile)
 		return False
-
-
