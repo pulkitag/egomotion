@@ -33,13 +33,17 @@ def get_folder_paths(folderId, splitPrms=None, isAlign=False, hostName=None):
 	else:
 		alignStr = 'unaligned'
 	if splitPrms is None:
-		splitPrms = get_trainval_split_prms()	
+		splitPrms = get_trainval_split_prms()
+	#is hostName is not None means we are getting paths
+  #of a different machine - so dont create directories
+	if hostName is not None:
+		mkDir = False
+	else:
+		mkDir = True	
 	cPaths,_   = cfg.get_paths(hostName) 
 	paths    = edict()
 	paths.dr   = cPaths.folderProc % folderId
-	ou.mkdir(paths.dr)
 	paths.procTarDr = cPaths.folderProcTar % folderId
-	ou.mkdir(paths.procTarDr)
 	paths.prefix     = osp.join(paths.dr, 'prefix.pkl')
 	paths.prefixAlign = osp.join(paths.dr, 'prefixAlign.pkl')
 	paths.prePerGrp   = osp.join(paths.dr, 'prePerGrp.pkl')
@@ -63,20 +67,25 @@ def get_folder_paths(folderId, splitPrms=None, isAlign=False, hostName=None):
 	#The derived directory for storing derived info
 	paths.deriv = edict()
 	#3 %s correspond to - splitPrms.pStr, aligned/nonaligned, folderId
-	paths.deriv.grps  = cfg.pths.folderDerivDir %\
+	paths.deriv.grps  = cPaths.folderDerivDir %\
             ('grpSplitStore', osp.join(splitPrms.pStr, alignStr,
              folderId))
-	paths.deriv.grpsTar = cfg.pths.folderDerivDirTar % \
+	paths.deriv.grpsTar = cPaths.folderDerivDirTar % \
             ('grpSplitStore', osp.join(splitPrms.pStr,  alignStr, folderId + '.tar'))
 	dirName = osp.basename(paths.deriv.grpsTar)
-	ou.mkdir(dirName)
+	if mkDir:
+		ou.mkdir(dirName)
 	for s in ['train', 'val', 'test']:
 		paths.grpSplits[s]  = osp.join(paths.deriv.grps, 
 						'groups_%s.pkl' % s)
 		dirName = osp.basename(paths.grpSplits[s])
-		ou.mkdir(dirName)
+		if mkDir:
+			ou.mkdir(dirName)
 	paths.trainvalSplitGrpKeys = osp.join(paths.deriv.grps, 
 									 'splits-keys.pkl')
+	if mkDir:
+		ou.mkdir(paths.dr)
+		ou.mkdir(paths.procTarDr)
 	return paths
 
 ##
