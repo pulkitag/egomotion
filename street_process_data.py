@@ -744,7 +744,6 @@ class StreetFolder(object):
 		print('%s, loading groups' % self.id_)
 		grpList = self.get_target_group_list() 
 		grps    = self.get_target_groups()
-		count   = 0
 		for gk in grpList:
 			g = grps[gk]
 			for n in range(g.grp.num):
@@ -752,11 +751,10 @@ class StreetFolder(object):
 				loc = g.grp.data[n].label.align.loc
 				inName    = osp.join(self.dirName_, prf + '.jpg')
 				outName   = osp.join(self.paths_.crpImPathAlign % imSz, 
-									 self._idx2cropname(count))
+									  g.grp.crpImNames[n])
 				#Save the image
 				save_cropped_image_aligned([inName], [outName], loc,
 							imSz, isForceWrite)
-				count += 1
 
 	def _idx2cropname(self, idx):
 		lNum  = int(idx/1000)
@@ -917,6 +915,23 @@ class StreetFolder(object):
 			drName  = pth.crpImPath % imSz
 		ou.mkdir(drName)
 		subprocess.check_call(['tar -xf %s -C %s' % (trFile, drName)],shell=True)
+
+	def del_cropped_images(self, imSz=256):
+		if self.isAlign_:
+			drName = pth.crpImPathAlign % imSz
+		else:
+			drName = pth.crpImPath % imSz
+		if osp.exists(drName):
+			print ('Deleting: %s' drName)
+			subprocess.check_call(['rm -r %s' % drName],shell=True)
+		#Delete the tar file	
+		if self.isAlign_:
+			trFile  = self.paths_.crpImPathAlignTar % imSz
+		else:
+			trFile  = self.paths_.crpImPathTar % imSz
+		if osp.exists(trFile):
+			print ('Deleting: %s' trFile)
+			subprocess.check_call(['rm %s' % trFile],shell=True)
 
 
 def recompute_all(folderName):
