@@ -280,9 +280,9 @@ class StreetLabel(object):
 	def get_small_memory(self):
 		lb = edict()
 		lb.pts = edict()
-		lb.pts.camera = self.pts.camera
+		lb.pts.camera = self.label.pts.camera
 		lb.rots       = self.label.rots	
-		lb.normal     = self.label.normal
+		lb.nrml       = self.label.nrml
 		if self.label.align is not None:
 			lb.align = edict()
 			lb.align.loc = self.label.align.loc
@@ -362,7 +362,7 @@ class StreetGroup(object):
 	def as_dict_small_memory(self):
 		grp = edict()
 		grp.folderId = self.grp.folderId
-		grp.num      = len(idx)
+		grp.num      = self.grp.num
 		grp.crpImNames = self.grp.crpImNames
 		grp.data       = []
 		for d in self.grp.data:
