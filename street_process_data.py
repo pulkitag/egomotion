@@ -893,7 +893,7 @@ class StreetFolder(object):
 		print (srcPath) 
 		dirName = osp.dirname(tgPath)
 		ou.mkdir(dirName)
-		#subprocess.check_call(['rsync -ravz %s %s' % (srcPath, tgPath)],shell=True)
+		#subprocess.check_call(['rsync -ravz --progress %s %s' % (srcPath, tgPath)],shell=True)
 		subprocess.check_call(['scp %s %s' % (srcPath, tgPath)],shell=True)
 
 	#Transfer the cropped images to a host
@@ -1065,8 +1065,12 @@ def send_trainval_splits(args):
 
 #Or alternatively fetch them
 def fetch_trainval_splits(args):
-	folderName, isAligned, hostName = args
-	sf = StreetFolder(folderName, isAlign=isAligned)		
+	if len(args) == 4:
+		folderName, isAligned, hostName, forceHost = args
+	else:
+		folderName, isAligned, hostName = args
+		forceHost=None
+	sf = StreetFolder(folderName, isAlign=isAligned, forceHost=forceHost)		
 	print ('Sending splits for %s' % folderName)
 	sf.fetch_scp_trainval_splits(hostName)
 
@@ -1077,7 +1081,7 @@ def untar_trainval_splits(args):
 	else:
 		folderName, isAligned = args
 		hostName, forceHost = None, None	
-	sf = StreetFolder(folderName, isAlign=isAligned, forceHost=None)		
+	sf = StreetFolder(folderName, isAlign=isAligned, forceHost=forceHost)		
 	print ('Untarring splits for %s' % folderName)
 	sf.untar_trainval_splits(hostName)
 
@@ -1087,6 +1091,10 @@ def del_trainval_splits(args):
 	sf = StreetFolder(folderName, isAlign=isAligned)		
 	print ('Deleting splits for %s' % folderName)
 	sf.del_trainval_splits()
+
+def fetch_trainval_splits_nvidia(debugMode=False):
+	run_parallel(fetch_trainval_splits, 'server', 'nvMain',
+         debugMode=debugMode, isAligned=True) 
 
 def untar_trainval_splits_nvidia(debugMode=False):
 	run_parallel(untar_trainval_splits, 'ivb', 'nvMain',
