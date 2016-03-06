@@ -181,7 +181,7 @@ def net_prms(dbFile=DEF_DB % 'net', **kwargs):
 	##The mean file
 	dArgs.meanFile  = ''
 	dArgs.meanType  = None
-	dArgs.ncpu      = 2
+	dArgs.ncpu      = 3
 	dArgs   = mpu.get_defaults(kwargs, dArgs, False)
 	allKeys = dArgs.keys()	
 	dArgs['expStr'] = mec.get_sql_id(dbFile, dArgs, ignoreKeys=['ncpu'])
@@ -225,7 +225,7 @@ def make_data_layers_proto(dPrms, nPrms, **kwargs):
 		if s == 'TEST':
 			grpListFile = dPrms.paths.exp.other.grpList % 'val'
 		else:
-			grpListFile = dPrms.paths.exp.other.grpList % 'test'
+			grpListFile = dPrms.paths.exp.other.grpList % 'train'
 		#The python parameters
 		if dPrms['isAlign']:
 			imFolder = osp.join(cfg.pths.folderProc, 'imCrop', 'imSz256-align')
@@ -334,7 +334,7 @@ def setup_experiment_demo(debugMode=False, isRun=False):
 	return exp 	 				
 
 
-def make_group_list_file(dPrms):
+def make_group_list_file(dPrms=None):
 	if dPrms is None:
 		dPrms = get_data_prms()
 	fName  = osp.join(REAL_PATH, 'geofence', '%s_list.txt')

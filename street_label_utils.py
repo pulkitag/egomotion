@@ -60,7 +60,7 @@ def get_pose_delta(lbInfo, rot1, rot2, pt1=None, pt2=None,
 	#Simple rotation without any rotation matrices
 	if lbInfo['simpleRot']:
 		assert lbInfo['angleType'] == 'euler'
-		theta = map(get_simple_theta_diff, r1, r2)
+		theta = map(get_simple_theta_diff, rot1, rot2)
 		theta = map(math.radians, theta)
 		if lbInfo['dof'] ==2:
 			return theta[0], theta[1]

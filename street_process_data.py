@@ -987,7 +987,7 @@ def untar_cropped_ims(args):
 		folderName, isAligned, imSz = args
 		hostName, forceHost = None, None
 	sf = StreetFolder(folderName, isAlign=isAligned, forceHost=forceHost)		
-	print ('Sending splits for %s' % folderName)
+	print ('Untarring images for %s' % folderName)
 	sf.untar_cropped_images(imSz, hostName)
 
 def del_cropped_ims(args):
@@ -1040,7 +1040,7 @@ def untar_trainval_splits(args):
 		folderName, isAligned = args
 		hostName, forceHost = None, None	
 	sf = StreetFolder(folderName, isAlign=isAligned, forceHost=None)		
-	print ('Sending splits for %s' % folderName)
+	print ('Untarring splits for %s' % folderName)
 	sf.untar_trainval_splits(hostName)
 
 def untar_trainval_splits_nvidia(debugMode=False):
