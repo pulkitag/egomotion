@@ -826,10 +826,12 @@ class StreetFolder(object):
 		assert len(set(setKeys['train']).intersection(set(setKeys['val']))) == 0
 		assert len(set(setKeys['train']).intersection(set(setKeys['test']))) == 0
 		#Save the split keys
+		dirName = osp.dirname(self.paths_.trainvalSplitGrpKeys)
+		ou.mkdir(dirName)
 		pickle.dump({'setKeys': setKeys, 'splitPrms': self.splitPrms_},
                open(self.paths_.trainvalSplitGrpKeys, 'w')) 
 		for s in ['train', 'val', 'test']:
-			sGroups = [grps[gk].as_dict() for gk in setKeys[s]]
+			sGroups = [grps[gk].as_dict_small_memory() for gk in setKeys[s]]
 			pickle.dump({'groups': sGroups}, open(self.paths_.grpSplits[s], 'w')) 	
 
 	def tar_trainval_splits(self, forceWrite=False):
@@ -961,6 +963,17 @@ class StreetFolder(object):
 			print ('Deleting: %s' % trFile)
 			subprocess.check_call(['rm %s' % trFile],shell=True)
 
+	def del_trainval_splits(self):
+		trFile = self.paths_.deriv.grpsTar
+		drName = self.paths_.deriv.grps 
+		if osp.exists(drName):
+			print ('Deleting: %s' % drName)
+			subprocess.check_call(['rm -r %s' % drName],shell=True)
+		#Delete the tar file	
+		if osp.exists(trFile):
+			print ('Deleting: %s' % trFile)
+			subprocess.check_call(['rm %s' % trFile],shell=True)
+
 
 def recompute_all(folderName):
 	sf = StreetFolder(folderName)		
@@ -1043,18 +1056,21 @@ def tar_trainval_splits(args):
 	print ('Saving splits for %s' % folderName)
 	sf.tar_trainval_splits(forceWrite=True)
 
+#Fourthly, send the train val splits
 def send_trainval_splits(args):
 	folderName, isAligned, hostName = args
 	sf = StreetFolder(folderName, isAlign=isAligned)		
 	print ('Sending splits for %s' % folderName)
 	sf.scp_trainval_splits(hostName)
 
+#Or alternatively fetch them
 def fetch_trainval_splits(args):
 	folderName, isAligned, hostName = args
 	sf = StreetFolder(folderName, isAlign=isAligned)		
 	print ('Sending splits for %s' % folderName)
 	sf.fetch_scp_trainval_splits(hostName)
 
+#And Finally untar them
 def untar_trainval_splits(args):
 	if len(args) == 4:
 		folderName, isAligned, hostName, forceHost = args
@@ -1064,6 +1080,13 @@ def untar_trainval_splits(args):
 	sf = StreetFolder(folderName, isAlign=isAligned, forceHost=None)		
 	print ('Untarring splits for %s' % folderName)
 	sf.untar_trainval_splits(hostName)
+
+#Sometimes unfortunately the splits need to be deleted
+def del_trainval_splits(args):
+	folderName, isAligned = args
+	sf = StreetFolder(folderName, isAlign=isAligned)		
+	print ('Deleting splits for %s' % folderName)
+	sf.del_trainval_splits()
 
 def untar_trainval_splits_nvidia(debugMode=False):
 	run_parallel(untar_trainval_splits, 'ivb', 'nvMain',
@@ -1082,6 +1105,11 @@ def del_cropped_ims_nvidia(imSz=256, debugMode=False):
          debugMode=debugMode, isAligned=True)
 	run_parallel(del_cropped_ims, imSz, 'nvMain', 
          debugMode=debugMode, isAligned=True)
+
+def recompute_trainval_splits(args):
+	del_trainval_splits(args)
+	save_trainval_splits(args)
+	tar_trainval_splits(args)		
 
 #Run functions in parallel that except a single argument folderName
 def run_parallel(fnName, *args, **kwargs):
