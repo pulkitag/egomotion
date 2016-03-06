@@ -70,7 +70,6 @@ def save_cropped_image_aligned(inNames, outNames, imCenter,
 		ou.mkdir(dirName)
 		scm.imsave(outNames[i], imSave)
 
-
 	
 def get_distance_between_groups(grp1, grp2):
 	lb1, lb2 = grp1.data[0], grp2.data[0]
@@ -277,6 +276,19 @@ class StreetLabel(object):
 	def get_rot_mat(self):
 		pass
 
+	#Only return the critical requirements
+	def get_small_memory(self):
+		lb = edict()
+		lb.pts = edict()
+		lb.pts.camera = self.pts.camera
+		lb.rots       = self.label.rots	
+		lb.normal     = self.label.normal
+		if self.label.align is not None:
+			lb.align = edict()
+			lb.align.loc = self.label.align.loc
+		else:
+			lb.align = None
+		return lb
 
 class StreetGroup(object):
 	def __init__(self, grp=edict()):
@@ -346,6 +358,16 @@ class StreetGroup(object):
 		for d in self.grp.data:
 			grpDict['data'].append(d.label)
 		return grpDict
+
+	def as_dict_small_memory(self):
+		grp = edict()
+		grp.folderId = self.grp.folderId
+		grp.num      = len(idx)
+		grp.crpImNames = self.grp.crpImNames
+		grp.data       = []
+		for d in self.grp.data:
+			grp['data'].append(d.get_small_memory())
+		return grp
 
 
 class StreetGroupList(object):
