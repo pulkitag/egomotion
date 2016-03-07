@@ -543,7 +543,7 @@ layer {
   top: "fc6_p"
 }
 layer {
-  name: "diff_fc6"
+  name: "common_fc"
   type: "Eltwise"
 	eltwise_param {
 		coeff: 1.0
@@ -551,38 +551,5 @@ layer {
 	}
   bottom: "fc6"
   bottom: "fc6_p"
-  top: "diff_fc6"
-}
-layer {
-  name: "common_fc"
-  type: "InnerProduct"
-  bottom: "diff_fc6"
-  top: "common_fc"
-  param {
-		name: "common_fc_w"
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-		name: "common_fc_b"
-    lr_mult: 2
-    decay_mult: 0
-  }
-  inner_product_param {
-    num_output: 512
-    weight_filler {
-      type: "xavier"
-    }
-    bias_filler {
-      type: "constant"
-      value: 1
-    }
-  }
-}
-layer {
-  name: "relu_common"
-  type: "PReLU"
-  bottom: "common_fc"
   top: "common_fc"
 }
-

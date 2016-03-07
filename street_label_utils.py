@@ -87,7 +87,7 @@ def get_pose_delta(lbInfo, rot1, rot2, pt1=None, pt2=None,
 				return lb
 	#Calculate the rotation
 	if lbInfo['angleType'] == 'euler':
-		if lbInfo['dof'] <= 3:
+		if lbInfo['dof'] == 3:
 			lb = (yaw, pitch, roll)
 		elif lbInfo['dof'] == 5:
 			lb = (yaw, pitch, dx, dy, dz)

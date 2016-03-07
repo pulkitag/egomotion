@@ -7,6 +7,8 @@ import street_label_utils as slu
 import my_exp_pose_grps as mepg
 import my_pycaffe as mp
 from os import path as osp
+from easydict import EasyDict as edict
+import streetview_data_group_rots as sdgr
 
 REAL_PATH = cfg.REAL_PATH
 
@@ -80,3 +82,28 @@ def demo_test():
 	net = make_deploy_net(exp)
 	if net is None:
 		return
+	batchSz = net.get_batchsz()
+	#Load the test data
+	data = pickle.load(open(exp.dPrms_.paths.exp.other.testData, 'r'))
+	data = data['testData']
+	#the parameters for extracting images
+	imPrms = edict()
+	imPrms['imSz']   = exp.cPrms_.nwPrms['ipImSz']
+	imPrms['cropSz'] = exp.cPrms_.nwPrms['crpSz']
+	imPrms['jitter_pct'] = 0
+	imPrms['jitter_amt'] = 0
+	imFolder = osp.join(cfg.pths.folderProc, 'imCrop', 'imSz256-align')
+	for b in range(0, len(data), batchSz):
+		print(b, 'Loading images ...')
+		ims = []
+		for i in range(b,b+batchSz):
+			fid, imName1, imName2, gtLb = data[i]
+			imName1 = osp.join(imFolder % fid, imName1)
+			imName2 = osp.join(imFolder % fid, imName2)
+			im = sdgr.read_double_images(imName1, imName2, imPrms)
+			ims.append(im.reshape((1,) + im.shape))	
+		ims  = np.concatenate(ims, axis=0)	
+		pose = net.forward(['pose_fc'], **{'pair_data':ims})
+		return pose
+		 		
+		
