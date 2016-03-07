@@ -113,7 +113,10 @@ def get_paths(dPrms=None):
 		pth.exp.other.grpList = osp.join(pth.exp.other.dr,
 					'group_list_%s_%s.pkl' % (dPrms['splitPrms']['pStr'], '%s')) 
 	ou.mkdir(pth.exp.other.dr)
-	pth.exp.other.lbInfo  = osp.join(pth.exp.other.dr, 'label_info_%s.pkl')
+	pth.exp.other.lbInfo   = osp.join(pth.exp.other.dr, 'label_info_%s.pkl')
+	#Save the test set
+	pth.exp.other.testData = osp.join(pth.exp.other.dr, 'test_data_%s.pkl')
+	pth.exp.other.testData = pth.exp.other.testData % dPrms['lbPrms'].get_lbstr()
 	
 	#Data files
 	pth.data    = edict()

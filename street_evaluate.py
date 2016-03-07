@@ -48,4 +48,8 @@ def make_test_set(dPrms, numTest=100000):
 			elm.append(lb)
 			elms.append(elm)
 			breakFlag = True
+	pickle.dump({'testData': elms}, open(dPrms.paths.exp.other.testData, 'w'))
 	return elms
+
+
+
