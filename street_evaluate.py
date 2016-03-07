@@ -4,6 +4,7 @@ import street_config as cfg
 import pickle
 import numpy as np
 import street_label_utils as slu
+import my_exp_pose_grps as mepg
 
 REAL_PATH = cfg.REAL_PATH
 
@@ -52,4 +53,20 @@ def make_test_set(dPrms, numTest=100000):
 	return elms
 
 
-
+def make_deploy_net(exp, numIter=60000):
+ 	exp.make_deploy(dataLayerNames=['window_data'], imSz=exp.netPrms_['ipImSz'])
+	modelName = exp.get_snapshot_name(numIter=numIter)
+	if not osp.exists(modelName):
+		print ('ModelFile doesnot exist')
+		return None
+	net       = mp.MyNet(exp.files_['netDefDeploy'], modelName)
+	#Set preprocessing
+	net.set_preprocess(ipName='window_data', chSwap=None, noTransform=True)
+	return net
+	
+def demo_test():
+	exp = mepg.simple_euler_dof2_dcv2_doublefcv1(gradClip=30,
+        stepsize=60000, base_lr=0.001, gamma=0.1)	
+	net = make_deploy_net(exp)
+	if net is None:
+		return
