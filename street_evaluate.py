@@ -5,6 +5,8 @@ import pickle
 import numpy as np
 import street_label_utils as slu
 import my_exp_pose_grps as mepg
+import my_pycaffe as mp
+from os import path as osp
 
 REAL_PATH = cfg.REAL_PATH
 
@@ -52,16 +54,24 @@ def make_test_set(dPrms, numTest=100000):
 	pickle.dump({'testData': elms}, open(dPrms.paths.exp.other.testData, 'w'))
 	return elms
 
+def demo_make_test():
+	posePrms = slu.PosePrms(maxRot=90, simpleRot=True, dof=2)
+	dPrms   =  sev2.get_data_prms(lbPrms=posePrms)
+	make_test_set(dPrms)
 
 def make_deploy_net(exp, numIter=60000):
- 	exp.make_deploy(dataLayerNames=['window_data'], imSz=exp.netPrms_['ipImSz'])
+	imSz = exp.cPrms_.nwPrms['ipImSz']
+	imSz = [[6, imSz, imSz]]
+ 	exp.make_deploy(dataLayerNames=['window_data'],
+      newDataLayerNames=['pair_data'], delAbove='pose_fc',
+      imSz=imSz, batchSz=100)
 	modelName = exp.get_snapshot_name(numIter=numIter)
 	if not osp.exists(modelName):
-		print ('ModelFile doesnot exist')
+		print ('ModelFile %s doesnot exist' % modelName)
 		return None
-	net       = mp.MyNet(exp.files_['netDefDeploy'], modelName)
+	net       = mp.MyNet(exp.files_['netdefDeploy'], modelName)
 	#Set preprocessing
-	net.set_preprocess(ipName='window_data', chSwap=None, noTransform=True)
+	net.set_preprocess(ipName='pair_data', chSwap=None, noTransform=True)
 	return net
 	
 def demo_test():

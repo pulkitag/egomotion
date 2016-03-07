@@ -543,16 +543,16 @@ layer {
   top: "fc6_p"
 }
 layer {
-  name: "concat_fc6"
+  name: "diff_fc6"
   type: "Concat"
   bottom: "fc6"
   bottom: "fc6_p"
-  top: "concat_fc6"
+  top: "diff_fc6"
 }
 layer {
   name: "common_fc"
   type: "InnerProduct"
-  bottom: "concat_fc6"
+  bottom: "diff_fc6"
   top: "common_fc"
   param {
 		name: "common_fc_w"
