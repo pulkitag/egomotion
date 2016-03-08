@@ -834,6 +834,27 @@ class StreetFolder(object):
 			sGroups = [grps[gk].as_dict_small_memory() for gk in setKeys[s]]
 			pickle.dump({'groups': sGroups}, open(self.paths_.grpSplits[s], 'w')) 	
 
+	#Verify that all the image files in the split exist
+	def verify_trainval_split_files(self, imSz=256):
+		import cv2
+		for s in ['train', 'val', 'test']:
+			print(s)
+			dat = pickle.load(open(self.paths_.grpSplits[s], 'r')) 	
+			dat = dat['groups']
+			for i, g in enumerate(dat):
+				for n in range(g.num):
+					if self.isAlign_:
+						imName   = osp.join(self.paths_.crpImPathAlign % imSz, 
+												g.crpImNames[n])
+					else:
+						imName   = osp.join(self.paths_.crpImPath % imSz, 
+												g.crpImNames[n])
+					im = cv2.imread(imName)
+					h, w, ch = im.shape
+					assert h==imSz and w==imSz and ch==3, im.shape
+					if not(osp.exists(imName)):
+						print ('%s DOESNOT EXISTS ...WTF' % imName)
+				
 	def tar_trainval_splits(self, forceWrite=False):
 		drName  = self.paths_.deriv.grps
 		trFile  = self.paths_.deriv.grpsTar
@@ -1118,6 +1139,9 @@ def recompute_trainval_splits(args):
 	del_trainval_splits(args)
 	save_trainval_splits(args)
 	tar_trainval_splits(args)		
+
+def verify_trainval_split_files(args):
+	pass
 
 #Run functions in parallel that except a single argument folderName
 def run_parallel(fnName, *args, **kwargs):

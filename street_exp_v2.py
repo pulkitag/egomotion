@@ -10,6 +10,7 @@ import street_label_utils as slu
 import street_process_data as spd
 import pickle
 import copy
+import numpy as np
 
 REAL_PATH = cfg.REAL_PATH
 DEF_DB    = cfg.DEF_DB % ('default', '%s')
@@ -117,6 +118,9 @@ def get_paths(dPrms=None):
 	#Save the test set
 	pth.exp.other.testData = osp.join(pth.exp.other.dr, 'test_data_%s.pkl')
 	pth.exp.other.testData = pth.exp.other.testData % dPrms['lbPrms'].get_lbstr()
+	#Pose stats
+	pth.exp.other.poseStats = osp.join(pth.exp.other.dr, 'pose_stats_%s.pkl') 
+	pth.exp.other.poseStats = pth.exp.other.poseStats % dPrms['lbPrms'].get_lbstr() 
 	#Save the predictions
 	pth.exp.results = edict()
 	pth.exp.results.dr   = osp.join(pth.exp.dr, 'results', '%s')
@@ -362,6 +366,59 @@ def make_group_list_file(dPrms=None):
             dPrms['splitPrms'], isAlign=dPrms['isAlign']) 
 			grpFiles.append(folderPath.grpSplits[s])
 		pickle.dump({'grpFiles': grpFiles}, open(grpListFileName, 'w'))
+
+
+def save_pose_stats(dPrms=None):
+	if dPrms is None:
+		dPrms = get_data_prms()
+	listName = dPrms['paths'].exp.other.grpList % 'val'
+	data     = pickle.load(open(listName, 'r'))	
+	grpDat   = []
+	grpCount = []
+	numGrp   = 0
+	for i,g in enumerate(data['grpFiles']):
+		grpDat.append(pickle.load(open(g, 'r'))['groups'])
+		grpCount.append(len(grpDat[i]))
+		print ('Groups in %s: %d' % (g, grpCount[i]))
+		numGrp += grpCount[i]
+	print ('Total number of groups: %d' % numGrp)
+	grpSampleProb = [float(i)/float(numGrp) for i in grpCount]
+	randSeed  = 7
+	randState = np.random.RandomState(randSeed) 
+	lbs      = []
+	for t in range(50000):
+		if np.mod(t,5000)==1:
+			print(t)	
+		breakFlag = False
+		while not breakFlag:
+			rand   =  randState.multinomial(1, grpSampleProb)
+			grpIdx =  np.where(rand==1)[0][0]
+			ng     =  randState.randint(low=0, high=grpCount[grpIdx])
+			grp    =  grpDat[grpIdx][ng]
+			l1     =  randState.permutation(grp.num)[0]
+			l2     =  randState.permutation(grp.num)[0]
+			if l1==l2:
+				rd = randState.rand()
+				#Sample the same image rarely
+				if rd < 0.85:
+					continue
+			lb  = slu.get_pose_delta(dPrms['lbPrms'].lb, grp.data[l1].rots,
+            grp.data[l2].rots, grp.data[l1].pts.camera,
+            grp.data[l2].pts.camera)
+			lb  = np.array(lb)
+			lbs.append(lb.reshape((1,)+lb.shape))
+			breakFlag = True
+	lbs = np.concatenate(lbs)
+	mu  = np.mean(lbs,0)
+	sd  = np.std(lbs,0)
+	md  = np.median(lbs,0)
+	mx  = np.max(lbs, 0)
+	mn  = np.min(lbs, 0)
+	aMx = np.max(np.abs(lbs),0)
+	aMn = np.min(np.abs(lbs),0)	
+	pickle.dump({'mu':mu, 'sd':sd, 'md':md, 'mx':mx,'mn':mn,
+   'aMx':aMx, 'aMn':aMn}, open(dPrms.paths.exp.other.poseStats, 'w'))
+	return lbs
 
 
 #Check if all group files are present or not

@@ -163,13 +163,15 @@ def get_exp(expNum):
 	if expNum == 0:
 		exp = mepg.simple_euler_dof2_dcv2_doublefcv1(gradClip=30, stepsize=60000,
 			 base_lr=0.001, gamma=0.1)
+		numIter = 182000
 		#numIter = 130000
-		numIter = 84000
+		#numIter = 84000
 	elif expNum == 1:
 		exp = mepg.simple_euler_dof2_dcv2_doublefcv1(gradClip=30, stepsize=60000, 
 			 base_lr=0.0001, gamma=0.5)
+		numIter = 182000
 		#numIter = 130000
-		numIter = 84000
+		#numIter = 84000
 	elif expNum == 2:
 		exp = mepg.simple_euler_dof2_dcv2_smallnetv5(gradClip=30, stepsize=60000,
 			 gamma=0.5, base_lr=0.0001) 	
@@ -180,6 +182,10 @@ def get_exp(expNum):
 	elif expNum == 4:
 		exp = mepg.simple_euler_dof2_dcv2_smallnetv5(gradClip=30)
 		numIter = 82000
+	elif expNum==5:
+		exp = mepg.simple_euler_dof2_dcv2_doublefcv1_diff(gradClip=30,
+        stepsize=60000, base_lr=0.001, gamma=0.1)
+		numIter = 84000
 	return exp, numIter
 
 def eval_multiple_models():
@@ -189,7 +195,7 @@ def eval_multiple_models():
 
 def get_multiple_results():
 	mdErrs, counts = [], []
-	for i in range(5):
+	for i in range(2):
 		exp, numIter = get_exp(i)
 		mdErr, count = get_results(exp, numIter)
 		mdErrs.append(mdErr)
