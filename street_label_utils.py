@@ -112,7 +112,7 @@ def get_pose_delta(lbInfo, rot1, rot2, pt1=None, pt2=None,
 class PosePrms(LabelPrms):
 	dbName = cfg.DEF_DB % ('label', 'pose') 
 	def __init__(self, angleType='euler', dof=3,
-         maxRot=None, simpleRot=False):
+         maxRot=None, simpleRot=False, nrmlz=None):
 		LabelPrms.__init__(self)
 		self.lb['type']      = 'pose'
 		self.lb['angleType'] = angleType
@@ -122,6 +122,7 @@ class PosePrms(LabelPrms):
 		#just as e1 - e2  
 		self.lb['simpleRot'] = simpleRot
 		self.lb['rotOrder']  = 'szyx'
+		self.lb['nrmlz']     = nrmlz
 		#Number of rotation degrees
 		if self.lb['dof'] in [2,5]:
 			self.lb['numRot'] =  2
