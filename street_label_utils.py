@@ -83,8 +83,8 @@ def get_pose_delta(lbInfo, rot1, rot2, pt1=None, pt2=None,
 	lb = None
 	#Figure out if the rotation is within or outside the limits
 	if lbInfo.maxRot is not None:
-		if (np.abs(thRot) > lbInfo.maxRot):
-				return lb
+		if (np.abs(thRot)) > lbInfo.maxRot:
+			return None
 	#Calculate the rotation
 	if lbInfo['angleType'] == 'euler':
 		if lbInfo['dof'] == 3:
@@ -129,7 +129,7 @@ class PosePrms(LabelPrms):
 			self.lb['numRot'] = 3
 
 	def get_lbstr(self):
-		print (self.dbName)
+		#print (self.dbName)
 		ignoreKeys = ['numRot']
 		if self.lb['simpleRot']:
 			ignoreKeys.append('rotOrder')

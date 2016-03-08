@@ -65,7 +65,6 @@ def euler_dof3_dcv2_doublefcv1(isRun=False,
 	return exp 	 			
 
 
-
 def simple_euler_dof2_dcv2_doublefcv1_diff(isRun=False,
          gradClip=30, stepsize=60000, base_lr=0.001,
          gamma=0.1, deviceId=0):

@@ -119,8 +119,7 @@ def get_paths(dPrms=None):
 	pth.exp.other.testData = pth.exp.other.testData % dPrms['lbPrms'].get_lbstr()
 	#Save the predictions
 	pth.exp.results = edict()
-	pth.exp.results.dr   = osp.join(pth.exp.dr, 'results', '%s') % dPrms['expStr']
-	ou.mkdir(pth.exp.results.dr)	
+	pth.exp.results.dr   = osp.join(pth.exp.dr, 'results', '%s')
 	pth.exp.results.file = osp.join(pth.exp.results.dr, 'iter%d.pkl') 
 	#Data files
 	pth.data    = edict()

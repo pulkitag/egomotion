@@ -12,6 +12,7 @@ import streetview_data_group_rots as sdgr
 import street_test_v2 as stv2
 import street_test as stv1
 import copy
+import other_utils as ou
 
 REAL_PATH = cfg.REAL_PATH
 
@@ -80,10 +81,18 @@ def make_deploy_net(exp, numIter=60000):
 	return net
 
 
+def get_result_filename(exp, numIter):
+	resFile = exp.dPrms_.paths.exp.results.file
+	resFile = osp.join(resFile % (osp.join(exp.cPrms_.expStr, exp.dPrms_.expStr), numIter))
+	return resFile
+
+
 def run_test(exp, numIter=90000, forceWrite=False):
-	fName = exp.dPrms_.paths.exp.results.file % numIter
-	if osp.exists(fName) and not forceWrite:
-		print ('Result file for %s exists' % fName)
+	resFile = get_result_filename(exp, numIter)
+	dirName = osp.dirname(resFile)
+	ou.mkdir(dirName)
+	if osp.exists(resFile) and not forceWrite:
+		print ('Result file for %s exists' % resFile)
 		return
 	net = make_deploy_net(exp, numIter=numIter)
 	if net is None:
@@ -111,13 +120,19 @@ def run_test(exp, numIter=90000, forceWrite=False):
 			im = sdgr.read_double_images(imName1, imName2, imPrms)
 			ims.append(im.reshape((1,) + im.shape))
 			gtLbs.append(np.array(gtLb).reshape((1,lbSz)))	
-		ims  = np.concatenate(ims, axis=0)	
+		ims  = np.concatenate(ims, axis=0)
+		#WHERE IS THE MEAN SUBTRACTION .... GRRRRRRR
+		if exp.cPrms_.nwPrms.meanType is None:
+			print ('MEAN SUB DONE')
+			ims  = ims.astype(np.float32) - 128.
+		else:
+			raise Exception('Mean type %s not recognized' % exp.cPrms_.nwPrms.meanType)	
 		pose = net.forward(['pose_fc'], **{'pair_data':ims})
 		pred.append(copy.deepcopy(pose['pose_fc']))
 	pred  = np.concatenate(pred)
 	gtLbs = np.concatenate(gtLbs)
 	pickle.dump({'pred':pred, 'gtLbs': gtLbs}, 
-       open(exp.dPrms_.paths.exp.results.file % numIter, 'w'))
+       open(resFile, 'w'))
 
 def demo_test(numIter=90000):
 	exp = mepg.simple_euler_dof2_dcv2_doublefcv1(gradClip=30,
@@ -127,7 +142,8 @@ def demo_test(numIter=90000):
 
 def get_results(exp, numIter=90000):
 	print ('Loading results')
-	data = pickle.load(open(exp.dPrms_.paths.exp.results.file % numIter, 'r'))
+	resFile = get_result_filename(exp, numIter)
+	data = pickle.load(open(resFile, 'r'))
 	pred = data['pred']
 	gt   = data['gtLbs']
 	#Convert from yaw, pitch, roll to pitch, yaw, roll
@@ -143,26 +159,39 @@ def get_results(exp, numIter=90000):
 	return mdErr, counts
 
 
+def get_exp(expNum):
+	if expNum == 0:
+		exp = mepg.simple_euler_dof2_dcv2_doublefcv1(gradClip=30, stepsize=60000,
+			 base_lr=0.001, gamma=0.1)
+		#numIter = 130000
+		numIter = 84000
+	elif expNum == 1:
+		exp = mepg.simple_euler_dof2_dcv2_doublefcv1(gradClip=30, stepsize=60000, 
+			 base_lr=0.0001, gamma=0.5)
+		#numIter = 130000
+		numIter = 84000
+	elif expNum == 2:
+		exp = mepg.simple_euler_dof2_dcv2_smallnetv5(gradClip=30, stepsize=60000,
+			 gamma=0.5, base_lr=0.0001) 	
+		numIter = 84000
+	elif expNum == 3:
+		exp = mepg.simple_euler_dof2_dcv2_smallnetv5(gradClip=30, stepsize=60000)
+		numIter = 84000
+	elif expNum == 4:
+		exp = mepg.simple_euler_dof2_dcv2_smallnetv5(gradClip=30)
+		numIter = 82000
+	return exp, numIter
+
 def eval_multiple_models():
-	exp = mepg.simple_euler_dof2_dcv2_doublefcv1(gradClip=30, stepsize=60000,
-     base_lr=0.001, gamma=0.1)
-	numIter = 130000
-	run_test(exp, numIter)
+	for i in range(5):
+		exp, numIter = get_exp(i)
+		run_test(exp, numIter, forceWrite=False)
 
-	exp = mepg.simple_euler_dof2_dcv2_doublefcv1(gradClip=30, stepsize=60000, 
-     base_lr=0.0001, gamma=0.5)
-	numIter = 130000
-	run_test(exp, numIter)
-
-	exp = mepg.simple_euler_dof2_dcv2_smallnetv5(gradClip=30, stepsize=60000,
-     gamma=0.5, base_lr=0.0001) 	
-	numIter = 84000
-	run_test(exp, numIter)
-
-	exp = mepg.simple_euler_dof2_dcv2_smallnetv5(gradClip=30, stepsize=60000)
-	numIter = 84000
-	run_test(exp, numIter)
-
-	exp = mepg.simple_euler_dof2_dcv2_smallnetv5(gradClip=30)
-	numIter = 82000
-	run_test(exp, numIter)
+def get_multiple_results():
+	mdErrs, counts = [], []
+	for i in range(5):
+		exp, numIter = get_exp(i)
+		mdErr, count = get_results(exp, numIter)
+		mdErrs.append(mdErr)
+		counts.append(count)
+	return mdErrs, counts
