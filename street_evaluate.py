@@ -9,6 +9,9 @@ import my_pycaffe as mp
 from os import path as osp
 from easydict import EasyDict as edict
 import streetview_data_group_rots as sdgr
+import street_test_v2 as stv2
+import street_test as stv1
+import copy
 
 REAL_PATH = cfg.REAL_PATH
 
@@ -75,11 +78,14 @@ def make_deploy_net(exp, numIter=60000):
 	#Set preprocessing
 	net.set_preprocess(ipName='pair_data', chSwap=None, noTransform=True)
 	return net
-	
-def demo_test():
-	exp = mepg.simple_euler_dof2_dcv2_doublefcv1(gradClip=30,
-        stepsize=60000, base_lr=0.001, gamma=0.1)	
-	net = make_deploy_net(exp)
+
+
+def run_test(exp, numIter=90000, forceWrite=False):
+	fName = exp.dPrms_.paths.exp.results.file % numIter
+	if osp.exists(fName) and not forceWrite:
+		print ('Result file for %s exists' % fName)
+		return
+	net = make_deploy_net(exp, numIter=numIter)
 	if net is None:
 		return
 	batchSz = net.get_batchsz()
@@ -93,6 +99,8 @@ def demo_test():
 	imPrms['jitter_pct'] = 0
 	imPrms['jitter_amt'] = 0
 	imFolder = osp.join(cfg.pths.folderProc, 'imCrop', 'imSz256-align')
+	gtLbs, pred    = [], []
+	lbSz     = exp.dPrms_['lbPrms'].get_lbsz()
 	for b in range(0, len(data), batchSz):
 		print(b, 'Loading images ...')
 		ims = []
@@ -101,9 +109,60 @@ def demo_test():
 			imName1 = osp.join(imFolder % fid, imName1)
 			imName2 = osp.join(imFolder % fid, imName2)
 			im = sdgr.read_double_images(imName1, imName2, imPrms)
-			ims.append(im.reshape((1,) + im.shape))	
+			ims.append(im.reshape((1,) + im.shape))
+			gtLbs.append(np.array(gtLb).reshape((1,lbSz)))	
 		ims  = np.concatenate(ims, axis=0)	
 		pose = net.forward(['pose_fc'], **{'pair_data':ims})
-		return pose
-		 		
-		
+		pred.append(copy.deepcopy(pose['pose_fc']))
+	pred  = np.concatenate(pred)
+	gtLbs = np.concatenate(gtLbs)
+	pickle.dump({'pred':pred, 'gtLbs': gtLbs}, 
+       open(exp.dPrms_.paths.exp.results.file % numIter, 'w'))
+
+def demo_test(numIter=90000):
+	exp = mepg.simple_euler_dof2_dcv2_doublefcv1(gradClip=30,
+        stepsize=60000, base_lr=0.001, gamma=0.1)	
+	run_test(exp)
+
+
+def get_results(exp, numIter=90000):
+	print ('Loading results')
+	data = pickle.load(open(exp.dPrms_.paths.exp.results.file % numIter, 'r'))
+	pred = data['pred']
+	gt   = data['gtLbs']
+	#Convert from yaw, pitch, roll to pitch, yaw, roll
+	if exp.dPrms_.lbPrms.lb.dof == 2:
+		pred = pred[:,[1,0]]
+		gt   = gt[:,[1,0]]
+	else:
+		pred = pred[:,[1,0,2]]
+		gt   = gt[:,[1,0,2]]
+	deltaRot, pdRot, gtRot = stv2.delta_rots(pred, gt, isOpRadian=False, opDeltaOnly=False)
+	print (np.median(deltaRot), np.mean(deltaRot))	
+	mdErr, counts = stv1.get_binned_angle_errs(np.array(deltaRot), np.array(gtRot))
+	return mdErr, counts
+
+
+def eval_multiple_models():
+	exp = mepg.simple_euler_dof2_dcv2_doublefcv1(gradClip=30, stepsize=60000,
+     base_lr=0.001, gamma=0.1)
+	numIter = 130000
+	run_test(exp, numIter)
+
+	exp = mepg.simple_euler_dof2_dcv2_doublefcv1(gradClip=30, stepsize=60000, 
+     base_lr=0.0001, gamma=0.5)
+	numIter = 130000
+	run_test(exp, numIter)
+
+	exp = mepg.simple_euler_dof2_dcv2_smallnetv5(gradClip=30, stepsize=60000,
+     gamma=0.5, base_lr=0.0001) 	
+	numIter = 84000
+	run_test(exp, numIter)
+
+	exp = mepg.simple_euler_dof2_dcv2_smallnetv5(gradClip=30, stepsize=60000)
+	numIter = 84000
+	run_test(exp, numIter)
+
+	exp = mepg.simple_euler_dof2_dcv2_smallnetv5(gradClip=30)
+	numIter = 82000
+	run_test(exp, numIter)

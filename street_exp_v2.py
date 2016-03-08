@@ -117,7 +117,11 @@ def get_paths(dPrms=None):
 	#Save the test set
 	pth.exp.other.testData = osp.join(pth.exp.other.dr, 'test_data_%s.pkl')
 	pth.exp.other.testData = pth.exp.other.testData % dPrms['lbPrms'].get_lbstr()
-	
+	#Save the predictions
+	pth.exp.results = edict()
+	pth.exp.results.dr   = osp.join(pth.exp.dr, 'results', '%s') % dPrms['expStr']
+	ou.mkdir(pth.exp.results.dr)	
+	pth.exp.results.file = osp.join(pth.exp.results.dr, 'iter%d.pkl') 
 	#Data files
 	pth.data    = edict()
 	pth.data.dr  = dataDir
