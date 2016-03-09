@@ -192,7 +192,7 @@ def net_prms(dbFile=DEF_DB % 'net', **kwargs):
 	dArgs.meanFile  = ''
 	dArgs.meanType  = None
 	dArgs.ncpu      = 3
-	dArgs.readSingleGrp = None
+	dArgs.readSingleGrp = False
 	dArgs   = mpu.get_defaults(kwargs, dArgs, False)
 	allKeys = dArgs.keys()	
 	dArgs['expStr'] = mec.get_sql_id(dbFile, dArgs, ignoreKeys=['ncpu', 'readSingleGrp'])
