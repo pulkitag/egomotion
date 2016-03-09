@@ -1,43 +1,16 @@
 layer {
-  name: "pascal_pose_fc"
+  name: "az_reg_fc"
   type: "InnerProduct"
   bottom: "common_fc"
-  top: "pascal_pose_fc"
+  top: "az_reg_fc"
   param {
-		name: "pose_fc_w"
-    lr_mult: 1
+		name: "az_reg_fc_w"
+    lr_mult: 10
     decay_mult: 1
   }
   param {
-		name: "pose_fc_b"
-    lr_mult: 2
-    decay_mult: 0
-  }
-  inner_product_param {
-    num_output: 4
-    weight_filler {
-      type: "gaussian"
-      std: 0.005
-    }
-    bias_filler {
-      type: "constant"
-      value: 1
-    }
-  }
-}
-layer {
-  name: "pascal_pose_cls_fc"
-  type: "InnerProduct"
-  bottom: "common_fc"
-  top: "pascal_pose_cls_fc"
-  param {
-		name: "pose_fc_w"
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-		name: "pose_fc_b"
-    lr_mult: 2
+		name: "az_reg_fc_b"
+    lr_mult: 20
     decay_mult: 0
   }
   inner_product_param {
@@ -53,11 +26,22 @@ layer {
   }
 }
 layer {
-  name: "pose_reg_loss_1"
+  name: "slice_az"
+  type: "Slice"
+  bottom: "az_reg_fc"
+  top: "az_reg_fc_0"
+  top: "az_reg_fc_1"
+  slice_param {
+    slice_dim: 1
+    slice_point: 1
+  }
+}
+layer {
+  name: "az_reg_loss_0"
   type: "Python"
-  bottom: "pascal_pose_fc_1"
-  bottom: "pose_reg_label_1"
-  top: "pose_reg_loss_1"
+  bottom: "az_reg_fc_0"
+  bottom: "az_reg_label_0"
+  top: "az_reg_loss_0"
 	python_param{
 		module: "python_loss_layers"
 		layer: "L1LogLossWithIgnoreLayer"
@@ -66,11 +50,11 @@ layer {
 	loss_weight: 1
 }
 layer {
-  name: "pose_reg_loss_2"
+  name: "az_reg_loss_1"
   type: "Python"
-  bottom: "pascal_pose_fc_2"
-  bottom: "pose_reg_label_2"
-  top: "pose_reg_loss_2"
+  bottom: "az_reg_fc_1"
+  bottom: "az_reg_label_1"
+  top: "az_reg_loss_1"
 	python_param{
 		module: "python_loss_layers"
 		layer: "L1LogLossWithIgnoreLayer"
@@ -79,17 +63,151 @@ layer {
 	loss_weight: 1
 }
 layer {
-  name: "pascal_cls_loss"
+  name: "el_reg_fc"
+  type: "InnerProduct"
+  bottom: "common_fc"
+  top: "el_reg_fc"
+  param {
+		name: "el_reg_fc_w"
+    lr_mult: 10
+    decay_mult: 1
+  }
+  param {
+		name: "el_reg_fc_b"
+    lr_mult: 20
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 2
+    weight_filler {
+      type: "gaussian"
+      std: 0.005
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+layer {
+  name: "slice_el"
+  type: "Slice"
+  bottom: "el_reg_fc"
+  top: "el_reg_fc_0"
+  top: "el_reg_fc_1"
+  slice_param {
+    slice_dim: 1
+    slice_point: 1
+  }
+}
+layer {
+  name: "el_reg_loss_0"
+  type: "Python"
+  bottom: "el_reg_fc_0"
+  bottom: "el_reg_label_0"
+  top: "el_reg_loss_0"
+	python_param{
+		module: "python_loss_layers"
+		layer: "L1LogLossWithIgnoreLayer"
+		param_str: "--loss_weight 10.0"
+	}
+	loss_weight: 1
+}
+layer {
+  name: "el_reg_loss_1"
+  type: "Python"
+  bottom: "el_reg_fc_1"
+  bottom: "el_reg_label_1"
+  top: "el_reg_loss_1"
+	python_param{
+		module: "python_loss_layers"
+		layer: "L1LogLossWithIgnoreLayer"
+		param_str: "--loss_weight 10.0"
+	}
+	loss_weight: 1
+}
+
+layer {
+  name: "az_cls_fc"
+  type: "InnerProduct"
+  bottom: "common_fc"
+  top: "az_cls_fc"
+  param {
+		name: "az_cls_fc_w"
+    lr_mult: 10
+    decay_mult: 1
+  }
+  param {
+		name: "az_cls_fc_b"
+    lr_mult: 20
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 2
+    weight_filler {
+      type: "gaussian"
+      std: 0.005
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+layer {
+  name: "az_cls_loss"
   type: "SoftmaxWithLoss"
-  bottom: "pascal_pose_cls_fc"
-  bottom: "pascal_pose_cls_label"
-  top: "pascal_cls_loss"
+  bottom: "az_cls_fc"
+  bottom: "az_cls_label"
+  top: "az_cls_loss"
 	loss_weight: 1.0
 }
 layer {
-  name: "pose_cls_accuracy"
+  name: "az_cls_accuracy"
   type: "Accuracy"
-  bottom: "pascal_pose_cls_fc"
-  bottom: "pascal_pose_cls_label"
-  top: "pose_cls_accuracy"
+  bottom: "az_cls_fc"
+  bottom: "az_cls_label"
+  top: "az_cls_accuracy"
+}
+layer {
+  name: "el_cls_fc"
+  type: "InnerProduct"
+  bottom: "common_fc"
+  top: "el_cls_fc"
+  param {
+		name: "el_cls_fc_w"
+    lr_mult: 10
+    decay_mult: 1
+  }
+  param {
+		name: "el_cls_fc_b"
+    lr_mult: 20
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 2
+    weight_filler {
+      type: "gaussian"
+      std: 0.005
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+layer {
+  name: "el_cls_loss"
+  type: "SoftmaxWithLoss"
+  bottom: "el_cls_fc"
+  bottom: "el_cls_label"
+  top: "el_cls_loss"
+	loss_weight: 1.0
+}
+layer {
+  name: "el_cls_accuracy"
+  type: "Accuracy"
+  bottom: "el_cls_fc"
+  bottom: "el_cls_label"
+  top: "el_cls_accuracy"
 }
