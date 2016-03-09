@@ -192,11 +192,11 @@ def net_prms(dbFile=DEF_DB % 'net', **kwargs):
 	dArgs.meanFile  = ''
 	dArgs.meanType  = None
 	dArgs.ncpu      = 3
+	dArgs.readSingleGrp = None
 	dArgs   = mpu.get_defaults(kwargs, dArgs, False)
 	allKeys = dArgs.keys()	
-	dArgs['expStr'] = mec.get_sql_id(dbFile, dArgs, ignoreKeys=['ncpu'])
+	dArgs['expStr'] = mec.get_sql_id(dbFile, dArgs, ignoreKeys=['ncpu', 'readSingleGrp'])
 	return dArgs, allKeys
-
 
 
 ##
@@ -228,7 +228,8 @@ def make_data_layers_proto(dPrms, nPrms, **kwargs):
 		#Make the label info file
 		lbInfo = dPrms['lbPrms']
 		lbDict = copy.deepcopy(lbInfo.lb)
-		lbDict['lbSz'] = lbInfo.get_lbsz()
+		lbDict['lbSz']      = lbInfo.get_lbsz()
+		lbDict['statsFile'] = dPrms.paths.exp.other.poseStats 
 		lbFile = dPrms.paths.exp.other.lbInfo % lbInfo.get_lbstr()
 		pickle.dump({'lbInfo': lbDict}, open(lbFile, 'w'))
 		#The group files
@@ -250,7 +251,8 @@ def make_data_layers_proto(dPrms, nPrms, **kwargs):
               'jitter_amt' : nPrms.maxJitter,
 							'resume_iter': resumeIter, 
 							'mean_file': meanFile,
-              'ncpu': nPrms.ncpu})
+              'ncpu': nPrms.ncpu,
+							'is_single_grp': nPrms.readSingleGrp})
 		netDef.set_layer_property('window_data', ['python_param', 'param_str'], 
 						'"%s"' % prmStr, phase=s)
 		#Rename the top corresponding to the labels
