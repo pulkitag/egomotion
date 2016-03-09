@@ -37,7 +37,7 @@ def net_prms(dbFile=DEF_DB % 'net', **kwargs):
 	#The data NetDefProto
 	dArgs.dataNetDefProto = 'data_layer_pascal' 
 	#the basic network architecture: baseNetDefProto
-	dArgs.baseNetDefProto = 'smallnet-v5_window_siamese_fc5'
+	dArgs.baseNetDefProto = 'doublefc-v1_window_fc6'
 	#the loss layers:
 	dArgs.lossNetDefProto = 'pascal_pose_loss_log_l1_layers'
 	if dArgs.batchSize is None:
@@ -85,11 +85,7 @@ def make_data_layers_proto(dPrms, nPrms, **kwargs):
 		lbName = '"%s_label"' % lbInfo.lb['type']
 		top2 = mpu.make_key('top', ['top'])
 		netDef.set_layer_property('window_data', top2, lbName, phase=s)
-	#Split the pair data according to the labels
-	baseFile  = dPrms.paths.baseProto % '%s_layers'
-	baseFile  = baseFile % lbInfo.lb['type']
-	splitDef  = mpu.ProtoDef(baseFile)
-	return sev2._merge_defs([netDef, splitDef])
+	return netDef
 
 def make_base_layers_proto(dPrms, nPrms, **kwargs):
 	#Read the basefile and construct a net
@@ -97,10 +93,17 @@ def make_base_layers_proto(dPrms, nPrms, **kwargs):
 	netDef    = mpu.ProtoDef(baseFile)
 	return netDef 
 
-def make_loss_layers_proto(dPrms, nPrms, **kwargs):
+def make_loss_layers_proto(dPrms, nPrms, lastTop, **kwargs):
 	#Read the basefile and construct a net
 	baseFile  = dPrms.paths.baseProto % nPrms.lossNetDefProto
 	netDef    = mpu.ProtoDef(baseFile)
+	if nPrms.lossNetDefProto in ['pascal_pose_loss_log_l1_layers']
+		lNames = ['az_reg_fc', 'el_reg_fc', 'az_cls_fc', 'el_cls_fc']
+		#Set the name of the bottom
+		for l in lNames:
+			netDef.set_layer_property(l, 'bottom', lastTop)
+	else:
+		raise Exception ('%s not found' % nPrms.lossNetDefProto)
 	return netDef 
 
 ##
@@ -110,8 +113,10 @@ def make_net_def(dPrms, nPrms, **kwargs):
 	dataDef  = make_data_layers_proto(dPrms, nPrms, **kwargs)
 	#Base net protodef
 	baseDef  = make_base_layers_proto(dPrms, nPrms, **kwargs)
+	#Get the name of the last top
+	lastTop  = baseDef.get_last_top_name()
 	#Loss protodef
-	lossDef  = make_loss_layers_proto(dPrms, nPrms, **kwargs)
+	lossDef  = make_loss_layers_proto(dPrms, nPrms, lastTop **kwargs)
 	#Merge al the protodefs
 	return sev2._merge_defs([dataDef, baseDef, lossDef]) 
 
