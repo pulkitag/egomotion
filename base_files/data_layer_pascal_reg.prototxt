@@ -1,0 +1,40 @@
+name: "StreetNet"
+layer {
+	name: "window_data"
+	top:  "data"
+	top:  "az_cls_label"
+	top:  "az_reg_label_0"
+	top:  "az_reg_label_1"
+	top:  "el_cls_label"
+	top:  "el_reg_label_0"
+	top:  "el_reg_label_1"
+	type: "Python"
+	python_param {
+		module: "python_layers.pascal_window_data"
+		layer: "PythonPascalWindowLayer"
+		param_str: ""
+	}
+	include {
+		phase: TRAIN
+	}
+}
+layer {
+	name: "window_data"
+	top:  "data"
+	top:  "az_cls_label"
+	top:  "az_reg_label_0"
+	top:  "az_reg_label_1"
+	top:  "el_cls_label"
+	top:  "el_reg_label_0"
+	top:  "el_reg_label_1"
+	type: "Python"
+	python_param {
+		module: "python_layers.pascal_window_data"
+		layer: "PythonPascalWindowLayer"
+		param_str: ""
+	}
+	include {
+		phase: TEST
+	}
+}
+
