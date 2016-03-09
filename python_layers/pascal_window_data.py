@@ -114,7 +114,7 @@ class PythonPascalWindowLayer(caffe.Layer):
 
 	def load_mean(self):
 		self.mu_ = None
-		if len(self.param_.mean_file) > 0:
+		if not self.param_.mean_file == 'None':
 			#Mean is assumbed to be in BGR format
 			self.mu_ = mp.read_mean(self.param_.mean_file)
 			self.mu_ = self.mu_.astype(np.float32)
@@ -252,7 +252,7 @@ class PythonPascalWindowLayer(caffe.Layer):
 		t2 = time.time()
 		tFetch = t2-t1
 		#Read the labels
-		print self.labelList
+		#print self.labelList
 		for b in range(self.param_.batch_size):
 			lb = self.labelList[b]
 			for i in range(6):
