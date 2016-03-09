@@ -79,12 +79,12 @@ def get_pose_delta(lbInfo, rot1, rot2, pt1=None, pt2=None,
 	dRot       = np.dot(rMat2, rMat1.transpose())
 	#pitch, yaw, roll are rotations around x, y, z axis
 	pitch, yaw, roll = t3eu.mat2euler(dRot, rotOrder)
-	_, thRot  = t3eu.euler2axangle(pitch, yaw, roll, rotOrder)
-	lb = None
+	#_, thRot  = t3eu.euler2axangle(pitch, yaw, roll, rotOrder)
+	#lb = None
 	#Figure out if the rotation is within or outside the limits
-	if lbInfo.maxRot is not None:
-		if (np.abs(thRot)) > lbInfo.maxRot:
-			return None
+	#if lbInfo.maxRot is not None:
+	#	if (np.abs(thRot)) > lbInfo.maxRot:
+	#		return None
 	#Calculate the rotation
 	if lbInfo['angleType'] == 'euler':
 		if lbInfo['dof'] == 3:
@@ -109,6 +109,60 @@ def get_pose_delta(lbInfo, rot1, rot2, pt1=None, pt2=None,
 		return lb + tuple((y2-y1, x2-x1, z2-z1))
 			
 
+def normalize_label(lb, nrmlz):
+	'''
+		nrmlz: dict with fields mu, sd
+	'''
+	lb = lb - nrmlz['mu']
+	lb = lb / nrmlz['sd']
+	return lb
+
+def get_normalized_pose_delta(lbInfo, rot1, rot2, **kwargs):
+	#The rotations in lb will be in radians
+	lb = get_pose_delta(lbInfo, rot1, rot2, **kwargs)
+	if lbInfo['nrmlz'] is not None:
+		lb = normalize_label(lb, lbInfo['nrmlzDat'])
+	return lb
+
+#Will return None if the rotation is more than maxRot 
+def get_pose_delta_clip(lbInfo, rot1, rot2, **kwargs):
+	assert lbInfo['angleType'] == 'euler'
+	#Get the label
+	lb = get_pose_delta(lbInfo, rot1, rot2, **kwargs)
+	#Clip by max rotation
+	if lbInfo['maxRot'] is not None:
+		if lbInfo['simpleRot']:
+			maxRot = np.max(lb[0:lbInfo['numRot']])	
+			if maxRot > math.radians(lbInfo['maxRot']):
+				return None
+		else:
+			#Find yaw and pitch
+			if lbInfo['numRot'] == 2:
+				yaw, pitch = lb[0:2]
+			else:
+				yaw, pitch, roll = lb[0:3]
+			#Get the rotation order
+			if lbInfo['rotOrder'] is None:
+				rotOrder = 'szxy'
+			else:
+				rotOrder = lbInfo['rotOrder']
+			_, thRot  = t3eu.euler2axangle(pitch, yaw, roll, rotOrder)
+			#Figure out if the rotation is within or outside the limits
+			if lbInfo.maxRot is not None:
+				if (np.abs(thRot)) > lbInfo.maxRot:
+					return None
+	#If the label is valid return it
+	return lb
+
+def get_normalized_pose_delta_clip(lbInfo, rot1, rot2, **kwargs):
+	lb = get_pose_delta_clip(lbInfo, rot1, rot2, **kwargs)
+	if lb is None:
+		return None
+	elif lbInfo['nrmlz'] is not None:
+		lb = normalize_label(lb, lbInfo['nrmlzDat'])
+	return lb
+		
+		
 class PosePrms(LabelPrms):
 	dbName = cfg.DEF_DB % ('label', 'pose') 
 	def __init__(self, angleType='euler', dof=3,
