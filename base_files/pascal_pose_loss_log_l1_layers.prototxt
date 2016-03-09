@@ -1,0 +1,95 @@
+layer {
+  name: "pascal_pose_fc"
+  type: "InnerProduct"
+  bottom: "common_fc"
+  top: "pascal_pose_fc"
+  param {
+		name: "pose_fc_w"
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+		name: "pose_fc_b"
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 4
+    weight_filler {
+      type: "gaussian"
+      std: 0.005
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+layer {
+  name: "pascal_pose_cls_fc"
+  type: "InnerProduct"
+  bottom: "common_fc"
+  top: "pascal_pose_cls_fc"
+  param {
+		name: "pose_fc_w"
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+		name: "pose_fc_b"
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 2
+    weight_filler {
+      type: "gaussian"
+      std: 0.005
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+layer {
+  name: "pose_reg_loss_1"
+  type: "Python"
+  bottom: "pascal_pose_fc_1"
+  bottom: "pose_reg_label_1"
+  top: "pose_reg_loss_1"
+	python_param{
+		module: "python_loss_layers"
+		layer: "L1LogLossWithIgnoreLayer"
+		param_str: "--loss_weight 10.0"
+	}
+	loss_weight: 1
+}
+layer {
+  name: "pose_reg_loss_2"
+  type: "Python"
+  bottom: "pascal_pose_fc_2"
+  bottom: "pose_reg_label_2"
+  top: "pose_reg_loss_2"
+	python_param{
+		module: "python_loss_layers"
+		layer: "L1LogLossWithIgnoreLayer"
+		param_str: "--loss_weight 10.0"
+	}
+	loss_weight: 1
+}
+layer {
+  name: "pascal_cls_loss"
+  type: "SoftmaxWithLoss"
+  bottom: "pascal_pose_cls_fc"
+  bottom: "pascal_pose_cls_label"
+  top: "pascal_cls_loss"
+	loss_weight: 1.0
+}
+layer {
+  name: "pose_cls_accuracy"
+  type: "Accuracy"
+  bottom: "pascal_pose_cls_fc"
+  bottom: "pascal_pose_cls_label"
+  top: "pose_cls_accuracy"
+}
