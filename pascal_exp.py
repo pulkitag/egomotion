@@ -17,6 +17,11 @@ REAL_PATH = cfg.REAL_PATH
 DEF_DB    = cfg.DEF_DB % ('default', '%s')
 
 ##
+#get the paths
+def get_paths(dPrms):
+	pass	
+
+##
 #Parameters that govern what data is being used
 def get_data_prms(dbFile=DEF_DB % 'data', **kwargs):
 	dArgs   = edict()
@@ -81,10 +86,6 @@ def make_data_layers_proto(dPrms, nPrms, **kwargs):
               'ncpu': nPrms.ncpu,
 		netDef.set_layer_property('window_data', ['python_param', 'param_str'], 
 						'"%s"' % prmStr, phase=s)
-		#Rename the top corresponding to the labels
-		lbName = '"%s_label"' % lbInfo.lb['type']
-		top2 = mpu.make_key('top', ['top'])
-		netDef.set_layer_property('window_data', top2, lbName, phase=s)
 	return netDef
 
 def make_base_layers_proto(dPrms, nPrms, **kwargs):
@@ -132,7 +133,7 @@ def setup_experiment_demo(debugMode=False, isRun=False):
 									 solFn=solFn, solPrms=solArgs)
 	exp     = mec.CaffeSolverExperiment(dPrms, cPrms,
 					  netDefFn=make_net_def, isLog=True)
-	if isRun:
+	If isRun:
 		exp.make()
 		exp.run() 
 	return exp 	 				
