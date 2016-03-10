@@ -11,6 +11,7 @@ import other_utils as ou
 import copy
 import matplotlib.pyplot as plt
 from skimage import color
+import math
 
 def create_window_file():
 	setName = ['test', 'train']
@@ -78,14 +79,16 @@ def get_filename(fName, isMirror=False):
 	else:
 		return prefix + '.jpg'
 	
-def format_label(lb):
+def format_raw_label(lb):
 	az, el = lb
 	az = np.mod(az, 360)
 	el = np.mod(el, 360)
 	if az > 180:
 		az = -(360 - az)
 	if el > 180:
-		el = -(180 - el)
+		el = -(360 - el)
+	az = math.radians(az)
+	el = math.radians(el)
 	return az, el	
 
 def create_window_file_v2(imSz=256, padSz=24, debugMode=False):
@@ -154,7 +157,7 @@ def create_window_file_v2(imSz=256, padSz=24, debugMode=False):
             imSz, imSz, 0, 0, imSz, imSz, xPad, yPad])
 			else:
 				imList.append([fStr, (chIm, imSz, imSz), (0, 0, imSz, imSz)])
-			lbList.append(format_label(lb))
+			lbList.append(format_raw_label(lb))
 			#Mirror the image		
 			im = im[:,::-1,:]
 			lbMirror = copy.deepcopy(lb)
@@ -167,7 +170,7 @@ def create_window_file_v2(imSz=256, padSz=24, debugMode=False):
 					 imSz, imSz, 0, 0, imSz, imSz, xPad, yPad])
 			else:
 				imList.append([fMirrorStr, (chIm, imSz, imSz), (0, 0, imSz, imSz)])
-			lbList.append(format_label(lbMirror))
+			lbList.append(format_raw_label(lbMirror))
 		print ('Skipped Count in set %s is %d' % (s, count))
 		#Write to window file
 		N = len(imList)
@@ -215,7 +218,7 @@ def vis_im_lb_list(imList, lbList, imSz=256, padSz=24):
 		imName, fName, og = iml[0:3]
 		x1, y1, x2, y2    = og
 		xPad, yPad = iml[-2], iml[-1]
-		az, el = format_label(lbl)
+		az, el = format_raw_label(lbl)
 		im     = scm.imread(osp.join(dName, imName))
 		imFull = scm.imread(osp.join(srcDir, fName)) 
 		ax.imshow(im)	

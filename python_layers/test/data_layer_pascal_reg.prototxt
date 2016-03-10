@@ -11,7 +11,7 @@ layer {
 	type: "Python"
 	python_param {
 		module: "python_layers.pascal_window_data"
-		layer: "PythonPascalWindowLayer"
+		layer: "PascalWindowLayer"
 		param_str: "--window_file /work4/pulkitag-code/code/projStreetView/pose-files/euler_train_pascal3d_imSz256_pdSz36.txt --im_root_folder /data0/pulkitag/data_sets/pascal_3d/imCrop/imSz256_pad36"
 	}
 }

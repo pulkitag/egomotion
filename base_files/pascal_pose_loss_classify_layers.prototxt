@@ -1,0 +1,94 @@
+layer {
+  name: "slice_label"
+  type: "Slice"
+  bottom: "label"
+  top: "azimuth_label"
+  top: "elevation_label"
+  slice_param {
+    slice_dim: 1
+    slice_point: 1
+  }
+}
+layer {
+  name: "azimuth_fc"
+  type: "InnerProduct"
+  bottom: "common_fc"
+  top: "azimuth_fc"
+  param {
+		name: "azimuth_fc_w"
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+		name: "azimuth_fc_b"
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 20
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+layer {
+  name: "elevation_fc"
+  type: "InnerProduct"
+  bottom: "common_fc"
+  top: "elevation_fc"
+  param {
+		name: "elevation_fc_w"
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+		name: "elevation_fc_b"
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 20
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+layer {
+  name: "azimuth_loss"
+  type: "SoftmaxWithLoss"
+  bottom: "azimuth_fc"
+  bottom: "azimuth_label"
+  top: "azimuth_loss"
+	loss_weight: 1.0
+}
+layer {
+  name: "azimuth_accuracy"
+  type: "Accuracy"
+  bottom: "azimuth_fc"
+  bottom: "azimuth_label"
+  top: "azimuth_accuracy"
+}
+layer {
+  name: "elevation_loss"
+  type: "SoftmaxWithLoss"
+  bottom: "elevation_fc"
+  bottom: "elevation_label"
+  top: "elevation_loss"
+	loss_weight: 1.0
+}
+layer {
+  name: "elevation_accuracy"
+  type: "Accuracy"
+  bottom: "elevation_fc"
+  bottom: "elevation_label"
+  top: "elevation_accuracy"
+}
+

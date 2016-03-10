@@ -9,6 +9,7 @@ HOST_NAME = socket.gethostname()
 def get_paths(hostName=None):
 	DEF_DB    = osp.join(REAL_PATH, 'exp-data/db-store/%s-%s-%s-db.sqlite')
 	pths = edict()
+	pths.pascal     = edict()
 	if hostName is  None:
 		hostName = HOST_NAME
 	#if 'ivb' in hostName:
@@ -22,9 +23,13 @@ def get_paths(hostName=None):
 		HOST_STR = 'nvCluster'
 		pths.mainDataDr = '/dev/shm/pulkitag/data_sets/streetview'
 		pths.expDir     = '/data/shared/pulkitag/streetview/exp'
+		pths.pascal.dataDr = '/dev/shm/pulkitag/data_sets/pascal3d' 
+		pths.pascal.expDr = '/data/shared/pulkitag/pascal3d/exp' 
 	else:
 		pths.mainDataDr = '/data0/pulkitag/data_sets/streetview'
 		pths.expDir     = '/data0/pulkitag/streetview/exp'
+		pths.pascal.dataDr = '/data0/pulkitag/data_sets/pascal3d' 
+		pths.pascal.expDr = '/data0/pulkitag/pascal3d/exp' 
 		HOST_STR = hostName
 	DEF_DB    = DEF_DB % ('%s',HOST_STR, '%s')
 
