@@ -61,11 +61,11 @@ def torchnet_cls_pd36(isRun=False, nAzBins=18, nElBins=18,
 	nwFn    = pep.process_net_prms
 	ncpu = 0
 	preTrainNet = osp.join(cfg.pths.data0,\
-                'caffe_models/torchnet_pose.caffemodel')
+                'caffe_models/streetview/pose-l1-torch7.caffemodel')
 	nwArgs  = {'ncpu': ncpu, 'lrAbove': None, 'preTrainNet':preTrainNet,
              'dataNetDefProto' : 'data_layer_pascal_cls',
              'lossNetDefProto' : 'pascal_pose_loss_classify_layers',
-						 'baseNetDefProto' : 'torchnet_pose',
+						 'baseNetDefProto' : 'pose-l1-torch7',
 						 'ipImSz': 101, 
 						 'opLrMult': 10}
 	solFn   = mec.get_default_solver_prms
