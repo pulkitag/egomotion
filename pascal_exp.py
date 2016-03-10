@@ -177,13 +177,14 @@ def net_prms(dbFile=DEF_DB % 'pascal_net', **kwargs):
 	#The amount of jitter in both the images
 	dArgs.maxJitter = 0
 	#The size of crop that should be cropped from the image
-	dArgs.crpSz     = 227
+	dArgs.crpSz     = 240
 	#the size to which the cropped image should be resized
 	dArgs.ipImSz    = 101
 	##The mean file
 	dArgs.meanFile  = ''
 	dArgs.meanType  = None
 	dArgs.ncpu      = 3
+	dArgs.opLrMult  = None
 	dArgs   = mpu.get_defaults(kwargs, dArgs, False)
 	allKeys = dArgs.keys()	
 	dArgs['expStr'] = mec.get_sql_id(dbFile, dArgs, ignoreKeys=['ncpu'])
@@ -247,8 +248,13 @@ def make_loss_layers_proto(dPrms, nPrms, lastTop, **kwargs):
 			netDef.set_layer_property('elevation_fc', ['inner_product_param', 'num_output'],
         dPrms.nElBins)
 			netDef.set_layer_property('elevation_fc', 'bottom', '"%s"' % lastTop)
+			lNames = ['azimuth_fc', 'elevation_fc']
 	else:
 		raise Exception ('%s not found' % nPrms.lossNetDefProto)
+	if nPrms.opLrMult is not None:
+		for l in lNames:
+			netDef.set_layer_property(l, ['param', 'lr_mult'], '%f' % nPrms.opLrMult)
+			netDef.set_layer_property(l, ['param_$dup$', 'lr_mult'], '%f' % (2 * nPrms.opLrMult))
 	return netDef 
 
 ##

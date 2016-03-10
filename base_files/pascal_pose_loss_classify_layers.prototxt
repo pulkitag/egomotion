@@ -1,7 +1,7 @@
 layer {
-  name: "slice_pose_label"
+  name: "slice_label"
   type: "Slice"
-  bottom: "pose_label"
+  bottom: "label"
   top: "azimuth_label"
   top: "elevation_label"
   slice_param {

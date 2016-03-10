@@ -1,0 +1,13 @@
+name: "StreetNet"
+layer {
+	name: "window_data"
+	top:  "data"
+	top:  "label"
+	type: "Python"
+	python_param {
+		module: "python_layers.pascal_window_data"
+		layer: "PascalWindowLayerCls"
+		param_str: "--window_file /work4/pulkitag-code/code/projStreetView/pose-files/euler_train_pascal3d_imSz256_pdSz36.txt --im_root_folder /data0/pulkitag/data_sets/pascal_3d/imCrop/imSz256_pad36 --lb_info_file /data0/pulkitag/pascal3d/exp/label_info/a68a9874-e6ad-11e5-b721-74d02bc823b7/lbinfo.pkl --jitter_amt 24 --crop_size 240"
+	}
+}
+
