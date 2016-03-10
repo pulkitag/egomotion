@@ -19,17 +19,20 @@ def get_paths(hostName=None):
 		pths.expDir     = '/data/shared/pulkitag/streetview/exp'
 		#pths.mainDataDr = '/scratch/pulkitag/data_sets/streetview'
 		#pths.expDir     = '/scratch/pulkitag/streetview/exp'
+		pths.data0      = '/data/shared/pulkitag'
 	elif 'ivb' in hostName:
 		HOST_STR = 'nvCluster'
 		pths.mainDataDr = '/dev/shm/pulkitag/data_sets/streetview'
 		pths.expDir     = '/data/shared/pulkitag/streetview/exp'
 		pths.pascal.dataDr = '/dev/shm/pulkitag/data_sets/pascal3d' 
 		pths.pascal.expDr = '/data/shared/pulkitag/pascal3d/exp' 
+		pths.data0      = '/data/shared/pulkitag'
 	else:
 		pths.mainDataDr = '/data0/pulkitag/data_sets/streetview'
 		pths.expDir     = '/data0/pulkitag/streetview/exp'
 		pths.pascal.dataDr = '/data0/pulkitag/data_sets/pascal3d' 
 		pths.pascal.expDr = '/data0/pulkitag/pascal3d/exp' 
+		pths.data0      = '/data0/pulkitag'
 		HOST_STR = hostName
 	DEF_DB    = DEF_DB % ('%s',HOST_STR, '%s')
 
