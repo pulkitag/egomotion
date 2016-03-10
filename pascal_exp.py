@@ -12,6 +12,8 @@ import pickle
 import copy
 import numpy as np
 import street_exp_v2 as sev2
+import math
+import my_pycaffe_io as mpio
 
 REAL_PATH = cfg.REAL_PATH
 DEF_DB    = cfg.DEF_DB % ('default', '%s')
@@ -31,8 +33,13 @@ def get_paths(dPrms):
 	pth.exp.snapshot    = edict()
 	pth.exp.snapshot.dr = osp.join(pth.exp.dr, 'snapshot')
 	ou.mkdir(pth.exp.snapshot.dr)
-	pth.exp.results = edict()
+	#Get the label-stats
+	pth.exp.labelStats = osp.join(pth.exp.dr, 'label_stats.pkl')
+	#info label for the experiment
+	pth.exp.lbInfo     = osp.join(pth.exp.dr, 'label_info', dPrms.expStr, 'lbinfo.pkl') 
+	ou.mkdir(osp.dirname(pth.exp.lbInfo))
 	#Results
+	pth.exp.results = edict()
 	pth.exp.results.dr   = osp.join(pth.exp.dr, 'results', '%s')
 	pth.exp.results.file = osp.join(pth.exp.results.dr, 'iter%d.pkl') 
 	#Data files
@@ -45,12 +52,88 @@ def get_paths(dPrms):
 	#Window files
 	windowDr      = osp.join(REAL_PATH, 'pose-files')
 	pth.window  = edict()
+	#Window files stores theta in degrees
 	pth.window.train = osp.join(windowDr, 'euler_train_pascal3d_imSz%d_pdSz%d.txt')
 	pth.window.test  = osp.join(windowDr, 'euler_test_pascal3d_imSz%d_pdSz%d.txt')
 	pth.window.train = pth.window.train % (dPrms.imCutSz, dPrms.imPadSz)
 	pth.window.test  = pth.window.test %  (dPrms.imCutSz, dPrms.imPadSz)
 	return pth	
 
+##
+#Find the bin index
+def find_bin_index(bins, val):
+	'''
+		bins[0]  is the minimum possible value
+		bins[-1] is the maximum possible value
+	'''
+	assert (val > bins[0] - 1e-6), val
+	assert (val < bins[-1] + 1e-6), val
+	idx = np.where(val < bins)[0]
+	if len(idx)==0:
+		return len(bins)-2
+	else:
+		return max(0, idx[0]-1)
+	
+#Format window file label 
+def format_label(theta, lbInfo, mu=None, sd=None, bins=None):
+	'''
+		Input
+		  theta: is in radian
+    Output:
+      flag: 1 - go in anticlockwise
+			      0 - go in clockwise
+			theta: the absolute value of theta
+	'''
+	#For classification
+	if lbInfo['anglePreProc'] == 'classify':
+		assert bins is not None
+		return find_bin_index(bins, theta), None
+	#For regression
+	assert lbInfo['angleFormat'] == 'radian'
+	theta = np.mod(theta, 2*np.pi)
+	theta = math.radians(theta)
+	if theta > np.pi:
+		theta = -(2 * np.pi - theta)
+		flag  = 0
+	else:
+		flag  = 1
+	#Perform preprocessing
+	if lbInfo['anglePreProc'] in ['mean_sub', 'amean_sub', 'med_sub', 'amed_sub']:
+		assert mu is not None
+		theta = theta - mu
+	elif lbInfo['anglePreProc'] in ['zscore']:
+		assert mu is not None
+		assert sd is not None
+		theta = (theta - mu)/sd
+	elif lbInfo['anglePreProc'] is None:
+		pass
+	else:
+		raise Exception('pre-proc %s not understood' % lbInfo['anglePreProc']) 
+	return flag, theta
+
+#Unformat the formatted label
+def unformat_label(theta, flag, lbInfo, mu=None, sd=None, bins=None):
+	assert lbInfo['angleFormat'] == 'radian'
+	#Classification label
+	if lbInfo['anglePreProc'] == 'classify':
+		assert bins is not None
+		mn, mx = bins[theta], bins[theta+1]
+		return (mn + mx)/2.0
+	#Regression labels
+	if lbInfo['anglePreProc'] in ['mean_sub', 'amean_sub', 'med_sub', 'amed_sub']:
+		assert mu is not None
+		theta = theta + mu
+	elif lbInfo['anglePreProc'] in ['zscore']:
+		assert mu is not None
+		assert sd is not None
+		theta = theta * sd + mu
+	elif lbInfo['anglePreProc'] is None:
+		pass
+	else:
+		raise Exception('pre-proc %s not understood' % lbInfo['anglePreProc']) 
+	if flag == 0:
+		theta = -theta
+	return theta	
 
 ##
 #Parameters that govern what data is being used
@@ -59,10 +142,23 @@ def get_data_prms(dbFile=DEF_DB % 'pascal_data', **kwargs):
 	dArgs.dataset = 'pascal'
 	dArgs.imCutSz = 256
 	dArgs.imPadSz = 36
+	dArgs.angleFormat  = 'radian'
+	dArgs.anglePreProc = 'mean_sub'
+	dArgs.nAzBins = None
+	dArgs.nElBins = None
 	allKeys = dArgs.keys()  
 	dArgs   = mpu.get_defaults(kwargs, dArgs)	
+	if dArgs.anglePreProc == 'classify':
+		assert dArgs.nAzBins is not None
+		assert dArgs.nElBins is not None
 	dArgs['expStr'] = mec.get_sql_id(dbFile, dArgs)
-	dArgs['paths']  = get_paths(dArgs) 
+	dArgs['paths']  = get_paths(dArgs)
+	dArgs.azBins = None
+	dArgs.elBins = None
+	if dArgs.nAzBins is not None:
+		dArgs.azBins = np.linspace(-np.pi, np.pi, dArgs.nAzBins+1)
+	if dArgs.nElBins is not None:
+		dArgs.elBins = np.linspace(-np.pi, np.pi, dArgs.nElBins+1)
 	return dArgs
 
 ##
@@ -110,6 +206,7 @@ def make_data_layers_proto(dPrms, nPrms, **kwargs):
 		prmStr = ou.make_python_param_str({'batch_size': b,
 					    'window_file': dPrms.paths.window[s.lower()],	 
 							'im_root_folder': dPrms.paths.data.imFolder,
+							'lb_info_file': dPrms.paths.exp.lbInfo,
 							'crop_size'  : nPrms.crpSz,
 							'im_size'    : nPrms.ipImSz, 
               'jitter_amt' : nPrms.maxJitter,
@@ -118,6 +215,14 @@ def make_data_layers_proto(dPrms, nPrms, **kwargs):
               'ncpu': nPrms.ncpu})
 		netDef.set_layer_property('window_data', ['python_param', 'param_str'], 
 						'"%s"' % prmStr, phase=s)
+	lbKeys = ['angleFormat', 'anglePreProc', 'azBins', 'elBins']
+	lb     = edict()
+	for lk in lbKeys:
+		lb[lk] = dPrms[lk]
+	lbInfo = pickle.load(open(dPrms.paths.exp.labelStats, 'r'))
+	for lk in lbInfo.keys():
+		lb[lk] = lbInfo[lk]
+	pickle.dump(lb, open(dPrms.paths.exp.lbInfo, 'w'))
 	return netDef
 
 def make_base_layers_proto(dPrms, nPrms, **kwargs):
@@ -135,6 +240,13 @@ def make_loss_layers_proto(dPrms, nPrms, lastTop, **kwargs):
 		#Set the name of the bottom
 		for l in lNames:
 			netDef.set_layer_property(l, 'bottom', '"%s"' % lastTop)
+	elif nPrms.lossNetDefProto in ['pascal_pose_loss_classify_layers']:
+			netDef.set_layer_property('azimuth_fc', ['inner_product_param', 'num_output'],
+        dPrms.nAzBins)
+			netDef.set_layer_property('azimuth_fc', 'bottom', '"%s"' % lastTop)
+			netDef.set_layer_property('elevation_fc', ['inner_product_param', 'num_output'],
+        dPrms.nElBins)
+			netDef.set_layer_property('elevation_fc', 'bottom', '"%s"' % lastTop)
 	else:
 		raise Exception ('%s not found' % nPrms.lossNetDefProto)
 	return netDef 
@@ -195,4 +307,29 @@ def setup_experiment_demo(debugMode=False, isRun=False):
 		exp.run() 
 	return exp 	 				
 
-
+def compute_label_stats(dPrms=None):
+	if dPrms is None:	
+		dPrms = get_data_prms()
+	if osp.exists(dPrms.paths.exp.labelStats):
+		print ('Label Stats already computed')
+		return
+	randState = np.random.RandomState(5)
+	wFile     = dPrms.paths.window.train		
+	wFid      = mpio.GenericWindowReader(wFile)
+	lbls      = wFid.get_all_labels()
+	N         = lbls.shape[0]
+	perm      = randState.permutation(N)
+	perm      = perm[0:int(0.2*N)]
+	lbls      = lbls[perm,:]
+	print (lbls.shape)
+	mu,  sd   = np.mean(lbls, 0), np.std(lbls,0)
+	aMu, aSd  = np.mean(np.abs(lbls),0), np.std(np.abs(lbls),0) 
+	md, aMd   = np.median(lbls,0), np.median(np.abs(lbls),0)	
+	print (mu, sd, aMu, aSd)
+	print (md, aMd)
+	stats = edict()
+	stats['mu'], stats['sd'] = mu, sd
+	stats['aMu'], stats['aSd'] = aMu, aSd
+	stats['md'], stats['aMd']  = md, aMd
+	wFid.close()
+	pickle.dump(stats, open(dPrms.paths.exp.labelStats, 'w'))

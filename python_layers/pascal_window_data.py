@@ -9,12 +9,15 @@ import my_pycaffe as mp
 from easydict import EasyDict as edict
 from transforms3d.transforms3d import euler  as t3eu
 import street_label_utils as slu
+import pascal_exp as pep
 import time
 import glog
 import pdb
 import pickle
 import copy
 import matplotlib.pyplot as plt
+import math
+import pickle
 try:
 	import cv2
 except:
@@ -85,15 +88,15 @@ def image_reader_scm(args):
 	#glog.info('Processed')
 	return (im, imNum)
 
-##
-#Parallel version
-class PythonPascalWindowLayer(caffe.Layer):
+
+class PascalWindowLayer(caffe.Layer):
 	@classmethod
 	def parse_args(cls, argsStr):
 		parser = argparse.ArgumentParser(description='PythonPascalWindow Layer')
 		parser.add_argument('--window_file', default='', type=str)
 		parser.add_argument('--im_root_folder', default='', type=str)
-		parser.add_argument('--mean_file', default='', type=str)
+		parser.add_argument('--lb_info_file', default='', type=str)
+		parser.add_argument('--mean_file', default='None', type=str)
 		parser.add_argument('--batch_size', default=128, type=int)
 		parser.add_argument('--crop_size', default=192, type=int)
 		parser.add_argument('--im_size', default=101, type=int)
@@ -109,8 +112,6 @@ class PythonPascalWindowLayer(caffe.Layer):
 
 	def __del__(self):
 		self.wfid_.close()
-		for n in self.numIm_:
-			self.pool_[n].terminate()
 
 	def load_mean(self):
 		self.mu_ = None
@@ -126,32 +127,18 @@ class PythonPascalWindowLayer(caffe.Layer):
 			x2 = int(x1 + self.param_.crop_size)
 			self.mu_ = self.mu_[:,y1:y2,x1:x2]
 
-	def setup(self, bottom, top):
-		self.param_ = PythonPascalWindowLayer.parse_args(self.param_str) 
+	def common_setup(self):
+		self.param_ = PascalWindowLayer.parse_args(self.param_str) 
+		#Read the window file
 		self.wfid_   = mpio.GenericWindowReader(self.param_.window_file)
 		self.numIm_  = self.wfid_.numIm_
-		self.lblSz_  = self.wfid_.lblSz_
+		self.lblSz_  = self.wfid_.lblSz
+		#Check for grayness
 		if self.param_.is_gray:
 			self.ch_ = 1
 		else:
 			self.ch_ = 3
 		assert self.numIm_ == 1, 'Only 1 image'
-		top[0].reshape(self.param_.batch_size, self.numIm_ * self.ch_,
-										self.param_.im_size, self.param_.im_size)
-		#Azimuth cls
-		top[1].reshape(self.param_.batch_size, 1, 1, 1)
-		#Azimuth bin 1 - reg
-		top[2].reshape(self.param_.batch_size, 2, 1, 1)
-		#Azimuth bin 2 - reg
-		top[3].reshape(self.param_.batch_size, 2, 1, 1)
-		#Elevation cls
-		top[4].reshape(self.param_.batch_size, 1, 1, 1)
-		#Elevation bin 1 - reg
-		top[5].reshape(self.param_.batch_size, 2, 1, 1)
-		#Elevation bin 2 - reg
-		top[6].reshape(self.param_.batch_size, 2, 1, 1)
-		#Load the mean
-		self.load_mean()
 		#If needed to resume	
 		if self.param_.resume_iter > 0:
 			N = self.param_.resume_iter * self.param_.batch_size
@@ -159,10 +146,8 @@ class PythonPascalWindowLayer(caffe.Layer):
 			print ('SKIPPING AHEAD BY %d out of %d examples, BECAUSE resume_iter is NOT 0'\
 							 % (N, self.wfid_.num_))
 			for n in range(N):
-				_, _ = self.wfid_.read_next()	
-				
-		self.imData_ = np.zeros((self.param_.batch_size, self.numIm_ * self.ch_,
-						self.param_.im_size, self.param_.im_size), np.float32)
+				_, _ = self.wfid_.read_next()
+		#Function for reading the images	
 		if 'cv2' in globals():
 			print('OPEN CV FOUND')
 			self.readfn_ = image_reader
@@ -172,19 +157,21 @@ class PythonPascalWindowLayer(caffe.Layer):
 		#The batch list
 		self.argList   = []
 		self.labelList = []
-		#Launch the prefetching	
-		self.launch_jobs()
-		self.t_ = time.time()	
+		#Load the mean
+		self.load_mean()
+		#Initialize image data
+		self.imData_ = np.zeros((self.param_.batch_size, self.numIm_ * self.ch_,
+						self.param_.im_size, self.param_.im_size), np.float32)
+		#open the label info file
+		lbInfo = pickle.load(open(self.param_.lb_info_file, 'r'))
+		self.lbInfo_ = lbInfo['lb']	
 
+	def setup(self, bottom, top):
+		pass	
+	
 	def format_label(self, theta):
-		theta = np.mod(theta, 360)
-		if theta > 180:
-			theta = -(360 - theta)
-			#cls label, theta_reg_bin1, theta_reg_bin2
-			return 0, np.abs(theta), 0.
-		else:
-			return  1, 0., np.abs(theta)
-
+		pass
+		
 	def launch_jobs(self):
 		self.argList   = []
 		self.labelList = []
@@ -192,12 +179,11 @@ class PythonPascalWindowLayer(caffe.Layer):
 		for b in range(self.param_.batch_size):
 			if self.wfid_.is_eof():	
 				self.wfid_.close()
-				self.wfid_   = mpio.GenericWindowReader(self.param_.source)
+				self.wfid_   = mpio.GenericWindowReader(self.param_.window_file)
 				glog.info('RESTARTING READ WINDOW FILE')
 			imNames, lbls = self.wfid_.read_next()
-			lb1 = self.format_label(lbls[0][0])
-			lb2 = self.format_label(lbls[0][1])
-			self.labelList.append(lb1 + lb2)
+			lb = self.format_label(lbls[0])
+			self.labelList.append(lb)
 			#Read images
 			fName, ch, h, w, x1, y1, x2, y2 = imNames[0].strip().split()
 			fName = osp.join(self.param_.im_root_folder, fName)
@@ -218,7 +204,6 @@ class PythonPascalWindowLayer(caffe.Layer):
 			except KeyboardInterrupt:
 				print 'Keyboard Interrupt received - terminating in launch jobs'
 				self.pool_.terminate()	
-
 
 	def get_prefetch_data(self):
 		t1 = time.time()
@@ -244,6 +229,54 @@ class PythonPascalWindowLayer(caffe.Layer):
 		#glog.info('%d, Fetching: %f, Copying: %f' % (n, tFetch, time.time()-t2))
 	
 	def forward(self, bottom, top):
+		pass
+		
+	def backward(self, top, propagate_down, bottom):
+		""" This layer has no backward """
+		pass
+	
+	def reshape(self, bottom, top):
+		""" This layer has no reshape """
+		pass
+
+
+class PascalWindowLayerReg(PascalWindowLayer):
+	def setup(self, bottom, top):
+		self.common_setup()
+		top[0].reshape(self.param_.batch_size, self.numIm_ * self.ch_,
+								self.param_.im_size, self.param_.im_size)
+		#Azimuth cls
+		top[1].reshape(self.param_.batch_size, 1, 1, 1)
+		#Azimuth bin 1 - reg
+		top[2].reshape(self.param_.batch_size, 2, 1, 1)
+		#Azimuth bin 2 - reg
+		top[3].reshape(self.param_.batch_size, 2, 1, 1)
+		#Elevation cls
+		top[4].reshape(self.param_.batch_size, 1, 1, 1)
+		#Elevation bin 1 - reg
+		top[5].reshape(self.param_.batch_size, 2, 1, 1)
+		#Elevation bin 2 - reg
+		top[6].reshape(self.param_.batch_size, 2, 1, 1)
+		#Launch the prefetching	
+		self.launch_jobs()
+		self.t_ = time.time()	
+
+	def format_theta(self, theta, idx):
+		if lbInfo['anglePreProc'] == 'mean_sub':
+			mu = lbInfo['mu'][idx]
+			sd = None
+		theta, flag = pep.format_label(theta, self.lbInfo_, mu=mu, sd=sd)
+		if flag == 1:
+			return flag, 0., theta
+		else:
+			return flag, theta, 0.
+
+	def format_label(self, lb):
+		lb1 = self.format_theta(lb[0], 0)
+		lb2 = self.format_theta(lb[1], 1)	
+		return lb1 + lb2
+	
+	def forward(self):
 		t1 = time.time()
 		tDiff = t1 - self.t_
 		#Load the images
@@ -275,13 +308,42 @@ class PythonPascalWindowLayer(caffe.Layer):
 		glog.info('Prev: %f, fetch: %f forward: %f' % (tDiff,tFetch, t2-t1))
 		self.t_ = time.time()
 
-	def backward(self, top, propagate_down, bottom):
-		""" This layer has no backward """
-		pass
-	
-	def reshape(self, bottom, top):
-		""" This layer has no reshape """
-		pass
+
+class PascalWindowLayerCls(PascalWindowLayer):
+	def setup(self, bottom, top):
+		self.common_setup()
+		top[0].reshape(self.param_.batch_size, self.numIm_ * self.ch_,
+								self.param_.im_size, self.param_.im_size)
+		top[1].reshape(self.param_.batch_size, 2, 1, 1)
+		#Launch the prefetching	
+		self.launch_jobs()
+		self.t_ = time.time()	
+
+	def format_label(self, lb):
+		assert self.lbInfo_['anglePreProc'] == 'classify'
+		azBin = pep.format_label(lb[0], self.lbInfo_, bins=self.lbInfo_.azBins)
+		elBin = pep.format_label(lb[1], self.lbInfo_, bins=self.lbInfo_.elBins)
+		return np.array([azBin, elBin]).astype(np.float32)
+
+	def forward(self):
+		t1 = time.time()
+		tDiff = t1 - self.t_
+		#Load the images
+		self.get_prefetch_data()
+		top[0].data[...] = self.imData_
+		t2 = time.time()
+		tFetch = t2-t1
+		#Read the labels
+		#print self.labelList
+		for b in range(self.param_.batch_size):
+			lb = self.labelList[b]
+			top[1].data[b,:,:,:] = lb
+		self.launch_jobs()
+		t2 = time.time()
+		#print ('Forward took %fs in PythonWindowDataParallelLayer' % (t2-t1))
+		glog.info('Prev: %f, fetch: %f forward: %f' % (tDiff,tFetch, t2-t1))
+		self.t_ = time.time()
+
 
 
 def vis_ims():
