@@ -186,16 +186,22 @@ def get_exp(expNum):
 		exp = mepg.simple_euler_dof2_dcv2_doublefcv1_diff(gradClip=30,
         stepsize=60000, base_lr=0.001, gamma=0.1)
 		numIter = 84000
+	#Using diff concat instead of just concatenating
+	elif expNum==6:
+		exp = mepg.simple_euler_dof2_dcv2_doublefcv1_diff(gradClip=30,
+        stepsize=60000, base_lr=0.001, gamma=0.1)
+		numIter = 182000	
 	return exp, numIter
 
 def eval_multiple_models():
-	for i in range(5):
+	for i in range(6,7):
 		exp, numIter = get_exp(i)
-		run_test(exp, numIter, forceWrite=False)
+		run_test(exp, numIter, forceWrite=True)
 
 def get_multiple_results():
 	mdErrs, counts = [], []
-	for i in range(2):
+	#for i in range(2):
+	for i in range(6,7):
 		exp, numIter = get_exp(i)
 		mdErr, count = get_results(exp, numIter)
 		mdErrs.append(mdErr)
