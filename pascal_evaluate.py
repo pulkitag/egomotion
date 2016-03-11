@@ -2,12 +2,14 @@ import scipy.misc as scm
 import pascal_exp_run as per
 from pascal3d_eval import poseBenchmark as pbench
 import pascal_exp as pep
+import setup_pascal3d as sp3d
 import cv2
 import numpy as np
 from os import path as osp
 import my_pycaffe as mp
 import copy
 import pdb
+import matplotlib.pyplot as plt
 
 PASCAL_CLS = ['aeroplane', 'bicycle', 'boat', 'bottle', 'bus', 'car',
               'chair', 'diningtable', 'motorbike', 'sofa', 'train',
@@ -45,12 +47,9 @@ def get_imdata(imNames, bbox, exp,  padSz=24):
 		im = cv2.imread(imn)
 		x1, y1, x2, y2 = b
 		h, w, ch = im.shape
-		xMn = max(0, x1 - padSz)
-		xMx = min(w, x2 + padSz)
-		yMn = max(0, y1 - padSz)
-		yMx = max(h, y2 + padSz)
+		x1, y1, x2, y2, _, _ = sp3d.crop_for_imsize((h, w, x1, y1, x2, y2), 256, padSz=padSz)
 		#Crop and resize
-		im = cv2.resize(im[yMn:yMx, xMn:xMx, :], (imSz, imSz))
+		im = cv2.resize(im[y1:y2, x1:x2, :], (imSz, imSz))
 		#Mean subtaction
 		if exp.cPrms_.nwPrms.meanType is None:
 			#print ('MEAN SUB DONE')
@@ -88,6 +87,26 @@ def get_predictions(exp, bench, net=None):
 				preds.append([az, el, 0])
 	return preds
 
+
+def get_evaluate_data(exp, classes=['car'], isPlot=False):
+	bench         = pbench.PoseBenchmark(classes=classes)
+	imNames, bbox = bench.giveTestInstances(classes[0])
+	ims = get_imdata(imNames, bbox, exp) 	 	
+	if isPlot:
+		plt.ion()
+		fig = plt.figure()
+		ax  = fig.add_subplot(111)
+		for i in range(ims.shape[0]):
+			im = ims[i].transpose((1,2,0))
+			im = im[:,:,(2,1,0)] + 128	
+			ax.imshow(im.astype(np.uint8))
+			plt.show()
+			plt.draw()
+			ip = raw_input()
+			if ip == 'q':
+				return 
+			plt.cla()
+	return ims
 
 def evaluate(exp, bench, preds=None, net=None):
 	if preds is None:
