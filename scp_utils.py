@@ -19,6 +19,19 @@ def get_hostaddr(hostName):
 		raise Exception('Not found %s' % hostName)
 	return addr
 
+
+def transfer_snapshot(exp, numIter, targetName=None):
+	snapName = exp.get_snapshot_name(numIter)
+	if not osp.exists(snapName):
+		print ('%s doenot exists' % snapName)
+		return
+	hostAddr = get_hostaddr('anakin')
+	trFile   = hostAddr + '/work4/pulkitag-code/code/projStreetView/exp-data/snaps'
+	if targetName is not None:
+		name = targetName + ('_%d' % numIter) + '.caffemodel'
+		trFile = osp.join(trFile, name) 
+	subprocess.check_call(['scp %s %s' % (snapName, trFile)], shell=True)
+
 ##
 #Helper for scp_cropim_tars
 def scp_cropim_tar_by_folderid(args):

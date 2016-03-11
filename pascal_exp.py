@@ -266,11 +266,14 @@ def make_net_def(dPrms, nPrms, **kwargs):
 	baseDef  = make_base_layers_proto(dPrms, nPrms, **kwargs)
 	#Get the name of the last top
 	lastTop  = baseDef.get_last_top_name()
-	print lastTop
+	#print lastTop
 	#Loss protodef
 	lossDef  = make_loss_layers_proto(dPrms, nPrms, lastTop, **kwargs)
 	#Merge al the protodefs
-	return sev2._merge_defs([dataDef, baseDef, lossDef]) 
+	netDef = sev2._merge_defs([dataDef, baseDef, lossDef]) 
+	if nPrms.lrAbove is not None:
+		netDef.set_no_learning_until(nPrms.lrAbove)
+	return netDef
 
 
 ##
