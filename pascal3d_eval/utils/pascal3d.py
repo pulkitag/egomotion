@@ -1,7 +1,8 @@
 import numpy as np
 import sys, os
 import os.path as osp
-sys.path.append(osp.join(os.getcwd(),'..'))
+HERE_PATH = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(osp.dirname(HERE_PATH))
 import startup
 import scipy.io as sio
 import itertools
