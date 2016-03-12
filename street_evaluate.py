@@ -129,8 +129,16 @@ def run_test(exp, numIter=90000, forceWrite=False):
 			raise Exception('Mean type %s not recognized' % exp.cPrms_.nwPrms.meanType)	
 		pose = net.forward(['pose_fc'], **{'pair_data':ims})
 		pred.append(copy.deepcopy(pose['pose_fc']))
-	pred  = np.concatenate(pred)
 	gtLbs = np.concatenate(gtLbs)
+	pred  = np.concatenate(pred)
+	print (pred.shape, gtLbs.shape)
+	#See if the labels require normalization	
+	if exp.dPrms_['lbPrms'].lb.nrmlz is not None:
+		nrmlzDat = pickle.load(open(exp.dPrms_.pth.exp.other.lbInfo, 'r'))
+		lbInfo   = copy.deepcopy(exp.dPrms_['lbPrms'].lb)
+		lbInfo['nrmlzDat'] = nrmlzDat
+		for i in range(pred.shape[0]):
+			pred[i] = slu.unnormalize_label(pred[i], lbInfo['nrmlzDat']	
 	pickle.dump({'pred':pred, 'gtLbs': gtLbs}, 
        open(resFile, 'w'))
 

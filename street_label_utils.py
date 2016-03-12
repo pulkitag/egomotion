@@ -117,6 +117,17 @@ def normalize_label(lb, nrmlz):
 	lb = lb / nrmlz['sd']
 	return lb
 
+
+def unnormalize_label(lb, nrmlz=None):
+	if nrmlz is None:
+		return lb
+	else:
+		lb = copy.deepcopy(lb)
+	lb = lb * nrmlz['sd']
+	lb = lb + nrmlz['mu']
+	return lb
+
+
 def get_normalized_pose_delta(lbInfo, rot1, rot2, **kwargs):
 	#The rotations in lb will be in radians
 	lb = get_pose_delta(lbInfo, rot1, rot2, **kwargs)
