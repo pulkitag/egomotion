@@ -98,16 +98,17 @@ class PascalWindowLayer(caffe.Layer):
 
 	def load_mean(self):
 		self.mu_ = None
-		if not self.param_.mean_file == 'None':
+		if 'binaryproto' in  self.param_.mean_file:
+			print ('##### MEAN FILE FOUND ######')
 			#Mean is assumbed to be in BGR format
 			self.mu_ = mp.read_mean(self.param_.mean_file)
 			self.mu_ = self.mu_.astype(np.float32)
 			ch, h, w = self.mu_.shape
-			assert (h >= self.param_.crop_size and w >= self.param_.crop_size)
-			y1 = int(h/2 - (self.param_.crop_size/2))
-			x1 = int(w/2 - (self.param_.crop_size/2))
-			y2 = int(y1 + self.param_.crop_size)
-			x2 = int(x1 + self.param_.crop_size)
+			assert (h >= self.param_.im_size and w >= self.param_.im_size)
+			y1 = int(h/2 - (self.param_.im_size/2))
+			x1 = int(w/2 - (self.param_.im_size/2))
+			y2 = int(y1 + self.param_.im_size)
+			x2 = int(x1 + self.param_.im_size)
 			self.mu_ = self.mu_[:,y1:y2,x1:x2]
 
 	def common_setup(self):
