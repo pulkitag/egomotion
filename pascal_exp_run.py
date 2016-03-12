@@ -9,13 +9,23 @@ DEF_DB    = cfg.DEF_DB % ('default', '%s')
 
 def scratch_cls_pd36(isRun=False, nAzBins=18, nElBins=18,
                   isLog=True, gradClip=30, stepsize=10000,
-                  gamma=0.5, base_lr=0.001, deviceId=0):
+                  gamma=0.5, base_lr=0.001, deviceId=0,
+                 isDropOut=False, numDrop=1):
 	dPrms   = pep.get_data_prms(anglePreProc='classify', 
              nAzBins=nAzBins, nElBins=nElBins)
 	nwFn    = pep.process_net_prms
 	ncpu = 0
+	if isDropOut:
+		if numDrop == 1:
+			baseProto = 'doublefc-v1_window_fc6_dropout'
+		else:
+			baseProto = 'doublefc-v1_window_fc6_double_dropout'
+	else:
+		baseProto = 'doublefc-v1_window_fc6'
+
 	nwArgs  = {'ncpu': ncpu, 'lrAbove': None, 'preTrainNet':None,
              'dataNetDefProto': 'data_layer_pascal_cls',
+						 'baseNetDefProtp': baseProto,
              'lossNetDefProto': 'pascal_pose_loss_classify_layers'}
 	solFn   = mec.get_default_solver_prms
 	solArgs = {'dbFile': DEF_DB % 'sol', 'clip_gradients': gradClip,
@@ -89,7 +99,11 @@ def torchnet_cls_pd36(isRun=False, nAzBins=18, nElBins=18,
 def doublefcv1_dcv2_dof2net_cls_pd36(isRun=False, nAzBins=18, nElBins=18,
                   isLog=True, gradClip=30, stepsize=10000,
                   gamma=0.5, base_lr=0.001, deviceId=0, crpSz=240,
-                  lrAbove=None, isDropOut=False):
+                  lrAbove=None, isDropOut=False, numDrop=1):
+	'''
+		isDropout: if dropouts should be used
+		numDrop  : number of dropout layers
+	'''
 	#Source net
 	srcExp   = mepg.simple_euler_dof2_dcv2_doublefcv1(gradClip=30,
             stepsize=60000, base_lr=0.001, gamma=0.1)
@@ -101,7 +115,10 @@ def doublefcv1_dcv2_dof2net_cls_pd36(isRun=False, nAzBins=18, nElBins=18,
 	nwFn    = pep.process_net_prms
 	ncpu = 0
 	if isDropOut:
-		baseProto = 'doublefc-v1_window_fc6_dropout'
+		if numDrop == 1:
+			baseProto = 'doublefc-v1_window_fc6_dropout'
+		else:
+			baseProto = 'doublefc-v1_window_fc6_double_dropout'
 	else:
 		baseProto = 'doublefc-v1_window_fc6'
 	nwArgs  = {'ncpu': ncpu, 'lrAbove': lrAbove, 'preTrainNet':preTrainNet,
