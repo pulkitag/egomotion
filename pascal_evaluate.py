@@ -172,9 +172,29 @@ def save_evaluation(exp, numIter, bench=None, forceWrite=False):
 		print ('Median accuracy on %s is %f' % (cls, mds[i]))
 		res[cls]['imn'], res[cls]['bbox'] = bench.giveTestInstances(cls)
 	mds = np.array(mds)
-	print ('MEAN ACCURACY %f', np.mean(mds))
+	print ('MEAN ACCURACY %f' % np.mean(mds))
 	pickle.dump(res, open(resFile, 'w'))
-	
+
+##
+#Save evaluation
+def save_evaluation_multiple():
+	bench         = pbench.PoseBenchmark(classes=PASCAL_CLS)
+	for num in range(7):
+		exp, numIter = get_exp(num)
+		save_evaluation(exp, numIter, bench=bench)
+
+##
+#Retreive the evaluation experiments
+def get_results():
+	for num in range(7):
+		exp, numIter = get_exp(num)
+		resFile = get_result_filename(exp, numIter)
+		res  = pickle.load(open(resFile, 'r'))					
+		md   = 0
+		for cls in PASCAL_CLS:
+			md += np.median(res[cls]['err'])
+		md = 180*md/np.pi
+		print (num, md/len(PASCAL_CLS))
 	
 ##
 #Debug evaluation code
