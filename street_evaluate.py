@@ -135,11 +135,11 @@ def run_test(exp, numIter=90000, forceWrite=False, deviceId=0):
 	print (pred.shape, gtLbs.shape)
 	#See if the labels require normalization	
 	if exp.dPrms_['lbPrms'].lb.nrmlz is not None:
-		nrmlzDat = pickle.load(open(exp.dPrms_.pth.exp.other.lbInfo, 'r'))
+		nrmlzDat = pickle.load(open(exp.dPrms_.paths.exp.other.poseStats, 'r'))
 		lbInfo   = copy.deepcopy(exp.dPrms_['lbPrms'].lb)
 		lbInfo['nrmlzDat'] = nrmlzDat
 		for i in range(pred.shape[0]):
-			pred[i] = slu.unnormalize_label(pred[i], lbInfo['nrmlzDat']	
+			pred[i] = slu.unnormalize_label(pred[i], lbInfo['nrmlzDat'])	
 	pickle.dump({'pred':pred, 'gtLbs': gtLbs}, 
        open(resFile, 'w'))
 
@@ -212,10 +212,10 @@ def get_exp(expNum):
 		numIter = 82000
 	return exp, numIter
 
-def eval_multiple_models(deviceId=0):
-	for i in range(7,9):
+def eval_multiple_models(deviceId=0, forceWrite=False):
+	for i in range(7,8):
 		exp, numIter = get_exp(i)
-		run_test(exp, numIter, forceWrite=False, deviceId=deviceId)
+		run_test(exp, numIter, forceWrite=forceWrite, deviceId=deviceId)
 
 def get_multiple_results():
 	mdErrs, counts = [], []

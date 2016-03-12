@@ -6,6 +6,7 @@ import numpy as np
 from scipy import linalg as linalg
 import math
 import street_process_data as spd
+import copy
 
 class LabelPrms(object):
 	dbName = cfg.DEF_DB % ('label', 'default') 
