@@ -140,14 +140,14 @@ def demo_test(numIter=90000):
 	run_test(exp)
 
 
-def get_results(exp, numIter=90000):
+def get_rotation_performance(exp, numIter=90000):
 	print ('Loading results')
 	resFile = get_result_filename(exp, numIter)
 	data = pickle.load(open(resFile, 'r'))
 	pred = data['pred']
 	gt   = data['gtLbs']
 	#Convert from yaw, pitch, roll to pitch, yaw, roll
-	if exp.dPrms_.lbPrms.lb.dof == 2:
+	if exp.dPrms_.lbPrms.lb.dof in [2,5]:
 		pred = pred[:,[1,0]]
 		gt   = gt[:,[1,0]]
 	else:
@@ -187,10 +187,20 @@ def get_exp(expNum):
         stepsize=60000, base_lr=0.001, gamma=0.1)
 		numIter = 84000
 	#Using diff concat instead of just concatenating
-	elif expNum==6:
+	elif expNum == 6:
 		exp = mepg.simple_euler_dof2_dcv2_doublefcv1_diff(gradClip=30,
         stepsize=60000, base_lr=0.001, gamma=0.1)
-		numIter = 182000	
+		numIter = 182000
+	#5DOF experiment
+	elif expNum == 7:
+		exp = mepg.simple_euler_dof5_dcv2_doublefcv1(gradClip=30,
+           stepsize=60000, gamma=0.1, base_lr=0.0003)
+		numIter = 82000
+	#5DOF experiment, different learning rate
+	elif expNum == 8:
+		exp = mepg.simple_euler_dof5_dcv2_doublefcv1(gradClip=30,
+           stepsize=60000, gamma=0.1, base_lr=0.001)
+		numIter = 82000
 	return exp, numIter
 
 def eval_multiple_models():
@@ -203,7 +213,7 @@ def get_multiple_results():
 	#for i in range(2):
 	for i in range(6,7):
 		exp, numIter = get_exp(i)
-		mdErr, count = get_results(exp, numIter)
+		mdErr, count = get_rotation_performance(exp, numIter)
 		mdErrs.append(mdErr)
 		counts.append(count)
 	return mdErrs, counts
