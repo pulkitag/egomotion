@@ -10,12 +10,63 @@ import my_pycaffe as mp
 import copy
 import pdb
 import matplotlib.pyplot as plt
+import pickle
+from os import path as osp
+from easydict import EasyDict as edict
+import other_utils as ou
 
 PASCAL_CLS = ['aeroplane', 'bicycle', 'boat', 'bottle', 'bus', 'car',
               'chair', 'diningtable', 'motorbike', 'sofa', 'train',
-              'tvmomitor']
-def get_exp():
-	pass
+              'tvmonitor']
+
+def get_result_filename(exp, numIter):
+	resFile = exp.dPrms_.paths.exp.results.file
+	resFile = osp.join(resFile % (osp.join(exp.cPrms_.expStr, exp.dPrms_.expStr), numIter))
+	ou.mkdir(osp.dirname(resFile))
+	return resFile
+
+#Get the objec that would be used to generate the benchmark data
+def get_car_bench_obj():
+	bench = pbench.PoseBenchmark('car')
+	return bench
+
+def get_exp(expNum=0, numIter=None):
+	#2 Dropout, lower learning rate
+	if expNum == 0:
+		exp  = per.doublefcv1_dcv2_dof2net_cls_pd36(nElBins=21, nAzBins=21,
+          crpSz=224, isDropOut=True, numDrop=2, base_lr=0.0001)
+		expIter = 14000
+	#2 Dropouts, 0.001 learning rate
+	elif expNum == 1:
+		exp = per.doublefcv1_dcv2_dof2net_cls_pd36(nElBins=21, nAzBins=21,
+           crpSz=240, isDropOut=True, numDrop=2)
+		expIter = 26000
+	#1 Dropout, 0.001 learning rate
+	elif expNum == 2:
+		exp = per.doublefcv1_dcv2_dof2net_cls_pd36(nElBins=21, nAzBins=21,
+           crpSz=224, isDropOut=True)	
+		expIter = 12000
+	#Tune only the last layer
+	elif expNum == 3:
+		exp = per.doublefcv1_dcv2_dof2net_cls_pd36(lrAbove='fc6')
+		expIter = 40000
+	#Torch-net
+	elif expNum == 4:
+		exp = exp = per.torchnet_cls_pd36()
+		expIter = 40000
+	#AlexNet
+	elif expNum == 5:
+		exp = per.alexnet_cls_pd36(nElBins=21, nAzBins=21, crpSz=224)
+		expIter = 30000
+	#Scratch, double dropout
+	elif expNum == 6:
+		exp = per.scratch_cls_pd36(nElBins=21, nAzBins=21, 
+        isDropOut=True, numDrop=2)
+		expIter = 12000
+	if numIter is None:
+		numIter = expIter
+	return exp, numIter
+
 
 def make_deploy_net(exp, numIter=60000):
 	imSz = exp.cPrms_.nwPrms['ipImSz']
@@ -33,14 +84,8 @@ def make_deploy_net(exp, numIter=60000):
 	return net
 
 ##
-#Get the objec that would be used to generate the benchmark data
-def get_bench_obj():
-	bench = pbench.PoseBenchmark('car')
-	return bench
-
-##
 #get images
-def get_imdata(imNames, bbox, exp,  padSz=24):
+def get_imdata(imNames, bbox, exp,  padSz=36):
 	ims  = []
 	imSz = exp.cPrms_.nwPrms.ipImSz 
 	for imn, b in zip(imNames, bbox):
@@ -61,9 +106,8 @@ def get_imdata(imNames, bbox, exp,  padSz=24):
 	ims = np.concatenate(ims)
 	return ims
 
-
-def get_predictions(exp, bench, net=None, debugMode=False):
-	imNames, bbox = bench.giveTestInstances('car')	
+def get_predictions(exp, bench, className='car', net=None, debugMode=False):
+	imNames, bbox = bench.giveTestInstances(className)	
 	N = len(imNames)
 	preds = []
 	if net is None:
@@ -91,7 +135,50 @@ def get_predictions(exp, bench, net=None, debugMode=False):
 	return preds
 
 
-def get_evaluate_data(exp, classes=['car'], isPlot=False):
+def evaluate(exp, bench, preds=None, net=None):
+	if preds is None:
+		preds = get_predictions(exp, bench, net=net)
+	#Get the ground truth predictions
+	gtPose = bench.giveTestPoses('car')
+	errs   = bench.evaluatePredictions('car', preds)
+	print(180*np.median(errs)/np.pi)
+	return errs    			
+
+##
+#Save evaulation
+def save_evaluation(exp, numIter, bench=None, forceWrite=False):
+	resFile = get_result_filename(exp, numIter)	
+	#Check if result file exists
+	if osp.exists(resFile) and not forceWrite:
+		print ('%s exists' % resFile)
+		return
+	#Get the benchmark object
+	print ('Loading Benchmark Object')
+	if bench is None:
+		bench         = pbench.PoseBenchmark(classes=PASCAL_CLS)
+	#Make the net
+	net = make_deploy_net(exp, numIter)
+	#Start evaluation
+	print ('Starting evaluation')
+	res = edict()
+	mds = []
+	for i, cls in enumerate(PASCAL_CLS):
+		res[cls] = edict()
+		res[cls]['pd']  = get_predictions(exp, bench, className=cls,
+                     net=net) 
+		res[cls]['gt']  = bench.giveTestPoses(cls)
+		res[cls]['err'] = bench.evaluatePredictions(cls, res[cls]['pd']) 
+		mds.append(180 * (np.median(res[cls]['err'])/np.pi))
+		print ('Median accuracy on %s is %f' % (cls, mds[i]))
+		res[cls]['imn'], res[cls]['bbox'] = bench.giveTestInstances(cls)
+	mds = np.array(mds)
+	print ('MEAN ACCURACY %f', np.mean(mds))
+	pickle.dump(res, open(resFile, 'w'))
+	
+	
+##
+#Debug evaluation code
+def debug_evaluate_data(exp, classes=['car'], isPlot=False):
 	bench         = pbench.PoseBenchmark(classes=classes)
 	imNames, bbox = bench.giveTestInstances(classes[0])
 	ims = get_imdata(imNames, bbox, exp) 	 	
@@ -110,16 +197,6 @@ def get_evaluate_data(exp, classes=['car'], isPlot=False):
 				return 
 			plt.cla()
 	return ims
-
-def evaluate(exp, bench, preds=None, net=None):
-	if preds is None:
-		preds = get_predictions(exp, bench, net=net)
-	#Get the ground truth predictions
-	gtPose = bench.giveTestPoses('car')
-	errs   = bench.evaluatePredictions('car', preds)
-	print(180*np.median(errs)/np.pi)
-	return errs    			
-
 
 def debug(exp, bench=None, net=None):
 	if bench is None:

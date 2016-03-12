@@ -213,7 +213,7 @@ def get_exp(expNum):
 	return exp, numIter
 
 def eval_multiple_models(deviceId=0, forceWrite=False):
-	for i in range(7,8):
+	for i in range(8,9):
 		exp, numIter = get_exp(i)
 		run_test(exp, numIter, forceWrite=forceWrite, deviceId=deviceId)
 
