@@ -117,7 +117,7 @@ def evaluate(exp, bench, preds=None, net=None):
 	#Get the ground truth predictions
 	gtPose = bench.giveTestPoses('car')
 	errs   = bench.evaluatePredictions('car', preds)
-	print(np.median(errs))
+	print(180*np.median(errs)/np.pi)
 	return errs    			
 
 
@@ -145,7 +145,7 @@ def debug(exp, bench=None, net=None):
 	gtEl = np.array(gtEl)
 	pdEl = np.array(pdEl)
 	errs  = bench.evaluatePredictions('car', testPreds)
-	print (np.median(errs))
+	print (180*np.median(errs)/np.pi)
 	return np.array(gtPose), np.array(testPreds), gtAz, pdAz
 
 def stupid_debug(exp, bench=None):
