@@ -42,14 +42,15 @@ def scratch_cls_pd36(isRun=False, nAzBins=18, nElBins=18,
 
 def alexnet_cls_pd36(isRun=False, nAzBins=18, nElBins=18,
                   isLog=True, gradClip=30, stepsize=10000,
-                  gamma=0.5, base_lr=0.001, deviceId=0, crpSz=240):
+                  gamma=0.5, base_lr=0.001, deviceId=0, crpSz=240,
+									lrAbove=None):
 	dPrms   = pep.get_data_prms(anglePreProc='classify', 
              nAzBins=nAzBins, nElBins=nElBins)
 	nwFn    = pep.process_net_prms
 	ncpu = 0
 	preTrainNet = osp.join(cfg.pths.data0,\
               'caffe_models/bvlc_reference/bvlc_reference_caffenet_upgraded.caffemodel')
-	nwArgs  = {'ncpu': ncpu, 'lrAbove': None, 'preTrainNet':preTrainNet,
+	nwArgs  = {'ncpu': ncpu, 'lrAbove': lrAbove, 'preTrainNet':preTrainNet,
              'dataNetDefProto' : 'data_layer_pascal_cls',
              'lossNetDefProto' : 'pascal_pose_loss_classify_layers',
 						 'baseNetDefProto' : 'alexnet',
