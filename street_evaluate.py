@@ -65,7 +65,7 @@ def demo_make_test():
 	dPrms   =  sev2.get_data_prms(lbPrms=posePrms)
 	make_test_set(dPrms)
 
-def make_deploy_net(exp, numIter=60000):
+def make_deploy_net(exp, numIter=60000, deviceId=0):
 	imSz = exp.cPrms_.nwPrms['ipImSz']
 	imSz = [[6, imSz, imSz]]
  	exp.make_deploy(dataLayerNames=['window_data'],
@@ -75,7 +75,8 @@ def make_deploy_net(exp, numIter=60000):
 	if not osp.exists(modelName):
 		print ('ModelFile %s doesnot exist' % modelName)
 		return None
-	net       = mp.MyNet(exp.files_['netdefDeploy'], modelName)
+	net       = mp.MyNet(exp.files_['netdefDeploy'], modelName,
+              deviceId=deviceId)
 	#Set preprocessing
 	net.set_preprocess(ipName='pair_data', chSwap=None, noTransform=True)
 	return net
@@ -87,14 +88,14 @@ def get_result_filename(exp, numIter):
 	return resFile
 
 
-def run_test(exp, numIter=90000, forceWrite=False):
+def run_test(exp, numIter=90000, forceWrite=False, deviceId=0):
 	resFile = get_result_filename(exp, numIter)
 	dirName = osp.dirname(resFile)
 	ou.mkdir(dirName)
 	if osp.exists(resFile) and not forceWrite:
 		print ('Result file for %s exists' % resFile)
 		return
-	net = make_deploy_net(exp, numIter=numIter)
+	net = make_deploy_net(exp, numIter=numIter, deviceId=deviceId)
 	if net is None:
 		return
 	batchSz = net.get_batchsz()
@@ -203,15 +204,15 @@ def get_exp(expNum):
 		numIter = 82000
 	return exp, numIter
 
-def eval_multiple_models():
-	for i in range(6,7):
+def eval_multiple_models(deviceId=0):
+	for i in range(7,9):
 		exp, numIter = get_exp(i)
-		run_test(exp, numIter, forceWrite=True)
+		run_test(exp, numIter, forceWrite=False, deviceId=deviceId)
 
 def get_multiple_results():
 	mdErrs, counts = [], []
 	#for i in range(2):
-	for i in range(6,7):
+	for i in range(7,9):
 		exp, numIter = get_exp(i)
 		mdErr, count = get_rotation_performance(exp, numIter)
 		mdErrs.append(mdErr)
