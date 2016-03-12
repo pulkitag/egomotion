@@ -62,7 +62,7 @@ def get_imdata(imNames, bbox, exp,  padSz=24):
 	return ims
 
 
-def get_predictions(exp, bench, net=None):
+def get_predictions(exp, bench, net=None, debugMode=False):
 	imNames, bbox = bench.giveTestInstances('car')	
 	N = len(imNames)
 	preds = []
@@ -84,7 +84,10 @@ def get_predictions(exp, bench, net=None):
                 exp.dPrms_, bins=exp.dPrms_.azBins)
 				el    = pep.unformat_label(elBin[k-i], None, 
                 exp.dPrms_, bins=exp.dPrms_.elBins)
-				preds.append([az, el, 0])
+				if debugMode:
+					preds.append([(az, el, 0), (azBin[k-i], elBin[k-i], 0)])
+				else:
+					preds.append([az, el, 0])
 	return preds
 
 
@@ -117,3 +120,48 @@ def evaluate(exp, bench, preds=None, net=None):
 	print(np.median(errs))
 	return errs    			
 
+
+def debug(exp, bench=None, net=None):
+	if bench is None:
+		bench = pbench.PoseBenchmark(azimuthOnly=False, classes=['car'])
+	preds = get_predictions(exp, bench, net=net, debugMode=True)
+	gtPose = bench.giveTestPoses('car')
+	gtAz, pdAz = [], []
+	gtEl, pdEl = [], []
+	testPreds  = []
+	for i in range(len(gtPose)):
+		az, el, _ = gtPose[i]
+		az,_ = pep.format_label(az, exp.dPrms_, bins=exp.dPrms_.azBins)
+		el,_ = pep.format_label(el, exp.dPrms_, bins=exp.dPrms_.elBins)
+		gtAz.append(az)
+		gtEl.append(el)
+		pdFloat, pdBins = preds[i]
+		testPreds.append(pdFloat)
+		paz, pel, _ = pdBins
+		pdAz.append(paz)
+		pdEl.append(pel)
+	gtAz = np.array(gtAz)
+	pdAz = np.array(pdAz)
+	gtEl = np.array(gtEl)
+	pdEl = np.array(pdEl)
+	errs  = bench.evaluatePredictions('car', testPreds)
+	print (np.median(errs))
+	return np.array(gtPose), np.array(testPreds), gtAz, pdAz
+
+def stupid_debug(exp, bench=None):
+	bench = pbench.PoseBenchmark(azimuthOnly=True, classes=['car'])
+	gtPose = bench.giveTestPoses('car')
+	pdPose = []
+	for i in range(len(gtPose)):
+		a, e, _ = gtPose[i]
+		aBin,_ = pep.format_label(a, exp.dPrms_, bins=exp.dPrms_.azBins)
+		eBin,_ = pep.format_label(e, exp.dPrms_, bins=exp.dPrms_.elBins)
+		az    = pep.unformat_label(aBin, None,
+						exp.dPrms_, bins=exp.dPrms_.azBins)
+		el    = pep.unformat_label(eBin, None, 
+						exp.dPrms_, bins=exp.dPrms_.elBins)
+		pdPose.append([az, el, 0])
+	errs  = bench.evaluatePredictions('car', pdPose)
+	print (np.median(errs))
+	
+	

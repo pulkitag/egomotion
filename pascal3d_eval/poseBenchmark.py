@@ -88,7 +88,7 @@ class PoseBenchmark():
                 relCtheta = -1
             #print ix
             #print gtQuat, predQuat, relQuat
-            errors[ix] = (2*math.acos(relCtheta) % (math.pi))
+            errors[ix] = min(2*math.acos(relCtheta), 2*np.pi - 2*math.acos(relCtheta))
         return errors
 
     def _initModelInfo(self):

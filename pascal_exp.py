@@ -73,6 +73,13 @@ def find_bin_index(bins, val):
 		return len(bins)-2
 	else:
 		return max(0, idx[0]-1)
+
+#format radians
+def format_radians(theta):
+	theta = np.mod(theta, 2*np.pi)
+	if theta > np.pi:
+		theta = -(2 * np.pi - theta)
+	return theta
 	
 #Format window file label 
 def format_label(theta, lbInfo, mu=None, sd=None, bins=None):
@@ -86,6 +93,7 @@ def format_label(theta, lbInfo, mu=None, sd=None, bins=None):
 	'''
 	#For classification
 	if lbInfo['anglePreProc'] == 'classify':
+		theta = format_radians(theta)
 		assert bins is not None
 		return find_bin_index(bins, theta), None
 	#For regression
