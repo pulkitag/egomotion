@@ -100,11 +100,41 @@ def eval_amir_on_amir():
 		gt[i,:]  = azGt, elGt
 		pd[i,:]  = az, el
 	return compute_rotation_errors(pd, gt)
+
+
+def save_amir_set_preds(exp, numIter):
+	resFile = get_result_filename(exp, numIter, amirTest=True)
+	data = pickle.load(open(resFile, 'r'))
+	pred = data['pred']
+	gtLb = data['gtLbs']
+	outName = osp.join('./test-files/amir_test',
+            exp.cPrms_.expStr, exp.dPrms_.expStr + '-numIter%d.txt')
+	outName = outName % numIter
+	ou.mkdir(osp.dirname(outName))
+	elms, _ = get_test_set_amir()
+	#open the file
+	fid = open(outName, 'w')
+	allPd = np.zeros((len(pred),2))
+	allGt = np.zeros((len(pred),2))
+	count = 0
+	for (el, pd, gt) in zip(elms, pred, gtLb):
+		_, nm1, nm2,_ = el
+		allPd[count,:] = pd[[1,0]]
+		allGt[count,:] = gt[[1,0]]
+		azGt, elGt = math.degrees(gt[0]), math.degrees(gt[1])
+		azPd, elPd = math.degrees(pd[0]), math.degrees(pd[1])
+		l = '%s %s %f %f' % (nm1, nm2, azGt, elGt)
+		l = '%s %f %f %f %f %f %f' % (l, azPd, elPd, 0, pd[2], pd[3], pd[4])
+		fid.write('%s\n' % l)
+		count += 1
+	fid.close()
+	mdErr, _ = compute_rotation_errors(allPd, allGt) 	
+	print mdErr
 		
-			
 def make_test_set_amir():
 	elms, imFolder = get_test_set_amir()
 	pickle.dump({'testData': elms}, open('./test-files/test_regress_amir.pkl', 'w'))
+
 
 def vis_test_set_amir():
 	### THIS iS NOT COMPLETE ####
@@ -187,7 +217,10 @@ def run_test(exp, numIter=90000, forceWrite=False, deviceId=0, amirTest=False):
 			imName2 = osp.join(imFolder % fid, imName2)
 			im = sdgr.read_double_images(imName1, imName2, imPrms)
 			ims.append(im.reshape((1,) + im.shape))
-			gtLbs.append(np.array(gtLb).reshape((1,lbSz)))	
+			if amirTest:
+				gtLbs.append(np.array(gtLb).reshape((1,2)))	
+			else:
+				gtLbs.append(np.array(gtLb).reshape((1,lbSz)))	
 		ims  = np.concatenate(ims, axis=0)
 		#WHERE IS THE MEAN SUBTRACTION .... GRRRRRRR
 		if exp.cPrms_.nwPrms.meanType is None:
@@ -256,7 +289,7 @@ def get_translation_peformance(exp, numIter=90000):
 		pred = pred[:,3:]
 		gt   = gt[:,3:]
 	err = np.abs(pred - gt)
-	return np.abs(gt), err		
+	return gt, pred, err		
 	
 
 def plot_peformance():

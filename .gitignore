@@ -3,6 +3,7 @@ h5py/*
 h5py*
 docs/*
 test-files/*
+test_files/*
 pose-files/*
 for-amir/*
 *.tar

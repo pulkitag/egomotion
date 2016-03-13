@@ -70,6 +70,11 @@ def get_exp(expNum=0, numIter=None):
 		exp = per.doublefcv1_dcv2_dof2net_cls_pd36(nElBins=21, nAzBins=21,
           crpSz=224, isDropOut=True, numDrop=2, base_lr=0.0001)
 		expIter = 52000
+	#AlexNet with imgnt mean 
+	elif expNum == 8:
+		exp = per.alexnet_cls_pd36(nElBins=21, nAzBins=21, crpSz=224,
+          meanFile='imagenet_proto')
+		expIter = 26000
 	if numIter is None:
 		numIter = expIter
 	return exp, numIter
@@ -199,16 +204,18 @@ def save_evaluation_multiple_iters(exp):
 		save_evaluation(exp, n, bench=bench)
 
 ##
-#Retreive the evaluation experiments
-def get_results():
+def get_result_dict(expList):
+	'''
+		expList: a list of (exp, numIter)
+	'''
 	resMed = OrderedDict()
 	resMed['expNum'] = []
 	for cls in PASCAL_CLS:
 		resMed[cls] = []
 	resMed['mean']   = []
-	for num in range(7):
-		resMed['expNum'].append(num)
-		exp, numIter = get_exp(num)
+	for i, exps in enumerate(expList):
+		resMed['expNum'].append(i)
+		exp, numIter = exps
 		resFile = get_result_filename(exp, numIter)
 		res  = pickle.load(open(resFile, 'r'))					
 		md   = 0
@@ -217,8 +224,16 @@ def get_results():
 			resMed[cls].append(math.degrees(np.median(res[cls]['err'])))
 		md = math.degrees(md/len(PASCAL_CLS))
 		resMed['mean'].append(md)
-		print (num, md)
 	return resMed
+	
+##
+#Retreive the evaluation experiments
+def get_results():
+	exps = []
+	for num in range(7):
+		exp, numIter = get_exp(num)
+		exps.append([exp, numIter])
+	return get_result_dict(exps)
 	
 ##
 #Debug evaluation code
