@@ -61,10 +61,11 @@ def make_test_set(dPrms, numTest=100000):
 	pickle.dump({'testData': elms}, open(dPrms.paths.exp.other.testData, 'w'))
 	return elms
 
-#Test set that amir originally used. 
-def make_test_set_amir():
+#Test set that amir originally used.
+def get_test_set_amir():
 	fName    = osp.join(cfg.pths.data0, 'data_sets', 'streetview', 'test',
              'regression_data', '30_sfrtest_uni.txt')
+	imFolder = osp.dirname(fName)
 	folderId = 'regression_test'
 	fid      = open(fName, 'r')
 	lines    = fid.readlines()
@@ -78,9 +79,41 @@ def make_test_set_amir():
 		elm   = [folderId, fName1, fName2] 
 		elm.append(lb)
 		elms.append(elm)	
-	pickle.dump({'testData': elms}, open('./test-files/test_regress_amir.pkl', 'w'))
-	return elms
+	return elms, imFolder
 
+#eval amir on amir.
+def eval_amir_on_amir():
+	fName    = osp.join(cfg.pths.data0, 'data_sets', 'streetview', 'test',
+             'regression_data', 'regression_test_eval.txt')
+	fid      = open(fName, 'r')
+	lines    = fid.readlines()
+	N        = len(lines)
+	fid.close()
+	gt = np.zeros((N,2))
+	pd = np.zeros((N,2))
+	for i, l in enumerate(lines):
+		fName1, fName2, azGt, elGt, az, el = l.split()
+		azGt, az = float(azGt), float(az)
+		elGt, el = float(elGt), float(el)
+		azGt, az = math.radians(azGt), math.radians(az)
+		elGt, el = math.radians(elGt), math.radians(el)
+		gt[i,:]  = azGt, elGt
+		pd[i,:]  = az, el
+	return compute_rotation_errors(pd, gt)
+		
+			
+
+def make_test_set_amir():
+	elms, imFolder = get_test_set_amir()
+	pickle.dump({'testData': elms}, open('./test-files/test_regress_amir.pkl', 'w'))
+
+def vis_test_set_amir():
+	fName    = osp.join(cfg.pths.data0, 'data_sets', 'streetview', 'test',
+             'regression_data', '30_sfrtest_uni.txt')
+	folderId = 'regression_test'
+	fid      = open(fName, 'r')
+	lines    = fid.readlines()
+	fid.close()
 
 def demo_make_test():
 	posePrms = slu.PosePrms(maxRot=90, simpleRot=True, dof=2)
@@ -184,6 +217,16 @@ def demo_test(numIter=90000):
 	run_test(exp)
 
 
+def compute_rotation_errors(pred, gt):
+	'''
+		pred, gt should be in pitch, yaw, roll format
+	'''	
+	deltaRot, pdRot, gtRot = stv2.delta_rots(pred, gt, isOpRadian=False, opDeltaOnly=False)
+	print (np.median(deltaRot), np.mean(deltaRot))	
+	mdErr, counts = stv1.get_binned_angle_errs(np.array(deltaRot), np.array(gtRot))
+	return mdErr, counts
+
+
 def get_rotation_performance(exp, numIter=90000):
 	print ('Loading results')
 	resFile = get_result_filename(exp, numIter)
@@ -197,11 +240,21 @@ def get_rotation_performance(exp, numIter=90000):
 	else:
 		pred = pred[:,[1,0,2]]
 		gt   = gt[:,[1,0,2]]
-	deltaRot, pdRot, gtRot = stv2.delta_rots(pred, gt, isOpRadian=False, opDeltaOnly=False)
-	print (np.median(deltaRot), np.mean(deltaRot))	
-	mdErr, counts = stv1.get_binned_angle_errs(np.array(deltaRot), np.array(gtRot))
-	return mdErr, counts
+	return compute_rotation_errors(pred, gt)
 
+def plot_peformance():
+	amirErr =  [10.6, 13.9, 17.62, 18.2, 22.4, 23.5, 27.8]
+	myErr   =  [3.7, 6.07, 9.39, 13.16, 19.10, 24.5, 35.8]
+	bins    =  [4.5, 18.9, 37.8, 56.8,  75.8,  94.8, 113.8]   
+	import matplotlib.pyplot as plt
+	fig = plt.figure()
+	ax  = fig.add_subplot(111)
+	l1, = ax.plot(bins, myErr, 'r', linewidth=3)
+	l2, = ax.plot(bins, amirErr, 'b', linewidth=3)
+	plt.legend([l1, l2], ['caffenet', 'torchnet'])
+	plt.title('Pose Performance')
+	plt.savefig('pose_performance.pdf')
+	
 
 def get_exp(expNum):
 	if expNum == 0:

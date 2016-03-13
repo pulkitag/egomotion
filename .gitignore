@@ -8,6 +8,7 @@ for-amir/*
 *.tar
 *.dat
 tmp/*
+*.pdf
 
 # Compiled Object files
 *.slo
