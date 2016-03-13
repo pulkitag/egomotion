@@ -60,6 +60,10 @@ def make_test_set(dPrms, numTest=100000):
 	pickle.dump({'testData': elms}, open(dPrms.paths.exp.other.testData, 'w'))
 	return elms
 
+
+def make_test_set_amir(dPrms, None):
+	pass
+
 def demo_make_test():
 	posePrms = slu.PosePrms(maxRot=90, simpleRot=True, dof=2)
 	dPrms   =  sev2.get_data_prms(lbPrms=posePrms)
