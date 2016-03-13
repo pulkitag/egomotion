@@ -18,11 +18,14 @@ DEF_DB    = cfg.DEF_DB % ('default', '%s')
 ##
 #get the mean file name
 def get_mean_file(muPrefix):
-	if muPrefix == '':
+	if muPrefix == '' or muPrefix is None:
 		return 'None'
-	if muPrefix in ['imagenet']:
+
+	if muPrefix == 'imagenet':
 		_, dataDir = get_datadirs()
 		muFile = osp.join(dataDir, muPrefix, 'mean_bgr.pkl')
+	elif muPrefix == 'imagenet_proto':
+		muFile    = osp.join(cfg.pths.data0, 'caffe_models/ilsvrc2012_mean.binaryproto')
 	else:
 		raise Exception('%s prefix for mean not recognized' % muPrefix)
 	return muFile	

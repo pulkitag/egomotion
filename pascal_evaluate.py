@@ -14,6 +14,8 @@ import pickle
 from os import path as osp
 from easydict import EasyDict as edict
 import other_utils as ou
+import math
+from collections import OrderedDict
 
 PASCAL_CLS = ['aeroplane', 'bicycle', 'boat', 'bottle', 'bus', 'car',
               'chair', 'diningtable', 'motorbike', 'sofa', 'train',
@@ -63,6 +65,11 @@ def get_exp(expNum=0, numIter=None):
 		exp = per.scratch_cls_pd36(nElBins=21, nAzBins=21, 
         isDropOut=True, numDrop=2)
 		expIter = 12000
+	#slower learning rate for finetuning
+	elif expNum == 7:
+		exp = per.doublefcv1_dcv2_dof2net_cls_pd36(nElBins=21, nAzBins=21,
+          crpSz=224, isDropOut=True, numDrop=2, base_lr=0.0001)
+		expIter = 52000
 	if numIter is None:
 		numIter = expIter
 	return exp, numIter
@@ -184,17 +191,34 @@ def save_evaluation_multiple():
 		save_evaluation(exp, numIter, bench=bench)
 
 ##
+#Evaluate for different values of iterations
+def save_evaluation_multiple_iters(exp):
+	bench         = pbench.PoseBenchmark(classes=PASCAL_CLS)
+	numIter = range(8000,60000,4000)
+	for n in numIter:
+		save_evaluation(exp, n, bench=bench)
+
+##
 #Retreive the evaluation experiments
 def get_results():
+	resMed = OrderedDict()
+	resMed['expNum'] = []
+	for cls in PASCAL_CLS:
+		resMed[cls] = []
+	resMed['mean']   = []
 	for num in range(7):
+		resMed['expNum'].append(num)
 		exp, numIter = get_exp(num)
 		resFile = get_result_filename(exp, numIter)
 		res  = pickle.load(open(resFile, 'r'))					
 		md   = 0
 		for cls in PASCAL_CLS:
 			md += np.median(res[cls]['err'])
-		md = 180*md/np.pi
-		print (num, md/len(PASCAL_CLS))
+			resMed[cls].append(math.degrees(np.median(res[cls]['err'])))
+		md = math.degrees(md/len(PASCAL_CLS))
+		resMed['mean'].append(md)
+		print (num, md)
+	return resMed
 	
 ##
 #Debug evaluation code

@@ -10,7 +10,7 @@ DEF_DB    = cfg.DEF_DB % ('default', '%s')
 def scratch_cls_pd36(isRun=False, nAzBins=18, nElBins=18,
                   isLog=True, gradClip=30, stepsize=10000,
                   gamma=0.5, base_lr=0.001, deviceId=0,
-                 isDropOut=False, numDrop=1):
+                 isDropOut=False, numDrop=1, crpSz=240):
 	dPrms   = pep.get_data_prms(anglePreProc='classify', 
              nAzBins=nAzBins, nElBins=nElBins)
 	nwFn    = pep.process_net_prms
@@ -26,7 +26,8 @@ def scratch_cls_pd36(isRun=False, nAzBins=18, nElBins=18,
 	nwArgs  = {'ncpu': ncpu, 'lrAbove': None, 'preTrainNet':None,
              'dataNetDefProto': 'data_layer_pascal_cls',
 						 'baseNetDefProtp': baseProto,
-             'lossNetDefProto': 'pascal_pose_loss_classify_layers'}
+             'lossNetDefProto': 'pascal_pose_loss_classify_layers',
+             'crpSz': crpSz}
 	solFn   = mec.get_default_solver_prms
 	solArgs = {'dbFile': DEF_DB % 'sol', 'clip_gradients': gradClip,
             ' stepsize': stepsize, 'base_lr': base_lr, 'gamma': gamma}
@@ -43,27 +44,24 @@ def scratch_cls_pd36(isRun=False, nAzBins=18, nElBins=18,
 def alexnet_cls_pd36(isRun=False, nAzBins=18, nElBins=18,
                   isLog=True, gradClip=30, stepsize=10000,
                   gamma=0.5, base_lr=0.001, deviceId=0, crpSz=240,
-									lrAbove=None, meanFile='None'):
+									lrAbove=None, meanFile='', resumeIter=None):
 	dPrms   = pep.get_data_prms(anglePreProc='classify', 
              nAzBins=nAzBins, nElBins=nElBins)
 	nwFn    = pep.process_net_prms
 	ncpu = 0
 	preTrainNet = osp.join(cfg.pths.data0,\
               'caffe_models/bvlc_reference/bvlc_reference_caffenet_upgraded.caffemodel')
-	if not meanFile == 'None':
-		meanFile    = osp.join(cfgs.pths.data0,\
-								'caffe_models/ilsvrc2012_mean.binaryproto')
 	nwArgs  = {'ncpu': ncpu, 'lrAbove': lrAbove, 'preTrainNet':preTrainNet,
              'dataNetDefProto' : 'data_layer_pascal_cls',
              'lossNetDefProto' : 'pascal_pose_loss_classify_layers',
 						 'baseNetDefProto' : 'alexnet',
 						 'ipImSz': 227, 'crpSz': crpSz,
-						 'opLrMult': 10, meanFile:meanFile}
+						 'opLrMult': 10, 'meanFile':meanFile}
 	solFn   = mec.get_default_solver_prms
 	solArgs = {'dbFile': DEF_DB % 'sol', 'clip_gradients': gradClip,
             ' stepsize': stepsize, 'base_lr': base_lr, 'gamma': gamma}
 	cPrms   = mec.get_caffe_prms(nwFn=nwFn, nwPrms=nwArgs,
-									 solFn=solFn, solPrms=solArgs)
+									 solFn=solFn, solPrms=solArgs, resumeIter=resumeIter)
 	exp     = mec.CaffeSolverExperiment(dPrms, cPrms,
 					  netDefFn = pep.make_net_def, isLog=isLog)
 	if isRun:
