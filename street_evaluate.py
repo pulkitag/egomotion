@@ -102,12 +102,12 @@ def eval_amir_on_amir():
 	return compute_rotation_errors(pd, gt)
 		
 			
-
 def make_test_set_amir():
 	elms, imFolder = get_test_set_amir()
 	pickle.dump({'testData': elms}, open('./test-files/test_regress_amir.pkl', 'w'))
 
 def vis_test_set_amir():
+	### THIS iS NOT COMPLETE ####
 	fName    = osp.join(cfg.pths.data0, 'data_sets', 'streetview', 'test',
              'regression_data', '30_sfrtest_uni.txt')
 	folderId = 'regression_test'
@@ -241,6 +241,23 @@ def get_rotation_performance(exp, numIter=90000):
 		pred = pred[:,[1,0,2]]
 		gt   = gt[:,[1,0,2]]
 	return compute_rotation_errors(pred, gt)
+
+
+def get_translation_peformance(exp, numIter=90000):
+	print ('Loading results')
+	resFile = get_result_filename(exp, numIter)
+	data = pickle.load(open(resFile, 'r'))
+	pred = data['pred']
+	gt   = data['gtLbs']
+	if exp.dPrms_.lbPrms.lb.dof == 5:
+		pred = pred[:, 2:]
+		gt   = gt[:,2:]
+	elif exp.dPrms_.lbPrms.lb.dof == 6:
+		pred = pred[:,3:]
+		gt   = gt[:,3:]
+	err = np.abs(pred - gt)
+	return np.abs(gt), err		
+	
 
 def plot_peformance():
 	amirErr =  [10.6, 13.9, 17.62, 18.2, 22.4, 23.5, 27.8]
