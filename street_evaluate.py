@@ -131,8 +131,8 @@ def run_test(exp, numIter=90000, forceWrite=False, deviceId=0, amirTest=False):
 	#Load the test data
 	if amirTest:
 		fName     = './test-files/test_regress_amir.pkl'
-		imFolder  = osp.join(cfg.data0, 'data_sets', 'streetview', 'test',
-             'regression_data')
+		imFolder  = osp.join(cfg.pths.data0, 'data_sets', 'streetview', 'test',
+             'regression_data', '%s')
 	else:
 		fName = exp.dPrms_.paths.exp.other.testData
 		imFolder = osp.join(cfg.pths.folderProc, 'imCrop', 'imSz256-align')
@@ -149,7 +149,7 @@ def run_test(exp, numIter=90000, forceWrite=False, deviceId=0, amirTest=False):
 	for b in range(0, len(data), batchSz):
 		print(b, 'Loading images ...')
 		ims = []
-		for i in range(b,b+batchSz):
+		for i in range(b,min(len(data), b+batchSz)):
 			fid, imName1, imName2, gtLb = data[i]
 			imName1 = osp.join(imFolder % fid, imName1)
 			imName2 = osp.join(imFolder % fid, imName2)
@@ -185,9 +185,9 @@ def demo_test(numIter=90000):
 	run_test(exp)
 
 
-def get_rotation_performance(exp, numIter=90000):
+def get_rotation_performance(exp, numIter=90000, amirTest=False):
 	print ('Loading results')
-	resFile = get_result_filename(exp, numIter)
+	resFile = get_result_filename(exp, numIter, amirTest=amirTest)
 	data = pickle.load(open(resFile, 'r'))
 	pred = data['pred']
 	gt   = data['gtLbs']
