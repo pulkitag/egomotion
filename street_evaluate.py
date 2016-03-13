@@ -13,6 +13,7 @@ import street_test_v2 as stv2
 import street_test as stv1
 import copy
 import other_utils as ou
+import math
 
 REAL_PATH = cfg.REAL_PATH
 
@@ -61,13 +62,32 @@ def make_test_set(dPrms, numTest=100000):
 	return elms
 
 
-def make_test_set_amir(dPrms, None):
-	pass
+#Test set that amir originally used. 
+def make_test_set_amir():
+	fName    = osp.join(cfg.pths.data0, 'data_sets', 'streetview', 'test',
+             'regression_data', '30_sfrtest_uni.txt')
+	folderId = 'regression_test'
+	fid      = open(fName, 'r')
+	lines    = fid.readlines()
+	fid.close()
+	elms     = []	
+	for l in lines:
+		fName1, fName2, az, el = l.split()
+		az = float(az)
+		el = float(el)
+		lb = np.array([math.radians(az), math.radians(el)])
+		elm   = [folderId, fName1, fName2] 
+		elm.append(lb)
+		elms.append(elm)	
+	pickle.dump({'testData': elms}, open('./test-files/test_regress_amir.pkl', 'w'))
+	return elms
+
 
 def demo_make_test():
 	posePrms = slu.PosePrms(maxRot=90, simpleRot=True, dof=2)
 	dPrms   =  sev2.get_data_prms(lbPrms=posePrms)
 	make_test_set(dPrms)
+
 
 def make_deploy_net(exp, numIter=60000, deviceId=0):
 	imSz = exp.cPrms_.nwPrms['ipImSz']
@@ -86,14 +106,19 @@ def make_deploy_net(exp, numIter=60000, deviceId=0):
 	return net
 
 
-def get_result_filename(exp, numIter):
+def get_result_filename(exp, numIter, amirTest=False):
+	if amirTest:
+		eStr = 'amir_test'
+	else:
+		eStr = ''
 	resFile = exp.dPrms_.paths.exp.results.file
-	resFile = osp.join(resFile % (osp.join(exp.cPrms_.expStr, exp.dPrms_.expStr), numIter))
+	resFile = osp.join(resFile % (osp.join(exp.cPrms_.expStr, exp.dPrms_.expStr + eStr), 
+            numIter))
 	return resFile
 
 
-def run_test(exp, numIter=90000, forceWrite=False, deviceId=0):
-	resFile = get_result_filename(exp, numIter)
+def run_test(exp, numIter=90000, forceWrite=False, deviceId=0, amirTest=False):
+	resFile = get_result_filename(exp, numIter, amirTest)
 	dirName = osp.dirname(resFile)
 	ou.mkdir(dirName)
 	if osp.exists(resFile) and not forceWrite:
@@ -104,7 +129,14 @@ def run_test(exp, numIter=90000, forceWrite=False, deviceId=0):
 		return
 	batchSz = net.get_batchsz()
 	#Load the test data
-	data = pickle.load(open(exp.dPrms_.paths.exp.other.testData, 'r'))
+	if amirTest:
+		fName     = './test-files/test_regress_amir.pkl'
+		imFolder  = osp.join(cfg.data0, 'data_sets', 'streetview', 'test',
+             'regression_data')
+	else:
+		fName = exp.dPrms_.paths.exp.other.testData
+		imFolder = osp.join(cfg.pths.folderProc, 'imCrop', 'imSz256-align')
+	data = pickle.load(open(fName, 'r'))
 	data = data['testData']
 	#the parameters for extracting images
 	imPrms = edict()
@@ -112,7 +144,6 @@ def run_test(exp, numIter=90000, forceWrite=False, deviceId=0):
 	imPrms['cropSz'] = exp.cPrms_.nwPrms['crpSz']
 	imPrms['jitter_pct'] = 0
 	imPrms['jitter_amt'] = 0
-	imFolder = osp.join(cfg.pths.folderProc, 'imCrop', 'imSz256-align')
 	gtLbs, pred    = [], []
 	lbSz     = exp.dPrms_['lbPrms'].get_lbsz()
 	for b in range(0, len(data), batchSz):
@@ -146,6 +177,7 @@ def run_test(exp, numIter=90000, forceWrite=False, deviceId=0):
 			pred[i] = slu.unnormalize_label(pred[i], lbInfo['nrmlzDat'])	
 	pickle.dump({'pred':pred, 'gtLbs': gtLbs}, 
        open(resFile, 'w'))
+
 
 def demo_test(numIter=90000):
 	exp = mepg.simple_euler_dof2_dcv2_doublefcv1(gradClip=30,
