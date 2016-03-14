@@ -17,7 +17,6 @@ import other_utils as ou
 import math
 from collections import OrderedDict
 import pdb
-import my_pycaffe_io as mpio
 
 PASCAL_CLS = ['aeroplane', 'bicycle', 'boat', 'bottle', 'bus', 'car',
               'chair', 'diningtable', 'motorbike', 'sofa', 'train',
@@ -349,23 +348,15 @@ def stupid_debug(exp, bench=None):
 	print (np.median(errs))
 
 	
-def get_cls_set_files(setName='train', cls='car'):
+def get_set_files(setName='train'):
 	imSz, padSz = 256, 36
 	inFile = 'pose-files/euler_%s_pascal3d_imSz%d_pdSz%d.txt' % (setName, imSz, padSz)
 	fid    = mpio.GenericWindowReader(inFile)
-	fNames, lbs = [], []
 	while True:
 		if fid.is_eof():
 			break
-		imDat, lbDat = fid.read_next()
-		fName, ch, h, w, x1, y1, x2, y2 = imDat[0].strip().split()
-		if cls in fName:
-			fNames.append(fName)
-			lbs.append(lbDat[0])
-	fid.close()
-	return fNames, lbs
-
-def load_features(fNames,imSz=256, padSz=36):
-	dirName = '/data0/pulkitag/nn/imCrop_features_08mar16/imSz%d_pad%d'
-	dirName = dirName % (imSz, padSz)
+		imDat, lbls = fig.read_next()
+		im, lb = imDat[p], lbls[p]
+		fName, ch, h, w, x1, y1, x2, y2 = im[0].strip().split()
+			lb = lb[0]
 	
