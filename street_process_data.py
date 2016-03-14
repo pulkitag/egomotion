@@ -156,6 +156,11 @@ class GeoCoordinate(object):
 		z = pt2.z_ - self.z_
 		return x, y, z
 
+	def get_displacemet_vector_rel(self, pt2):
+		'''
+		'''
+		pass
+
 
 
 #Mantains a list of folders that have been processed
