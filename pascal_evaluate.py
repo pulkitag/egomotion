@@ -346,5 +346,14 @@ def stupid_debug(exp, bench=None):
 		pdPose.append([az, el, 0])
 	errs  = bench.evaluatePredictions('car', pdPose)
 	print (np.median(errs))
+
 	
+def get_set_files(setName='train'):
+	while True:
+		if fid.is_eof():
+			break
+		imDat, lbls = fig.read_next()
+		im, lb = imDat[p], lbls[p]
+		fName, ch, h, w, x1, y1, x2, y2 = im[0].strip().split()
+			lb = lb[0]
 	
