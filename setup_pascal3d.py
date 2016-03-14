@@ -12,6 +12,7 @@ import copy
 import matplotlib.pyplot as plt
 from skimage import color
 import math
+import pickle
 
 def create_window_file():
 	setName = ['test', 'train']
@@ -91,15 +92,18 @@ def format_raw_label(lb):
 	el = math.radians(el)
 	return az, el	
 
-def create_window_file_v2(imSz=256, padSz=24, debugMode=False):
+def create_pascal_filestore(imSz=256, padSz=24, debugMode=False):
 	dName  = '/data0/pulkitag/data_sets/pascal_3d/imCrop'
 	dName = osp.join(dName, 'imSz%d_pad%d') % (imSz, padSz)
-	ou.mkdir(dName)
+	dName = osp.join(dName, 'imSz%d_pad%d_hash/f%s') % (imSz, padSz, '%d')
+	svFile = osp.join(dName, 'im%d.jpg')
 	srcDir = '/data0/pulkitag/pascal3d/Images' 
 	setName = ['train', 'test']
-	for i,s in enumerate(setName):
-		inName = 'pose-files/annotations_master_%s_pascal3d.txt' % s
-		oName  = 'pose-files/euler_%s_pascal3d_imSz%d_pdSz%d.txt' % (s, imSz, padSz)
+	count, fCount  = 0, 0
+	fStore = edict()
+	for si, s in enumerate(setName):
+		inName     = 'pose-files/annotations_master_%s_pascal3d.txt' % s
+		storeFile  = 'pose-files/pascal3d_dict_%s_imSz%d_pdSz%d.pkl' % (s, imSz, padSz)
 		inFid  = mpio.GenericWindowReader(inName)
 		imDat, lbls = [], []
 		N = inFid.num_
@@ -129,14 +133,100 @@ def create_window_file_v2(imSz=256, padSz=24, debugMode=False):
 			if x2 <= x1 or y2 <= y1:
 				print ('Size is weird', x1,x2,y1,y2)
 				print ('Skipping', s, im)
-				count += 1
 				continue
 			if x1 <0 or y1<0:
 				print ('Too small', x1, y1)
-				count += 1
+				continue 
 			if x2 > w or y2 > h:
 				print ('Too big', x2, w, y2, h)	
-				count += 1
+				continue
+			fPrefix = fName[0:-4]
+			svImName = svFile % (fCount, np.mod(count,1000))
+			if fPrefix not in fStore.keys():
+				fStore[fPrefix] = edict()
+				fStore[fPrefix].name   = [svImName]
+				fStore[fPrefix].coords = [(x1,y1,x2,y2)]
+			else:
+				fStore[fPrefix].name.append(svImName)
+				fStore[fPrefix].coords.append((x1,y1,x2,y2))
+			count += 1
+			if np.mod(count,1000) == 0:
+				fCount += 1
+			#Read and crop the image
+			xOg1, yOg1, xOg2, yOg2 = x1, y1, x2, y2
+			x1, y1, x2, y2 , xPad, yPad= crop_for_imsize((h, w, x1, y1, x2, y2), imSz, padSz)
+			im = scm.imread(osp.join(srcDir, fName))
+			if im.ndim == 2:
+				im = color.gray2rgb(im)	
+			hIm, wIm, chIm = im.shape
+			assert hIm==h and wIm==w and chIm==3,(hIm, wIm, chIm, h, w)
+			im = cv2.resize(im[y1:y2, x1:x2,:], (imSz, imSz), interpolation=cv2.INTER_LINEAR)
+			ou.mkdir(osp.dirname(svImName))
+			scm.imsave(svImName, im)
+	pickle.dump({'fStore': fStore}, open(storeFile, 'w'))	
+
+
+def create_window_file_v2(imSz=256, padSz=24, debugMode=False):
+	dName  = '/data0/pulkitag/data_sets/pascal_3d/imCrop'
+	dName = osp.join(dName, 'imSz%d_pad%d') % (imSz, padSz)
+	dName = osp.join(dName, 'imSz%d_pad%d_hash/f%s') % (imSz, padSz, '%d')
+	svFile = osp.join(dName, 'im%d.jpg')
+	srcDir = '/data0/pulkitag/pascal3d/Images' 
+	setName = ['train', 'test']
+	count, fCount  = 0, 0
+	fStore = edict()
+	for si, s in enumerate(setName):
+		inName = 'pose-files/annotations_master_%s_pascal3d.txt' % s
+		oName  = 'pose-files/euler_%s_pascal3d_imSz%d_pdSz%d.txt' % (s, imSz, padSz)
+		oFile  = 'pose-files/pascal3d_dict_%s_imSz%d_pdSz%d.pkl' % (s, imSz, padSz)
+		inFid  = mpio.GenericWindowReader(inName)
+		imDat, lbls = [], []
+		N = inFid.num_
+		for i in range(inFid.num_):
+			im, lb = inFid.read_next()
+			imDat.append(im)
+			lbls.append(lb)
+		inFid.close()
+		randSeed = 7
+		randState = np.random.RandomState(randSeed)
+		perm = randState.permutation(N)
+		if s == 'train':
+			numBad = 2
+		else:
+			numBad = 0
+		count = 0
+		print (len(perm))
+		imList = []
+		lbList = []
+		for rep, p in enumerate(perm):
+			if np.mod(rep,1000)==1:
+				print (rep)
+			im, lb = imDat[p], lbls[p]
+			lb = lb[0]
+			fName, ch, h, w, x1, y1, x2, y2 = im[0].strip().split()
+			x1, y1, x2, y2, h, w = int(x1), int(y1), int(x2), int(y2), int(h), int(w)
+			if x2 <= x1 or y2 <= y1:
+				print ('Size is weird', x1,x2,y1,y2)
+				print ('Skipping', s, im)
+				continue
+			if x1 <0 or y1<0:
+				print ('Too small', x1, y1)
+				continue 
+			if x2 > w or y2 > h:
+				print ('Too big', x2, w, y2, h)	
+				continue
+			fPrefix = fName[0:-4]
+			svImName = svFile % (fCount, np.mod(count,1000))
+			if fPrefix not in fStore.keys():
+				fStore[fPrefix] = edict()
+				fStore[fPrefix].name   = [svImName]
+				fStore[fPrefix].coords = [(x1,y1,x2,y2)]
+			else:
+				fStore[fPrefix].name.append(svImName)
+				fStore[fPrefix].coords.append((x1,y1,x2,y2))
+			count += 1
+			if np.mod(count,1000) == 0:
+				fCount += 1
 			#Read and crop the image
 			xOg1, yOg1, xOg2, yOg2 = x1, y1, x2, y2
 			x1, y1, x2, y2 , xPad, yPad= crop_for_imsize((h, w, x1, y1, x2, y2), imSz, padSz)
@@ -171,7 +261,6 @@ def create_window_file_v2(imSz=256, padSz=24, debugMode=False):
 			else:
 				imList.append([fMirrorStr, (chIm, imSz, imSz), (0, 0, imSz, imSz)])
 			lbList.append(format_raw_label(lbMirror))
-		print ('Skipped Count in set %s is %d' % (s, count))
 		#Write to window file
 		N = len(imList)
 		perm = randState.permutation(N)
