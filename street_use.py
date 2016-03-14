@@ -45,6 +45,40 @@ class PoseCompute(object):
 		return euler
 
 
+class PoseComputeV2(object):
+	def __init__(self, batchSz=1, modelIter=20000):
+		prms, cPrms = mepo.smallnetv5_fc5_pose_euler_crp192_rawImSz256_lossl1()
+		exp         = se.setup_experiment(prms, cPrms)
+		#Setup the Net
+		mainDataDr = cfg.STREETVIEW_DATA_MAIN
+		meanFile   = osp.join(mainDataDr,
+								 'pulkitag/caffe_models/ilsvrc2012_mean_for_siamese.binaryproto')
+		rootFolder = osp.join(mainDataDr,
+								 'pulkitag/data_sets/streetview/proc/resize-im/im256/')
+		batchSz    = batchSz
+		testNet = mpu.CaffeTest.from_caffe_exp(exp)
+		testNet.setup_network(opNames=['fc5'], imH=101, imW=101, cropH=101, cropW=101,
+									channels = 6, chSwap=(2,1,0,5,4,3), 
+									modelIterations=modelIter, delAbove='pose_fc', batchSz=batchSz,
+									isAccuracyTest=False, dataLayerNames=['window_data'],
+									newDataLayerNames = ['pair_data'],
+									meanFile =meanFile)
+		#Assing the net
+		self.net_ = testNet
+
+	def compute(self, im):
+		'''
+			im: should be HxWx6
+		'''
+		ims = im.reshape((1,) + im.shape)
+		feats = self.net_.net_.forward_all(blobs=['pose_fc'], **{'pair_data': ims})
+		predFeat = copy.deepcopy(feats['pose_fc'])
+		euler = st.to_degrees(predFeat.squeeze())
+		return euler
+
+
+
+
 def get_kitti_paths():
 	imDir = '/data1/pulkitag/data_sets/kitti/odometry'
 	pth   = edict()
