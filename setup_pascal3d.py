@@ -94,8 +94,8 @@ def format_raw_label(lb):
 
 def create_pascal_filestore(imSz=256, padSz=24, debugMode=False):
 	dName  = '/data0/pulkitag/data_sets/pascal_3d/imCrop'
-	dName = osp.join(dName, 'imSz%d_pad%d_hash/f%s') % (imSz, padSz, '%d')
-	svFile = osp.join(dName, 'im%d.jpg')
+	dName = osp.join(dName, 'imSz%d_pad%d_hash') % (imSz, padSz)
+	svFile = 'imSz%d_pad%d_hash/f%s/im%s.jpg' % (imSz, padSz, '%d', '%d')
 	srcDir = '/data0/pulkitag/pascal3d/Images' 
 	setName = ['train', 'test']
 	count, fCount  = 0, 0
@@ -163,6 +163,7 @@ def create_pascal_filestore(imSz=256, padSz=24, debugMode=False):
 			hIm, wIm, chIm = im.shape
 			assert hIm==h and wIm==w and chIm==3,(hIm, wIm, chIm, h, w)
 			im = cv2.resize(im[y1:y2, x1:x2,:], (imSz, imSz), interpolation=cv2.INTER_LINEAR)
+			svImName = osp.join(dName, svImName)
 			ou.mkdir(osp.dirname(svImName))
 			scm.imsave(svImName, im)
 	pickle.dump({'fStore': fStore}, open(storeFile, 'w'))	
