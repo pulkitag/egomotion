@@ -45,6 +45,31 @@ class PoseCompute(object):
 		return euler
 
 
+class PoseComputeV2(object):
+	def __init__(self, net):
+		'''
+			net: Instance of mp.MyNet
+		'''
+		self.net_ = net		
+		self.exp_ = None
+
+	@classmethod
+	def from_exp(cls, exp, modelIter=20000, deviceId=0):
+		net = seval.make_deploy_net(exp, numIter, deviceId=deviceId)
+		self = cls(net)
+		return self
+		
+	def compute(self, im):
+		'''
+			im: should be HxWx6
+		'''
+		ims = im.reshape((1,) + im.shape)
+		feats = self.net_.net_.forward_all(blobs=['pose_fc'], **{'pair_data': ims})
+		predFeat = copy.deepcopy(feats['pose_fc'])
+		euler = st.to_degrees(predFeat.squeeze())
+		return euler
+
+
 def get_kitti_paths():
 	imDir = '/data1/pulkitag/data_sets/kitti/odometry'
 	pth   = edict()

@@ -16,6 +16,7 @@ from easydict import EasyDict as edict
 import other_utils as ou
 import math
 from collections import OrderedDict
+import pdb
 
 PASCAL_CLS = ['aeroplane', 'bicycle', 'boat', 'bottle', 'bus', 'car',
               'chair', 'diningtable', 'motorbike', 'sofa', 'train',
@@ -75,6 +76,12 @@ def get_exp(expNum=0, numIter=None):
 		exp = per.alexnet_cls_pd36(nElBins=21, nAzBins=21, crpSz=224,
           meanFile='imagenet_proto')
 		expIter = 26000
+	#Scratch, double dropout, cropped size 224
+	elif expNum == 9:
+		exp = per.scratch_cls_pd36(nElBins=21, nAzBins=21, crpSz=224, 
+        isDropOut=True, numDrop=2)
+		expIter = 12000
+
 	if numIter is None:
 		numIter = expIter
 	return exp, numIter
@@ -203,10 +210,25 @@ def save_evaluation_multiple_iters(exp):
 	for n in numIter:
 		save_evaluation(exp, n, bench=bench)
 
+
+def find_theta_diff(theta1, theta2, diffType=None):
+	'''
+		theta1, theta2 are in radians
+	'''
+	v1  = np.array((math.cos(theta1), math.sin(theta1))).reshape(2,1)
+	v2  = np.array((math.cos(theta2), math.sin(theta2))).reshape(2,1)
+	dv  = np.sum(v1 * v2)
+	if diffType is None:
+		theta = math.acos(dv)
+	elif diffType == 'mod180':
+		theta = math.acos(np.abs(dv))
+	return theta
+
 ##
-def get_result_dict(expList):
+def get_result_dict(expList, diffType=None):
 	'''
 		expList: a list of (exp, numIter)
+		diffType: None - normal errors
 	'''
 	resMed = OrderedDict()
 	resMed['expNum'] = []
@@ -217,11 +239,22 @@ def get_result_dict(expList):
 		resMed['expNum'].append(i)
 		exp, numIter = exps
 		resFile = get_result_filename(exp, numIter)
+		if not osp.exists(resFile):
+			save_evaluation(exp, numIter)	
 		res  = pickle.load(open(resFile, 'r'))					
 		md   = 0
 		for cls in PASCAL_CLS:
-			md += np.median(res[cls]['err'])
-			resMed[cls].append(math.degrees(np.median(res[cls]['err'])))
+			gtPoses = np.array(map(pep.format_radians, np.array(res[cls]['gt'])[:,0]))
+			pdPoses = np.array(map(pep.format_radians, np.array(res[cls]['pd'])[:,0]))
+			if diffType is None:
+				err = np.median(res[cls]['err'])
+			elif diffType in ['mod180']:
+				diff = [find_theta_diff(th1, th2, 'mod180') for th1, th2 in zip(pdPoses,gtPoses)]
+				err = np.median(diff)
+			elif diffType in ['mod90']:
+				err = np.median(np.mod(pdPoses - gtPoses, np.pi/2.))
+			resMed[cls].append(math.degrees(err))
+			md += err
 		md = math.degrees(md/len(PASCAL_CLS))
 		resMed['mean'].append(md)
 	return resMed
@@ -234,6 +267,20 @@ def get_results():
 		exp, numIter = get_exp(num)
 		exps.append([exp, numIter])
 	return get_result_dict(exps)
+
+##
+#Compare results
+def compare_results(diffType=None):
+	numIter = 38000
+	#AlexNet
+	expAlex, _ = get_exp(5)
+	#Ours
+	expOur, _  = get_exp(2)
+	#Scratch
+	expScr, _  = get_exp(9)
+	exps   = ([expAlex, numIter], [expOur, numIter], [expScr, numIter])
+	res    = get_result_dict(exps, diffType)  		
+	return res
 	
 ##
 #Debug evaluation code
