@@ -106,26 +106,54 @@ def make_deploy_net(exp, numIter=60000):
 
 ##
 #get images
-def get_imdata(imNames, bbox, exp,  padSz=36):
+def get_imdata(imNames, bbox, exp=None,  padSz=36, svMode=False):
 	ims  = []
-	imSz = exp.cPrms_.nwPrms.ipImSz 
+	if exp is None:
+		imSz = 256
+	else:
+		imSz = exp.cPrms_.nwPrms.ipImSz 
 	for imn, b in zip(imNames, bbox):
-		im = cv2.imread(imn)
+		if svMode:
+			im = scm.imread(imn)
+		else:
+			im = cv2.imread(imn)
 		x1, y1, x2, y2 = b
 		h, w, ch = im.shape
 		x1, y1, x2, y2, _, _ = sp3d.crop_for_imsize((h, w, x1, y1, x2, y2), 256, padSz=padSz)
 		#Crop and resize
 		im = cv2.resize(im[y1:y2, x1:x2, :], (imSz, imSz))
-		#Mean subtaction
-		if exp.cPrms_.nwPrms.meanType is None:
-			#print ('MEAN SUB DONE')
-			im  = im.astype(np.float32) - 128.
-		else:
-			raise Exception('Mean type %s not recognized' % exp.cPrms_.nwPrms.meanType)
-		im = im.transpose((2,0,1))	
+		if not svMode:
+			#Mean subtaction
+			if exp.cPrms_.nwPrms.meanType is None:
+				#print ('MEAN SUB DONE')
+				im  = im.astype(np.float32) - 128.
+			else:
+				raise Exception('Mean type %s not recognized' % exp.cPrms_.nwPrms.meanType)
+			im = im.transpose((2,0,1))	
 		ims.append(im.reshape((1,) + im.shape))
 	ims = np.concatenate(ims)
 	return ims
+
+##
+#Save the image data for the test set
+def save_imdata():
+	bench = pbench.PoseBenchmark(classes=PASCAL_CLS)
+	count = 0
+	dName = '/data0/pulkitag/data_sets/pascal3d/imCrop/test/im%d.jpg'
+	testList = []
+	count = 0
+	for cls in PASCAL_CLS:
+		print (cls)	
+		imNames, bbox = bench.giveTestInstances(cls)	
+		ims = get_imdata(imNames, bbox, svMode=True)	
+		for i in range(ims.shape[0]):
+			svName = dName % count
+			scm.imsave(svName, ims[i])
+			testList.append([imNames[i], bbox[i], svName])
+			count += 1
+	outFile = 'pose-files/pascal_test_data.pkl'
+	pickle.dump({'testList': testList}, open(outFile, 'w'))
+
 
 def get_predictions(exp, bench, className='car', net=None, debugMode=False):
 	imNames, bbox = bench.giveTestInstances(className)	
@@ -349,6 +377,34 @@ def stupid_debug(exp, bench=None):
 	errs  = bench.evaluatePredictions('car', pdPose)
 	print (np.median(errs))
 
+
+def transform_dict():
+	fName = './pose-files/pascal3d_dict_test_imSz256_pdSz36.pkl'
+	dat   = pickle.load(open(fName, 'r'))
+	dat   = dat['fStore']
+	fStore = {}
+	for k in dat.keys():
+		inData = dat[k]
+		for i, n in enumerate(inData.name):
+			ns = n.split('/')
+			key = '%s/%s' % (ns[1],ns[2])
+			fStore[key]	= [k, inData.lbs[i]]
+	return fStore
+
+def verify_dict():
+	data = transform_dict()
+	fig = plt.figure()
+	for k in data.keys():
+		imName = '/data0/pulkitag/data_sets/pascal3d/imCrop/imSz256_pad36_hash/imSz256_pad36_hash'
+		imName = osp.join(imName, k)
+		im = scm.imread(imName)		
+		plt.imshow(im)
+		plt.ion()
+		plt.show()
+		plt.title('az: %f, el:%f' % data[k][1])
+		ip = raw_input()
+		if ip == 'q':
+			return
 	
 def get_cls_set_files(setName='train', cls='car'):
 	imSz, padSz = 256, 36
@@ -387,7 +443,6 @@ def find_nn(feats1, feats2):
 		idxs.append(sortIdx[0:10])
 	return idxs
 		
-
 def save_nn_results(cls='car'):
 	trainFiles, trainLbs = get_cls_set_files('train', cls=cls)
 	bench = pbench.PoseBenchmark(classes=[cls])
