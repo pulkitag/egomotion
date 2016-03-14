@@ -18,6 +18,7 @@ import math
 from collections import OrderedDict
 import pdb
 import my_pycaffe_io as mpio
+import pickle
 
 PASCAL_CLS = ['aeroplane', 'bicycle', 'boat', 'bottle', 'bus', 'car',
               'chair', 'diningtable', 'motorbike', 'sofa', 'train',
@@ -365,7 +366,30 @@ def get_cls_set_files(setName='train', cls='car'):
 	fid.close()
 	return fNames, lbs
 
-def load_features(fNames,imSz=256, padSz=36):
+def load_features(fNames, netName='caffe_pose_fc5', imSz=256, padSz=36):
 	dirName = '/data0/pulkitag/nn/imCrop_features_08mar16/imSz%d_pad%d'
 	dirName = dirName % (imSz, padSz)
+	feats   = []
+	for f in fNames:
+		featFile = osp.join(dirName, f[0:-4] + '.p')
+		dat      = pickle.load(open(featFile, 'r'))
+		feats.append(dat[netName])
+	feats = np.concatenate(feats)
+	return feats
+
+def find_nn(feats1, feats2):
+	idxs = [] 
+	for i1 in range(feats1.shape[0]):
+		f1   = feats1[i1]
+		diff = feats2 - f1
+		diff = np.sum(diff * diff,1)
+		sortIdx = np.argsort(diff)
+		idxs.append(sortIdx[0:10])
+	return idxs
+		
+
+def save_nn_results(cls='car'):
+	trainFiles, trainLbs = get_cls_set_files('train', cls=cls)
+	bench = pbench.PoseBenchmark(classes=[cls])
+	
 	
