@@ -169,6 +169,10 @@ def create_pascal_filestore(imSz=256, padSz=24, debugMode=False):
 	pickle.dump({'fStore': fStore}, open(storeFile, 'w'))	
 
 
+
+def save_my_ass():
+	pass	
+
 def create_window_file_v2(imSz=256, padSz=24, debugMode=False):
 	dName  = '/data0/pulkitag/data_sets/pascal_3d/imCrop'
 	dName = osp.join(dName, 'imSz%d_pad%d') % (imSz, padSz)

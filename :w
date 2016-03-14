@@ -398,12 +398,8 @@ def transform_dict(setName):
 			fStore[key]	= [k, inData.lbs[i]]
 	return fStore
 
-def load_single_feature(featFile, netName='caffe_pose_fc5'):
-	dat      = pickle.load(open(featFile, 'r'))
-	return dat[netName]
-
-def load_train_features(keyList, netName='caffe_pose_fc5', imSz=256, padSz=36):
-	dirName = '/data0/pulkitag/nn/pascal3d_imSz256_pad36_hash_features_08mar16/imSz256_pad36_hash'
+def load_features(storeFile, keyList, netName='caffe_pose_fc5', imSz=256, padSz=36):
+	dirName = '/data0/pulkitag/nn/ipascal3d_imSz256_pad36_hash_features_08mar16/imSz256_pad36_hash'
 	feats = []	
 	for k in keyList:
 		featFile = osp.join(dirName, k[0:-4] + '.p')
@@ -411,28 +407,6 @@ def load_train_features(keyList, netName='caffe_pose_fc5', imSz=256, padSz=36):
 		feats.append(dat[netName])
 	feats = np.concatenate(feats)
 	return feats
-
-def load_test_features(netName='caffe_pose_fc5'):
-	outFile = 'pose-files/pascal_test_data.pkl'
-	dat     = pickle.load(open(outFile, 'r'))
-	dat     = dat['testList']
-	dirName = '/data0/pulkitag/nn/pascal3d_test2_features_08mar16'
-	feats   = []
-	otherDat = []
-	for tt in dat:
-		origName, bbox, svName = tt
-		featName = svName[0:-4] + '.p'
-		featName = osp.join(dirName, featName)	
-		feats.append(load_single_feature(featName, netName))	
-		otherDat.append([origName, bbox])
-	return feats, otherDat
-
-def compute_accuracy_nn(netName='caffe_pose_fc5'):
-	trainDat   = transform_dict('train')
-	keyList    = trainDat.keys()
-	trainFeats = load_train_features(keyList, netName)
-	testFeats, metaDat  = load_test_features(netName) 
-
 
 def find_nn(feats1, feats2):
 	idxs = [] 
