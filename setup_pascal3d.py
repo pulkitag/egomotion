@@ -94,7 +94,6 @@ def format_raw_label(lb):
 
 def create_pascal_filestore(imSz=256, padSz=24, debugMode=False):
 	dName  = '/data0/pulkitag/data_sets/pascal_3d/imCrop'
-	dName = osp.join(dName, 'imSz%d_pad%d') % (imSz, padSz)
 	dName = osp.join(dName, 'imSz%d_pad%d_hash/f%s') % (imSz, padSz, '%d')
 	svFile = osp.join(dName, 'im%d.jpg')
 	srcDir = '/data0/pulkitag/pascal3d/Images' 
@@ -142,13 +141,16 @@ def create_pascal_filestore(imSz=256, padSz=24, debugMode=False):
 				continue
 			fPrefix = fName[0:-4]
 			svImName = svFile % (fCount, np.mod(count,1000))
+			lbFormat = format_raw_label(lb)
 			if fPrefix not in fStore.keys():
 				fStore[fPrefix] = edict()
 				fStore[fPrefix].name   = [svImName]
 				fStore[fPrefix].coords = [(x1,y1,x2,y2)]
+				fStore[fPrefix].lbs    = [lbFormat]
 			else:
 				fStore[fPrefix].name.append(svImName)
 				fStore[fPrefix].coords.append((x1,y1,x2,y2))
+				fStore[fPrefix].lbs.append(lbFormat)
 			count += 1
 			if np.mod(count,1000) == 0:
 				fCount += 1
