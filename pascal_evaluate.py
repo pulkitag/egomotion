@@ -382,7 +382,7 @@ def get_data_dict(setName):
 	if setName == 'test':
 		fName = './pose-files/pascal3d_dict_test_imSz256_pdSz36.pkl'
 	else:
-		fName = './pose-files/pascal3d_dict_train_imSz256_pdSz36.pkl'
+		fName = './pose-files/pascal3d_dict_train_imSz256_pdSz24.pkl'
 	dat   = pickle.load(open(fName, 'r'))
 	dat   = dat['fStore']
 	return dat
@@ -413,7 +413,7 @@ def load_train_features(keyList, netName='caffe_pose_fc5', imSz=256, padSz=36):
 	return feats
 
 def load_test_features(netName='caffe_pose_fc5'):
-	outFile = 'pose-files/pascal_test_data.pkl'
+	outFile = './pose-files/pascal_test_data.pkl'
 	dat     = pickle.load(open(outFile, 'r'))
 	dat     = dat['testList']
 	dirName = '/data0/pulkitag/nn/pascal3d_test2_features_08mar16'
@@ -421,18 +421,28 @@ def load_test_features(netName='caffe_pose_fc5'):
 	otherDat = []
 	for tt in dat:
 		origName, bbox, svName = tt
-		featName = svName[0:-4] + '.p'
+		featName = osp.basename(svName[0:-4] + '.p')
 		featName = osp.join(dirName, featName)	
 		feats.append(load_single_feature(featName, netName))	
 		otherDat.append([origName, bbox])
+	feats = np.concatenate(feats)
 	return feats, otherDat
+
 
 def compute_accuracy_nn(netName='caffe_pose_fc5'):
 	trainDat   = transform_dict('train')
 	keyList    = trainDat.keys()
 	trainFeats = load_train_features(keyList, netName)
 	testFeats, metaDat  = load_test_features(netName) 
-
+	#Find the neartest neigbhors
+	nnIdxs     = find_nn(testFeats, trainFeats)
+	nnKeys     = []
+	for i,_ in enumerate(nnIdxs):
+		idx = []
+		for k in nnIdxs[i]:
+			idx.append(keyList[k])
+		nnKeys.append(idx)
+	pickle.dump({'testInfo':metaDat, 'nnKeys': nnKeys}, open('pascal_results_%s.pkl' % netName,'w'))
 
 def find_nn(feats1, feats2):
 	idxs = [] 
