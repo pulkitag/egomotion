@@ -100,11 +100,12 @@ def create_pascal_filestore(imSz=256, padSz=24, debugMode=False):
 	setName = ['train', 'test']
 	count, fCount  = 0, 0
 	fStore = edict()
-	for si, s in enumerate(setName):
+	for si, s in enumerate([setName[0]]):
 		inName     = 'pose-files/annotations_master_%s_pascal3d.txt' % s
 		storeFile  = 'pose-files/pascal3d_dict_%s_imSz%d_pdSz%d.pkl' % (s, imSz, padSz)
 		inFid  = mpio.GenericWindowReader(inName)
 		imDat, lbls = [], []
+		inFid.num_ = inFid.num_ - 1000
 		N = inFid.num_
 		for i in range(inFid.num_):
 			im, lb = inFid.read_next()

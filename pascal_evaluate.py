@@ -429,10 +429,10 @@ def load_test_features(netName='caffe_pose_fc5'):
 
 def compute_accuracy_nn(netName='caffe_pose_fc5'):
 	trainDat   = transform_dict('train')
-	keyList    = trainDat.keys()
+	keyList    = trainDat.keys()[0:10]
 	trainFeats = load_train_features(keyList, netName)
 	testFeats, metaDat  = load_test_features(netName) 
-
+	
 
 def find_nn(feats1, feats2):
 	idxs = [] 
