@@ -10,6 +10,7 @@ for-amir/*
 *.dat
 tmp/*
 *.pdf
+*.pkl
 
 # Compiled Object files
 *.slo
