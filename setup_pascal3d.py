@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from skimage import color
 import math
 import pickle
+import pdb
 
 def create_window_file():
 	setName = ['test', 'train']
@@ -95,7 +96,7 @@ def format_raw_label(lb):
 def create_pascal_filestore(imSz=256, padSz=24, debugMode=False):
 	dName  = '/data0/pulkitag/data_sets/pascal_3d/imCrop'
 	dName = osp.join(dName, 'imSz%d_pad%d_hash') % (imSz, padSz)
-	svFile = 'imSz%d_pad%d_hash/f%s/im%s.jpg' % (imSz, padSz, '%d', '%d')
+	svFile = 'f%s/im%s.jpg' % (imSz, padSz, '%d', '%d')
 	srcDir = '/data0/pulkitag/pascal3d/Images' 
 	setName = ['train', 'test']
 	count, fCount  = 0, 0
@@ -176,7 +177,6 @@ def save_my_ass():
 
 def create_window_file_v2(imSz=256, padSz=24, debugMode=False):
 	dName  = '/data0/pulkitag/data_sets/pascal_3d/imCrop'
-	dName = osp.join(dName, 'imSz%d_pad%d') % (imSz, padSz)
 	dName = osp.join(dName, 'imSz%d_pad%d_hash/f%s') % (imSz, padSz, '%d')
 	svFile = osp.join(dName, 'im%d.jpg')
 	srcDir = '/data0/pulkitag/pascal3d/Images' 
@@ -202,13 +202,12 @@ def create_window_file_v2(imSz=256, padSz=24, debugMode=False):
 			numBad = 2
 		else:
 			numBad = 0
-		count = 0
 		print (len(perm))
 		imList = []
 		lbList = []
 		for rep, p in enumerate(perm):
 			if np.mod(rep,1000)==1:
-				print (rep)
+				print (rep, fCount, count)
 			im, lb = imDat[p], lbls[p]
 			lb = lb[0]
 			fName, ch, h, w, x1, y1, x2, y2 = im[0].strip().split()
@@ -245,11 +244,13 @@ def create_window_file_v2(imSz=256, padSz=24, debugMode=False):
 			assert hIm==h and wIm==w and chIm==3,(hIm, wIm, chIm, h, w)
 			im = cv2.resize(im[y1:y2, x1:x2,:], (imSz, imSz), interpolation=cv2.INTER_LINEAR)
 			#get filestr
-			fStr       = get_filename(fName)
-			fMirrorStr = get_filename(fName, isMirror=True) 
+			fStr       = get_filename(svImName)
+			fMirrorStr = get_filename(svImName, isMirror=True) 
 			svName = osp.join(dName, fStr)
 			ou.mkdir(osp.dirname(svName))
 			scm.imsave(svName, im)
+			#print (svName)
+			#pdb.set_trace()
 			if debugMode:
 				imList.append([fStr, fName, (xOg1, yOg1, xOg2, yOg2), chIm,
             imSz, imSz, 0, 0, imSz, imSz, xPad, yPad])
