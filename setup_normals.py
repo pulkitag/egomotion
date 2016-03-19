@@ -11,6 +11,7 @@ import other_utils as ou
 import pascal_exp as pep
 import subprocess
 import pdb
+import cv2
 from sklearn.cluster import KMeans
 
 REAL_PATH = cfg.REAL_PATH
@@ -144,10 +145,11 @@ def compute_normal_centers(isReSz=False):
 
 def load_clusters():
 	pths = get_paths()
-	dat  = pickle.load(open(pth.exp.nrmlClusters, 'r'))
+	dat  = pickle.load(open(pths.exp.nrmlClusters, 'r'))
 	dat  = dat['clusters']
 	Z    = np.sum(dat * dat, 1)
-	dat  = dat / Z
+	N,_  = dat.shape
+	dat  = dat / Z.reshape(N,1)
 	return dat
 		
 
@@ -161,14 +163,14 @@ def assign_normals_cluster(n, clusters=None):
 	if clusters is None:
 		clusters = load_clusters()
 	pths = get_paths()
-	nrmlFile = pth.data.gtnrmlRaw % n
-	maskFile = pth.data.maskRaw % n
+	nrmlFile = pths.data.gtnrmlRaw % n
+	maskFile = pths.data.maskRaw % n
 	nrml     = scm.imread(nrmlFile)
 	mask     = scm.imread(maskFile)		
 	mask     = mask[45:471, 41:601].astype(np.float32)
 	nrml     = nrml[45:471, 41:601]/255.0
-	mask     = cv2.resize(mask, [20 20])
-	nrml     = cv2.resize(nrml, [20 20])
+	mask     = cv2.resize(mask, (20, 20))
+	nrml     = cv2.resize(nrml, (20, 20))
 	mask     = mask > 0.5
 	nrmlCluster = 20 * np.ones((20, 20))
 	for i in range(20):
@@ -185,7 +187,7 @@ def cluster2normals(nrmlCluster, clusters=None):
 	nrml = np.zeros((20,20,3)) 
 	for i in range(H):
 		for j in range(W):
-			idx = nrmlClusters[i,j]
+			idx = nrmlCluster[i,j]
 			if idx == 20:
 				continue
 			else:
@@ -193,6 +195,27 @@ def cluster2normals(nrmlCluster, clusters=None):
 	return nrml
 
 
+def vis_clusters():
+	pth = get_paths()
+	clusters = load_clusters()
+	fig = plt.figure()
+	ax1  = fig.add_subplot(211)
+	ax2  = fig.add_subplot(212)
+	for n in range(10):
+		#Cluster to normals
+		nrmlCluster = assign_normals_cluster(n, clusters)
+		nrml  = cluster2normals(nrmlCluster)
+		ax1.imshow(nrml, interpolation='none')	
+		#Actual normals
+		pths = get_paths()
+		nrmlFile = pth.data.gtnrmlRaw % n
+		nrml     = scm.imread(nrmlFile)
+		nrml     = nrml[45:471, 41:601]
+		nrml     = cv2.resize(nrml, (20, 20))
+		ax2.imshow(nrml, interpolation='none')
+		plt.savefig('tmp/nrmls/vis%d.png' % n)	
+	
+	
 def read_normal_file(fName):
 	dat = sio.loadmat(sio)
 	
