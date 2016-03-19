@@ -45,7 +45,7 @@ def get_paths(dPrms):
 	#Data files
 	pth.data      = edict()
 	pth.data.dr   = dataDir	
-	pth.data.imFolder = osp.join(pth.data.dr, 'imCrop', 'imSz%d_pad%d')
+	pth.data.imFolder = osp.join(pth.data.dr, 'imCrop', 'imSz%d_pad%d_hash')
 	pth.data.imFolder = pth.data.imFolder % (dPrms.imCutSz, dPrms.imPadSz)
 	#base net files
 	pth.baseProto = osp.join(REAL_PATH, 'base_files', '%s.prototxt')
