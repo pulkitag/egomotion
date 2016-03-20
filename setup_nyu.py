@@ -13,6 +13,7 @@ import subprocess
 import pdb
 import cv2
 from sklearn.cluster import KMeans
+import copy
 
 REAL_PATH = cfg.REAL_PATH
 DEF_DB    = cfg.DEF_DB % ('default', '%s')
@@ -41,12 +42,11 @@ def get_paths():
 	#Data files
 	pth.data      = edict()
 	pth.data.dr   = dataDir	
+	pth.data.splits    = osp.join(dataDir, 'splits.mat')
 	pth.data.gtnrmlRaw = osp.join(dataDir, 'normals_gt', 'normals','%04d.png')
 	pth.data.maskRaw   = osp.join(dataDir, 'normals_gt', 'masks','%04d.png')
 	pth.data.gtnrml    = osp.join(dataDir, 'normals_gt_renamed', 'normals', '%04d.png')
 	pth.data.imRaw     = osp.join(dataDir, 'ims', 'im%04d.jpg')
-	pth.data.imFolder = osp.join(dataDir, 'imCrop', 'imSz%d_pad%d')
-	#pth.data.imFolder = pth.data.imFolder % (dPrms.imCutSz, dPrms.imPadSz)
 	#base net files
 	pth.baseProto = osp.join(REAL_PATH, 'base_files', '%s.prototxt')
 	#Window files
@@ -158,17 +158,11 @@ def get_cluster_index(dat, clusters):
 	dist = np.sum(dist * dist, 1)
 	return np.argmin(dist)
 
-		
-def assign_normals_cluster(n, clusters=None):
-	if clusters is None:
-		clusters = load_clusters()
-	pths = get_paths()
-	nrmlFile = pths.data.gtnrmlRaw % n
-	maskFile = pths.data.maskRaw % n
-	nrml     = scm.imread(nrmlFile)
-	mask     = scm.imread(maskFile)		
-	mask     = mask[45:471, 41:601].astype(np.float32)
-	nrml     = nrml[45:471, 41:601]/255.0
+
+def normals2cluster(nrml, mask, clusters):
+	nrml     = copy.deepcopy(nrml)/255.
+	mask     = copy.deepcopy(mask)
+	mask     = mask.astype(np.float32)
 	mask     = cv2.resize(mask, (20, 20))
 	nrml     = cv2.resize(nrml, (20, 20))
 	mask     = mask > 0.5
@@ -180,6 +174,15 @@ def assign_normals_cluster(n, clusters=None):
 	return nrmlCluster			
 
 
+def normals2cluster_from_idx(n, clusters=None):
+	if clusters is None:
+		clusters = load_clusters()
+	pths = get_paths()
+	nrml = read_normals_from_idx(n)
+	mask = read_mask_from_idx(n)
+	return normals2cluster(nrml, mask, clusters)
+
+	
 def cluster2normals(nrmlCluster, clusters=None):
 	if clusters is None:
 		clusters = load_clusters()
@@ -215,7 +218,47 @@ def vis_clusters():
 		ax2.imshow(nrml, interpolation='none')
 		plt.savefig('tmp/nrmls/vis%d.png' % n)	
 	
+
+def get_set_index(setName='train'):
+	pths = get_paths()
+	data = sio.loadmat(pths.data.splits)
+	if setName == 'train':
+		idxs = data['trainNdxs']
+	elif setName == 'test':
+		idxs = data['testNdxs']
+	else:
+		raise Exception('set %s not recognized' % setName)	
+	#Conver to pythonic format
+	idxs = [i-1 for i in idxs]
+	return idxs
 	
-def read_normal_file(fName):
-	dat = sio.loadmat(sio)
 	
+def read_file(fName):
+	data    = scm.imread(fName)
+	data    = data[45:471, 41:601]
+	return data
+
+def read_file_bgr(fName):
+	data    = scm.imread(fName)
+	data    = data[45:471, 41:601]
+	return data[:,:,[2, 1, 0]]
+
+def read_mask(fName):
+	mask     = scm.imread(fName)
+	mask     = mask[45:471, 41:601]
+	return mask
+
+def read_normals_from_idx(n):
+	pths = get_paths()
+	nrmlFile = pths.data.gtnrmlRaw % n
+	return read_file(nrmlFile)
+
+def read_mask_from_idx(n):
+	pths = get_paths()
+	maskFile = pths.data.maskRaw % n
+	return read_file(maskFile)
+
+def read_image_from_idx(n):
+	pths   = get_paths()
+	imFile = pths.data.imRaw % (n+1)
+	return read_file_bgr(imFile) 	
