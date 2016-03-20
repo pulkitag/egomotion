@@ -1,0 +1,30 @@
+name: "StreetNet"
+layer {
+	name: "window_data"
+	top:  "data"
+	top: "label"
+	type: "Python"
+	python_param {
+		module: "python_layers.nrml_nyu_window_data"
+		layer: "NrmlWindowLayerCls"
+		param_str: ""
+	}
+	include {
+		phase: TRAIN
+	}
+}
+layer {
+	name: "window_data"
+	top:  "data"
+	top:  "label"
+	type: "Python"
+	python_param {
+		module: "python_layers.nrml_nyu_window_data"
+		layer: "NrmlWindowLayerCls"
+		param_str: ""
+	}
+	include {
+		phase: TEST
+	}
+}
+

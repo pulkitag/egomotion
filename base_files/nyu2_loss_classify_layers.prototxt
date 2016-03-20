@@ -1,0 +1,61 @@
+layer {
+  name: "sfn_fc"
+  type: "InnerProduct"
+  bottom: "common_fc"
+  top: "sfn_fc"
+  param {
+		name: "sfn_fc_w"
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+		name: "sfn_fc_b"
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 8000
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+layer {
+	name: "sfn_fc_reshape"
+  type: "Reshape"
+	top: "sfn_fc_reshape"
+	bottom: "sfn_fc"
+	reshape_param {
+		shape {
+			dim: 0
+      dim: 20
+      dim: 20
+      dim: 20
+		}
+	}
+}
+layer {
+  name: "sfn_loss"
+  type: "SoftmaxWithLoss"
+  bottom: "sfn_fc_reshape"
+  bottom: "label"
+  top: "sfn_loss"
+	loss_weight: 1.0
+	loss_param {
+		ignore_label: 20
+	}
+}
+layer {
+  name: "sfn_accuracy"
+  type: "Accuracy"
+  bottom: "sfn_fc_reshape"
+  bottom: "label"
+  top: "sfn_accuracy"
+	accuracy_param {
+		ignore_label: 20
+	}
+}

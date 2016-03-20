@@ -177,8 +177,8 @@ def save_my_ass():
 
 def create_window_file_v2(imSz=256, padSz=24, debugMode=False):
 	dName  = '/data0/pulkitag/data_sets/pascal_3d/imCrop'
-	dName = osp.join(dName, 'imSz%d_pad%d_hash/f%s') % (imSz, padSz, '%d')
-	svFile = osp.join(dName, 'im%d.jpg')
+	dName = osp.join(dName, 'imSz%d_pad%d_hash') % (imSz, padSz)
+	svFile = 'f%s/im%s.jpg' % ('%d', '%d')
 	srcDir = '/data0/pulkitag/pascal3d/Images' 
 	setName = ['train', 'test']
 	count, fCount  = 0, 0
@@ -210,7 +210,7 @@ def create_window_file_v2(imSz=256, padSz=24, debugMode=False):
 				print (rep, fCount, count)
 			im, lb = imDat[p], lbls[p]
 			lb = lb[0]
-			fName, ch, h, w, x1, y1, x2, y2 = im[0].strip().split()
+			srcImName, ch, h, w, x1, y1, x2, y2 = im[0].strip().split()
 			x1, y1, x2, y2, h, w = int(x1), int(y1), int(x2), int(y2), int(h), int(w)
 			if x2 <= x1 or y2 <= y1:
 				print ('Size is weird', x1,x2,y1,y2)
@@ -222,22 +222,22 @@ def create_window_file_v2(imSz=256, padSz=24, debugMode=False):
 			if x2 > w or y2 > h:
 				print ('Too big', x2, w, y2, h)	
 				continue
-			fPrefix = fName[0:-4]
-			svImName = svFile % (fCount, np.mod(count,1000))
-			if fPrefix not in fStore.keys():
-				fStore[fPrefix] = edict()
-				fStore[fPrefix].name   = [svImName]
-				fStore[fPrefix].coords = [(x1,y1,x2,y2)]
+			srcImPrefix = srcImName[0:-4]
+			svImName    = svFile % (fCount, np.mod(count,1000))
+			if srcImPrefix not in fStore.keys():
+				fStore[srcImPrefix] = edict()
+				fStore[srcImPrefix].name   = [svImName]
+				fStore[srcImPrefix].coords = [(x1,y1,x2,y2)]
 			else:
-				fStore[fPrefix].name.append(svImName)
-				fStore[fPrefix].coords.append((x1,y1,x2,y2))
+				fStore[srcImPrefix].name.append(svImName)
+				fStore[srcImPrefix].coords.append((x1,y1,x2,y2))
 			count += 1
 			if np.mod(count,1000) == 0:
 				fCount += 1
 			#Read and crop the image
 			xOg1, yOg1, xOg2, yOg2 = x1, y1, x2, y2
 			x1, y1, x2, y2 , xPad, yPad= crop_for_imsize((h, w, x1, y1, x2, y2), imSz, padSz)
-			im = scm.imread(osp.join(srcDir, fName))
+			im = scm.imread(osp.join(srcDir, srcImName))
 			if im.ndim == 2:
 				im = color.gray2rgb(im)	
 			hIm, wIm, chIm = im.shape
