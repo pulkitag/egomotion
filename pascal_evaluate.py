@@ -1,6 +1,7 @@
 import scipy.misc as scm
 import pascal_exp_run as per
 from pascal3d_eval import poseBenchmark as pbench
+import nn_utils as nnu
 import pascal_exp as pep
 import setup_pascal3d as sp3d
 import cv2
@@ -436,7 +437,7 @@ def compute_accuracy_nn(netName='caffe_pose_fc5'):
 	trainFeats = load_train_features(keyList, netName)
 	testFeats, metaDat  = load_test_features(netName) 
 	#Find the neartest neigbhors
-	nnIdxs     = find_nn(testFeats, trainFeats)
+	nnIdxs     = nnu.find_nn(testFeats, trainFeats)
 	nnKeys     = []
 	for i,_ in enumerate(nnIdxs):
 		idx = []
@@ -527,17 +528,6 @@ def save_nn_results_final(netName='caffe_pose_fc5'):
 	return res	
 			
 	
-
-def find_nn(feats1, feats2):
-	idxs = [] 
-	for i1 in range(feats1.shape[0]):
-		f1   = feats1[i1]
-		diff = feats2 - f1
-		diff = np.sum(diff * diff,1)
-		sortIdx = np.argsort(diff)
-		idxs.append(sortIdx[0:10])
-	return idxs
-
 def save_nn_results(cls='car', bench=None):
 	dat = get_data_dict('train')
 	fullKeys = dat.keys()
