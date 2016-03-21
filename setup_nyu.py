@@ -32,7 +32,8 @@ def get_paths():
 	pth.exp.nn   = edict()
 	pth.exp.nn.dr  = osp.join(pth.exp.dr, 'nn')
 	#Nearesest neigbor using netName %s
-	pth.exp.nn.net = osp.join(pth.exp.nn.dr, 'net_%s.pkl') 
+	pth.exp.nn.net   = osp.join(pth.exp.nn.dr, 'net_%s.pkl') 
+	pth.exp.nn.feats = osp.join(pth.exp.nn.dr, 'features/im%04d.pkl') 
 	#Get the label-stats
 	pth.exp.labelStats  = osp.join(pth.exp.dr, 'label_stats.pkl')
 	#Normal centers
@@ -312,3 +313,24 @@ def eval_random():
 		thetas = np.concatenate((thetas, tht))
 	print (np.median(thetas), np.min(thetas), np.max(thetas)) 
 	return thetas
+
+
+#Evaluation using random nearest neigbors
+def load_features_all(netName):
+	'''
+		caffe_lsm_conv5: learning to see by moving
+		caffe_video_fc7: CMU ICCV15 paper
+		caffe_alex_pool5: alexnet pool5
+		caffe_alex_fc7: alexnet fc7
+		caffe_pose_fc5: caffe posenet fc5
+		torch_pose_fc6: torch posenet fc6
+		caffe_street_fc6: 08mar16 models - caffe pose 
+		caffe_PoseMatch_fc5: joint pose and match
+	'''
+	feats = []
+	for n in range(1,1449+1):
+		fName = pths.exp.nn.feats % n
+		dat   = pickle.load(open(fName, 'r'))
+		feats.append(dat[netName])
+	feats = np.concatenate(feats)
+	return feats
