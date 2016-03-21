@@ -382,6 +382,7 @@ def save_nn_indexes_all():
 		save_nn_indexes(n)
 
 def save_nn_results(netName):
+	pths    = get_paths()
 	netFile = pths.exp.nn.net % netName
 	dat     = pickle.load(open(netFile, 'r'))
 	nnIdx   = dat['nn']
@@ -391,6 +392,7 @@ def save_nn_results(netName):
 		tht  = eval_from_index(tIdx, nnIdx[tIdx][0])
 		thetas = np.concatenate((thetas, tht))
 	oFile = pths.exp.nn.results % netName
+	ou.mkdir(osp.dirname(oFile))
 	pickle.dump({'thetas': thetas}, open(oFile, 'w'))
 	print (netName)
 	print (np.median(thetas), np.min(thetas), np.max(thetas))
