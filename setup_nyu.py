@@ -284,10 +284,14 @@ def eval_single(gt, pd, mask=None):
 	pdZ = pdZ.reshape(pdZ.shape + (1,))
 	gt  = gt / gtZ
 	pd  = pd / pdZ
+	assert gt.shape == pd.shape
 	theta = np.minimum(1,np.maximum(-1, np.sum(gt * pd, axis=2)))
 	acos  = np.vectorize(math.acos)
 	theta = acos(theta)
 	theta = 180. * (theta / np.pi)
+	if not theta.shape[0:2] == gt.shape[0:2]:
+		pdb.set_trace()
+	assert theta.shape == gt.shape[0:2]
 	if mask is not None:
 		theta = theta[mask]
 	return theta
@@ -413,7 +417,7 @@ def vis_nn():
     which='both',      # both major and minor ticks are affected
     bottom='off',      # ticks along the bottom edge are off
     top='off',         # ticks along the top edge are off
-    labelbottom='off'
+    labelbottom='off')
 	ax  = edict()
 	for net in netNames:
 		ax[net] = []
@@ -433,6 +437,7 @@ def save_nn_results(netName):
 	for i,tIdx in enumerate(testIdx):
 		if np.mod(i,100)==1:
 			print (i)
+		#print (tIdx, nnIdx[tIdx][0])
 		tht  = eval_from_index(tIdx, nnIdx[tIdx][0])
 		thetas = np.concatenate((thetas, tht))
 	oFile = pths.exp.nn.results % netName
