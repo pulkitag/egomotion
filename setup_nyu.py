@@ -33,8 +33,8 @@ def get_paths():
 	pth.exp.nn   = edict()
 	pth.exp.nn.dr  = osp.join(pth.exp.dr, 'nn')
 	#Nearesest neigbor using netName %s
-	pth.exp.nn.net   = osp.join(pth.exp.nn.dr, 'net_%s.pkl') 
 	pth.exp.nn.feats = osp.join(pth.exp.nn.dr, 'features/im%04d.p') 
+	pth.exp.nn.net   = osp.join(pth.exp.nn.dr, 'net_%s.pkl') 
 	pth.exp.nn.results = osp.join(pth.exp.nn.dr, 'results/%s.pkl') 
 	#Get the label-stats
 	pth.exp.labelStats  = osp.join(pth.exp.dr, 'label_stats.pkl')
@@ -262,8 +262,10 @@ def read_normals_from_idx(n):
 def read_mask_from_idx(n):
 	pths = get_paths()
 	maskFile = pths.data.maskRaw % n
-	mask = read_file(maskFile)
-	print (maskFile, np.sum(mask))
+	mask = scm.imread(maskFile, mode='L')
+	mask = mask.astype(np.bool)
+	mask = mask[45:471, 41:601]
+	#print (maskFile, np.sum(mask))
 	return mask
 
 def read_image_from_idx(n):
@@ -291,7 +293,7 @@ def eval_single(gt, pd, mask=None):
 		pdb.set_trace()
 	assert theta.shape == gt.shape[0:2]
 	N = np.sum(mask)
-	print (theta.shape, N)
+	#print (theta.shape, N)
 	if mask is not None:
 		theta = theta[mask]
 	if not N == len(theta):
@@ -494,4 +496,8 @@ def debug_num_pixels(netName):
 			pdb.set_trace()
 		nSum += N
 	return (nSum)
-	
+
+def debug_mask():
+	for i in range(100):	
+		mask = read_mask_from_idx(0)
+
