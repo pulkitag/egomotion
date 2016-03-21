@@ -333,14 +333,27 @@ def load_features_all(netName):
 		caffe_street_fc6: 08mar16 models - caffe pose 
 		caffe_PoseMatch_fc5: joint pose and match
 	'''
+	pths = get_paths()
 	feats = []
-	for n in range(1,1449+1):
-		fName = pths.exp.nn.feats % n
+	N = 1449
+	for n in range(N):
+		#The features are stored in matlab indexing
+		fName = pths.exp.nn.feats % (n+1)
 		dat   = pickle.load(open(fName, 'r'))
 		feats.append(dat[netName])
 	feats = np.concatenate(feats)
 	return feats
 
 #Save the indexes of nearest neigbors
-def save_nn_indexes(netName):
-	
+def save_nn_indexes(netName='caffe_street_fc6'):
+	pths  = get_paths()
+	feats = load_features_all(netName)
+	nnIdx = []
+	N     = 1449
+	for n in range(N):
+		idx = nnu.([feats[n]], feats, numNN=11)
+		idx = idx[0][1:]
+		nnIdx.append(idx)
+	oFile = pths.exp.nn.net % netName
+	ou.mkdir(osp.dirname(oFile))
+	pickle.dump({'nn': nnIdx}, open(oFile, 'w'))
