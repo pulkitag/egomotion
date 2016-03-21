@@ -336,6 +336,7 @@ def load_features_all(netName):
 	pths = get_paths()
 	feats = []
 	N = 1449
+	print ('Loading Features')
 	for n in range(N):
 		#The features are stored in matlab indexing
 		fName = pths.exp.nn.feats % (n+1)
@@ -344,6 +345,7 @@ def load_features_all(netName):
 		ff = ff.reshape((1, ff.shape[0]))
 		feats.append(ff)
 	feats = np.concatenate(feats)
+	print ('Loading Features Done')
 	return feats
 
 #Save the indexes of nearest neigbors
@@ -354,6 +356,8 @@ def save_nn_indexes(netName='caffe_street_fc6', feats=None):
 	nnIdx = []
 	N     = 1449
 	for n in range(N):
+		if np.mod(n,100)==1:
+			print (n)
 		ff = feats[n].flatten()
 		ff = ff.reshape((1, ff.shape[0]))
 		idx = nnu.find_nn(ff, feats, numNN=11)
@@ -363,11 +367,21 @@ def save_nn_indexes(netName='caffe_street_fc6', feats=None):
 	ou.mkdir(osp.dirname(oFile))
 	pickle.dump({'nn': nnIdx}, open(oFile, 'w'))
 
-def save_nn_indexes_all():
+def get_all_netnames():
 	netName = ['caffe_lsm_conv5', 'caffe_video_fc7',
             'caffe_alex_pool5', 'caffe_alex_fc7',
              'caffe_pose_fc5' , 'torch_pose_fc6',
              'caffe_street_fc6', 'caffe_PoseMatch_fc5']
+	return netName
+
+def save_nn_indexes_all():
+	netName = get_all_netnames()
 	for n in netName:
 		print (n)
 		save_nn_indexes(n)
+
+def save_nn_results(netName):
+	netFile = pths.exp.nn.net % netName
+	dat     = pickle.load(open(netFile, 'r'))
+	nnIdx   = dat['nn']
+	testIdx = 0	
