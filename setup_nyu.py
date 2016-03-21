@@ -187,7 +187,7 @@ def normals2cluster(nrml, mask, clusters):
 
 
 def normals2cluster_fullim(nrml, mask, clusters):
-	nrml     = copy.deepcopy(nrml)/255.
+	nrml     = copy.deepcopy(nrml)
 	mask     = copy.deepcopy(mask)
 	nrmlCluster = 20 * np.ones(mask.shape)
 	for i in range(mask.shape[0]):
@@ -195,8 +195,6 @@ def normals2cluster_fullim(nrml, mask, clusters):
 			if mask[i,j]:
 				nrmlCluster[i,j] = get_cluster_index(nrml[i,j], clusters)
 	return nrmlCluster			
-
-
 
 
 def normals2cluster_from_idx(n, clusters=None):
@@ -311,11 +309,11 @@ def eval_single(gt, pd, mask=None, clusters=None):
 	#Binned errors
 	if clusters is not None:
 		nrmlCls = normals2cluster_fullim(gt, mask, clusters)
-		nCls    = cluster.shape[0]
+		nCls    = clusters.shape[0]
 		errs    = []
 		for n in range(nCls):
 			err = theta[nrmlCls==n]
-			errs.append(err)	
+			errs.append(err)
 	#Find errors asfter masking out pixels for which no depth info
 	N = np.sum(mask)
 	if mask is not None:
@@ -482,21 +480,30 @@ def save_nn_results(netName, trainOnly=False):
 	pths   = get_paths()
 	nnIdx   = load_nn_indexes(netName, trainOnly=trainOnly)
 	testIdx = get_set_index('test')
-	thetas  = np.array([])
 	clusters = load_clusters()
+	nCl      = clusters.shape[0]
+	print ('Num clusters: %d' % nCl)
+	thetas  = np.array([])
+	binErrs = []
+	for n in range(nCl):
+		binErrs.append(np.array([]))
 	for i,tIdx in enumerate(testIdx):
 		if np.mod(i,100)==1:
 			print (i)
 		#print (tIdx, nnIdx[tIdx][0])
 		tht, binErr  = eval_from_index(tIdx, nnIdx[tIdx][0], clusters=clusters)
 		thetas = np.concatenate((thetas, tht))
+		for n in range(nCl):
+			if len(binErr[n]) > 0:
+				binErrs[n] = np.concatenate((binErrs[n], binErr[n]))
 	if trainOnly:
 		oFile = pths.exp.nn.resultsTrainOnly % netName
 	else:
 		oFile = pths.exp.nn.results % netName
 	print ('Saving to: %s' % oFile)
 	ou.mkdir(osp.dirname(oFile))
-	pickle.dump({'thetas': thetas}, open(oFile, 'w'))
+	pickle.dump({'thetas': thetas, 'binErrs': binErrs, 
+      'clusters': clusters}, open(oFile, 'w'))
 	print (netName)
 	print (np.median(thetas), np.min(thetas), np.max(thetas))
 
