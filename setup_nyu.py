@@ -417,10 +417,13 @@ def save_nn_indexes_all(trainOnly=False):
 
 def load_nn_indexes(netName, trainOnly=False):
 	pths    = get_paths()
-	netFile = pths.exp.nn.net % netName
+	if trainOnly:
+		netFile = pths.exp.nn.netTrainOnly % netName
+	else:
+		netFile = pths.exp.nn.net % netName
 	dat     = pickle.load(open(netFile, 'r'))
 	nnIdx   = dat['nn']
-	return testIdx
+	return nnIdx
 
 def vis_nn():
 	#Chose the test images for which visualization needs to be made
@@ -452,11 +455,9 @@ def vis_nn():
 
 
 #Save nearest neighbor results for a certain net
-def save_nn_results(netName):
-	pths    = get_paths()
-	netFile = pths.exp.nn.net % netName
-	dat     = pickle.load(open(netFile, 'r'))
-	nnIdx   = dat['nn']
+def save_nn_results(netName, trainOnly=False):
+	pths   = get_paths()
+	nnIdx   = load_nn_indexes(netName, trainOnly=trainOnly)
 	testIdx = get_set_index('test')
 	thetas  = np.array([])
 	for i,tIdx in enumerate(testIdx):
@@ -465,23 +466,30 @@ def save_nn_results(netName):
 		#print (tIdx, nnIdx[tIdx][0])
 		tht  = eval_from_index(tIdx, nnIdx[tIdx][0])
 		thetas = np.concatenate((thetas, tht))
-	oFile = pths.exp.nn.results % netName
+	if trainOnly:
+		oFile = pths.exp.nn.resultsTrainOnly % netName
+	else:
+		oFile = pths.exp.nn.results % netName
+	print ('Saving to: %s' % oFile)
 	ou.mkdir(osp.dirname(oFile))
 	pickle.dump({'thetas': thetas}, open(oFile, 'w'))
 	print (netName)
 	print (np.median(thetas), np.min(thetas), np.max(thetas))
 
 #Save nearest neighbor results for all the nets
-def save_nn_results_all():
+def save_nn_results_all(trainOnly=False):
 	netName = get_all_netnames()
 	for n in netName:
 		print (n)
-		save_nn_results(n)
+		save_nn_results(n, trainOnly=trainOnly)
 
 #Read the nearest neighbor results for a certain net
-def read_nn_results(netName):
+def read_nn_results(netName, trainOnly=False):
 	pths  = get_paths()
-	oFile = pths.exp.nn.results % netName
+	if trainOnly:
+		oFile = pths.exp.nn.resultsTrainOnly % netName
+	else:
+		oFile = pths.exp.nn.results % netName
 	dat   = pickle.load(open(oFile, 'r'))
 	theta = np.array(dat['thetas'])
 	print (theta.shape, len(theta)/(426 * 560))
@@ -490,11 +498,11 @@ def read_nn_results(netName):
 	err11 = np.sum(theta <= 11.25)/float(N)
 	err22 = np.sum(theta <= 22.5)/float(N)
 	err30 = np.sum(theta <=30)/float(N)
-	print ('%s, %.2f, %.2f, %.2f, %.2f' % (netName, md, err11, err22, err30))
+	print ('%s, %.1f, %.1f, %.1f, %.1f' % (netName, md, 100*err11, 100*err22, 100*err30))
 
-def read_nn_results_all():
+def read_nn_results_all(trainOnly=False):
 	for n in get_all_netnames():
-		read_nn_results(n)
+		read_nn_results(n, trainOnly=trainOnly)
 
 
 def debug_num_pixels(netName):
