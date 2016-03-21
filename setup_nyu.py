@@ -186,6 +186,19 @@ def normals2cluster(nrml, mask, clusters):
 	return nrmlCluster			
 
 
+def normals2cluster_fullim(nrml, mask, clusters):
+	nrml     = copy.deepcopy(nrml)/255.
+	mask     = copy.deepcopy(mask)
+	nrmlCluster = 20 * np.ones(mask.shape)
+	for i in range(mask.shape[0]):
+		for j in range(mask.shape[1]): 
+			if mask[i,j]:
+				nrmlCluster[i,j] = get_cluster_index(nrml[i,j], clusters)
+	return nrmlCluster			
+
+
+
+
 def normals2cluster_from_idx(n, clusters=None):
 	if clusters is None:
 		clusters = load_clusters()
@@ -277,7 +290,7 @@ def read_image_from_idx(n):
 	return read_file_bgr(imFile) 
 
 ## evaluate a single file
-def eval_single(gt, pd, mask=None):
+def eval_single(gt, pd, mask=None, clusters=None):
 	gt   = copy.deepcopy(gt)/255.0
 	pd   = copy.deepcopy(pd)/255.0 
 	eps = 1e-8
@@ -295,14 +308,25 @@ def eval_single(gt, pd, mask=None):
 	if not theta.shape[0:2] == gt.shape[0:2]:
 		pdb.set_trace()
 	assert theta.shape == gt.shape[0:2]
+	#Binned errors
+	if clusters is not None:
+		nrmlCls = normals2cluster_fullim(gt, mask, clusters)
+		nCls    = cluster.shape[0]
+		errs    = []
+		for n in range(nCls):
+			err = theta[nrmlCls==n]
+			errs.append(err)	
+	#Find errors asfter masking out pixels for which no depth info
 	N = np.sum(mask)
-	#print (theta.shape, N)
 	if mask is not None:
 		theta = theta[mask]
 	if not N == len(theta):
 		print ('Something ois weird')
 		pdb.set_trace()
-	return theta
+	if clusters is None:
+		return theta
+	else:
+		return theta, errs
 
 def demo_eval():
 	for n in range(10):
@@ -311,12 +335,11 @@ def demo_eval():
 		print (np.median(theta), np.min(theta), np.max(theta)) 
 
 #Makes it very easy to evaluate non-parametric methods
-def eval_from_index(gtIdx, pdIdx):
+def eval_from_index(gtIdx, pdIdx, clusters=None):
 	gtNrml = read_normals_from_idx(gtIdx)
 	mask   = read_mask_from_idx(gtIdx)
 	pdNrml = read_normals_from_idx(pdIdx)
-	tht  = eval_single(gtNrml, pdNrml, mask)
-	return tht
+	return eval_single(gtNrml, pdNrml, mask, clusters=clusters)
 
 def eval_random():
 	testIdx = get_set_index('test') 
@@ -460,11 +483,12 @@ def save_nn_results(netName, trainOnly=False):
 	nnIdx   = load_nn_indexes(netName, trainOnly=trainOnly)
 	testIdx = get_set_index('test')
 	thetas  = np.array([])
+	clusters = load_clusters()
 	for i,tIdx in enumerate(testIdx):
 		if np.mod(i,100)==1:
 			print (i)
 		#print (tIdx, nnIdx[tIdx][0])
-		tht  = eval_from_index(tIdx, nnIdx[tIdx][0])
+		tht, binErr  = eval_from_index(tIdx, nnIdx[tIdx][0], clusters=clusters)
 		thetas = np.concatenate((thetas, tht))
 	if trainOnly:
 		oFile = pths.exp.nn.resultsTrainOnly % netName
