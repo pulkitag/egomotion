@@ -35,6 +35,7 @@ def get_paths():
 	#Nearesest neigbor using netName %s
 	pth.exp.nn.net   = osp.join(pth.exp.nn.dr, 'net_%s.pkl') 
 	pth.exp.nn.feats = osp.join(pth.exp.nn.dr, 'features/im%04d.p') 
+	pth.exp.nn.results = osp.join(pth.exp.nn.dr, 'results/%s.pkl') 
 	#Get the label-stats
 	pth.exp.labelStats  = osp.join(pth.exp.dr, 'label_stats.pkl')
 	#Normal centers
@@ -384,4 +385,18 @@ def save_nn_results(netName):
 	netFile = pths.exp.nn.net % netName
 	dat     = pickle.load(open(netFile, 'r'))
 	nnIdx   = dat['nn']
-	testIdx = 0	
+	testIdx = get_set_index('test')
+	thetas  = np.array([])
+	for tIdx in testIdx:
+		tht  = eval_from_index(tIdx, nnIdx[tIdx][0])
+		thetas = np.concatenate((thetas, tht))
+	oFile = pths.exp.nn.results % netName
+	pickle.dump({'thetas': thetas}, open(oFile, 'w'))
+	print (netName)
+	print (np.median(thetas), np.min(thetas), np.max(thetas))
+
+def save_nn_results_all():
+	netName = get_all_netnames()
+	for n in netName:
+		print (n)
+		save_nn_results(n)
