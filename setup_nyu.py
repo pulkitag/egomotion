@@ -309,8 +309,9 @@ def eval_from_index(gtIdx, pdIdx):
 def eval_random():
 	testIdx = get_set_index('test') 
 	thetas  = np.array([])
-	for n in testIdx[0:100]:
-		print (n)
+	for i,n in enumerate(testIdx):
+		if np.mod(i,100)==1:
+			print (i)
 		#Prediction
 		while True:
 			idx    = np.random.randint(1449)		
@@ -350,7 +351,11 @@ def load_features_all(netName):
 	return feats
 
 #Save the indexes of nearest neigbors
-def save_nn_indexes(netName='caffe_street_fc6', feats=None):
+def save_nn_indexes(netName='caffe_street_fc6', feats=None, trainOnly=False):
+	'''
+		trainOnly: True - only consider examples for trainset for NN
+               False - consider al examples except the query for NN
+	'''
 	pths  = get_paths()
 	if feats is None:
 		feats = load_features_all(netName)
@@ -381,6 +386,15 @@ def save_nn_indexes_all():
 		print (n)
 		save_nn_indexes(n)
 
+def vis_nn_indexes():
+	plt.ion()
+	fig = plt.figure()
+	ax  = []
+	count = 1
+	for i in range(7):
+		ax.append(fig.add_subplot(1,7, count))
+	
+
 def save_nn_results(netName):
 	pths    = get_paths()
 	netFile = pths.exp.nn.net % netName
@@ -388,7 +402,9 @@ def save_nn_results(netName):
 	nnIdx   = dat['nn']
 	testIdx = get_set_index('test')
 	thetas  = np.array([])
-	for tIdx in testIdx:
+	for i,tIdx in enumerate(testIdx):
+		if np.mod(i,100)==1:
+			print (i)
 		tht  = eval_from_index(tIdx, nnIdx[tIdx][0])
 		thetas = np.concatenate((thetas, tht))
 	oFile = pths.exp.nn.results % netName
