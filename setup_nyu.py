@@ -36,6 +36,9 @@ def get_paths():
 	pth.exp.nn.feats = osp.join(pth.exp.nn.dr, 'features/im%04d.p') 
 	pth.exp.nn.net   = osp.join(pth.exp.nn.dr, 'net_%s.pkl') 
 	pth.exp.nn.results = osp.join(pth.exp.nn.dr, 'results/%s.pkl') 
+	pth.exp.nn.netTrainOnly   = osp.join(pth.exp.nn.dr, 'net_%s_trainonly.pkl') 
+	pth.exp.nn.resultsTrainOnly = osp.join(pth.exp.nn.dr, 'results/%s_trainonly.pkl') 
+	#Get the label-stats
 	#Get the label-stats
 	pth.exp.labelStats  = osp.join(pth.exp.dr, 'label_stats.pkl')
 	#Normal centers
@@ -368,19 +371,36 @@ def save_nn_indexes(netName='caffe_street_fc6', feats=None, trainOnly=False):
 	pths  = get_paths()
 	if feats is None:
 		feats = load_features_all(netName)
-	nnIdx = []
+	testIdx   = get_set_index('test')
+	trainIdx  = get_set_index('train')
+	testFeats  = [feats[i] for i in testIdx]
+	trainFeats = [feats[i] for i in trainIdx]   
 	N     = 1449
+	nnIdx = []
 	for n in range(N):
 		if np.mod(n,100)==1:
 			print (n)
 		ff = feats[n].flatten()
 		ff = ff.reshape((1, ff.shape[0]))
-		idx = nnu.find_nn(ff, feats, numNN=11)
-		idx = idx[0][1:]
+		if trainOnly:
+			idx = nnu.find_nn(ff, trainFeats, numNN=11)
+			idx = idx[0]
+			idx = [trainIdx[i] for i in idx]
+			if idx[0] == n:
+				idx = idx[1:]
+			else:
+				idx = idx[0:10]
+		else:
+			idx = nnu.find_nn(ff, feats, numNN=11)
+			idx = idx[0][1:]
 		nnIdx.append(idx)
-	oFile = pths.exp.nn.net % netName
+	if trainOnly:
+		oFile = pths.exp.nn.netTrainOnly % netName
+	else:
+		oFile = pths.exp.nn.net % netName
 	ou.mkdir(osp.dirname(oFile))
 	pickle.dump({'nn': nnIdx}, open(oFile, 'w'))
+
 
 def get_all_netnames():
 	netName = ['caffe_lsm_conv5', 'caffe_video_fc7',
@@ -389,13 +409,13 @@ def get_all_netnames():
              'caffe_street_fc6', 'caffe_PoseMatch_fc5']
 	return netName
 
-def save_nn_indexes_all():
+def save_nn_indexes_all(trainOnly=False):
 	netName = get_all_netnames()
 	for n in netName:
 		print (n)
-		save_nn_indexes(n)
+		save_nn_indexes(n, trainOnly=trainOnly)
 
-def load_nn_indexes(netName):
+def load_nn_indexes(netName, trainOnly=False):
 	pths    = get_paths()
 	netFile = pths.exp.nn.net % netName
 	dat     = pickle.load(open(netFile, 'r'))
