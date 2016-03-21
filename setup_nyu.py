@@ -14,6 +14,7 @@ import pdb
 import cv2
 from sklearn.cluster import KMeans
 import copy
+import math
 
 REAL_PATH = cfg.REAL_PATH
 DEF_DB    = cfg.DEF_DB % ('default', '%s')
@@ -229,6 +230,7 @@ def get_set_index(setName='train'):
 	else:
 		raise Exception('set %s not recognized' % setName)	
 	#Conver to pythonic format
+	idxs = idxs.squeeze()
 	idxs = [i-1 for i in idxs]
 	return idxs
 	
@@ -261,4 +263,47 @@ def read_mask_from_idx(n):
 def read_image_from_idx(n):
 	pths   = get_paths()
 	imFile = pths.data.imRaw % (n+1)
-	return read_file_bgr(imFile) 	
+	return read_file_bgr(imFile) 
+
+## evaluate a single file
+def eval_single(gt, pd, mask=None):
+	gt   = copy.deepcopy(gt)/255.0
+	pd   = copy.deepcopy(pd)/255.0 
+	eps = 1e-8
+	gtZ = np.sqrt(np.sum(gt * gt, axis=2)) + eps
+	pdZ = np.sqrt(np.sum(pd * pd, axis=2)) + eps
+	gtZ = gtZ.reshape(gtZ.shape + (1,))
+	pdZ = pdZ.reshape(pdZ.shape + (1,))
+	gt  = gt / gtZ
+	pd  = pd / pdZ
+	theta = np.minimum(1,np.maximum(-1, np.sum(gt * pd, axis=2)))
+	acos  = np.vectorize(math.acos)
+	theta = acos(theta)
+	theta = 180. * (theta / np.pi)
+	if mask is not None:
+		theta = theta[mask]
+	return theta
+
+def demo_eval():
+	for n in range(10):
+		nrml  = read_normals_from_idx(n)
+		theta = eval_single(nrml, nrml)
+		print (np.median(theta), np.min(theta), np.max(theta)) 
+
+def eval_random():
+	testIdx = get_set_index('test') 
+	thetas  = np.array([])
+	for n in testIdx[0:100]:
+		gtNrml = read_normals_from_idx(n)
+		mask   = read_mask_from_idx(n)
+		print (n)
+		#Prediction
+		while True:
+			idx    = np.random.randint(1449)		
+			if not idx == n:
+				break
+		pdNrml = read_normals_from_idx(idx)
+		tht  = eval_single(gtNrml, pdNrml, mask)
+		thetas = np.concatenate((thetas, tht))
+	print (np.median(thetas), np.min(thetas), np.max(thetas)) 
+	return thetas
