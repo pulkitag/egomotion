@@ -253,10 +253,6 @@ def read_file_bgr(fName):
 	data    = data[45:471, 41:601]
 	return data[:,:,[2, 1, 0]]
 
-def read_mask(fName):
-	mask     = scm.imread(fName)
-	mask     = mask[45:471, 41:601]
-	return mask
 
 def read_normals_from_idx(n):
 	pths = get_paths()
@@ -266,7 +262,9 @@ def read_normals_from_idx(n):
 def read_mask_from_idx(n):
 	pths = get_paths()
 	maskFile = pths.data.maskRaw % n
-	return read_file(maskFile)
+	mask = read_file(maskFile)
+	print (maskFile, np.sum(mask))
+	return mask
 
 def read_image_from_idx(n):
 	pths   = get_paths()
@@ -292,8 +290,13 @@ def eval_single(gt, pd, mask=None):
 	if not theta.shape[0:2] == gt.shape[0:2]:
 		pdb.set_trace()
 	assert theta.shape == gt.shape[0:2]
+	N = np.sum(mask)
+	print (theta.shape, N)
 	if mask is not None:
 		theta = theta[mask]
+	if not N == len(theta):
+		print ('Something ois weird')
+		pdb.set_trace()
 	return theta
 
 def demo_eval():
@@ -470,3 +473,25 @@ def read_nn_results(netName):
 def read_nn_results_all():
 	for n in get_all_netnames():
 		read_nn_results(n)
+
+
+def debug_num_pixels(netName):
+	pths    = get_paths()
+	netFile = pths.exp.nn.net % netName
+	dat     = pickle.load(open(netFile, 'r'))
+	nnIdx   = dat['nn']
+	testIdx = get_set_index('test')
+	thetas  = np.array([])
+	nSum = 0
+	for i,tIdx in enumerate(testIdx):
+		if np.mod(i,100)==1:
+			print (i)
+		#print (tIdx, nnIdx[tIdx][0])
+		tht  = eval_from_index(tIdx, nnIdx[tIdx][0])
+		mask = read_mask_from_idx(tIdx)
+		N    = np.sum(mask)
+		if not N== len(tht):
+			pdb.set_trace()
+		nSum += N
+	return (nSum)
+	
