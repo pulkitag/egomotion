@@ -15,6 +15,7 @@ import cv2
 from sklearn.cluster import KMeans
 import copy
 import math
+import nn_utils as nnu
 
 REAL_PATH = cfg.REAL_PATH
 DEF_DB    = cfg.DEF_DB % ('default', '%s')
@@ -296,20 +297,25 @@ def demo_eval():
 		theta = eval_single(nrml, nrml)
 		print (np.median(theta), np.min(theta), np.max(theta)) 
 
+#Makes it very easy to evaluate non-parametric methods
+def eval_from_index(gtIdx, pdIdx):
+	gtNrml = read_normals_from_idx(gtIdx)
+	mask   = read_mask_from_idx(gtIdx)
+	pdNrml = read_normals_from_idx(pdIdx)
+	tht  = eval_single(gtNrml, pdNrml, mask)
+	return tht
+
 def eval_random():
 	testIdx = get_set_index('test') 
 	thetas  = np.array([])
 	for n in testIdx[0:100]:
-		gtNrml = read_normals_from_idx(n)
-		mask   = read_mask_from_idx(n)
 		print (n)
 		#Prediction
 		while True:
 			idx    = np.random.randint(1449)		
 			if not idx == n:
 				break
-		pdNrml = read_normals_from_idx(idx)
-		tht  = eval_single(gtNrml, pdNrml, mask)
+		tht  = eval_from_index(n, idx)
 		thetas = np.concatenate((thetas, tht))
 	print (np.median(thetas), np.min(thetas), np.max(thetas)) 
 	return thetas
@@ -334,3 +340,7 @@ def load_features_all(netName):
 		feats.append(dat[netName])
 	feats = np.concatenate(feats)
 	return feats
+
+#Save the indexes of nearest neigbors
+def save_nn_indexes(netName):
+	
