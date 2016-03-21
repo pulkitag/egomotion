@@ -34,7 +34,7 @@ def get_paths():
 	pth.exp.nn.dr  = osp.join(pth.exp.dr, 'nn')
 	#Nearesest neigbor using netName %s
 	pth.exp.nn.net   = osp.join(pth.exp.nn.dr, 'net_%s.pkl') 
-	pth.exp.nn.feats = osp.join(pth.exp.nn.dr, 'features/im%04d.pkl') 
+	pth.exp.nn.feats = osp.join(pth.exp.nn.dr, 'features/im%04d.p') 
 	#Get the label-stats
 	pth.exp.labelStats  = osp.join(pth.exp.dr, 'label_stats.pkl')
 	#Normal centers
@@ -345,13 +345,15 @@ def load_features_all(netName):
 	return feats
 
 #Save the indexes of nearest neigbors
-def save_nn_indexes(netName='caffe_street_fc6'):
+def save_nn_indexes(netName='caffe_street_fc6', feats=None):
 	pths  = get_paths()
-	feats = load_features_all(netName)
+	if feats is None:
+		feats = load_features_all(netName)
 	nnIdx = []
 	N     = 1449
 	for n in range(N):
-		idx = nnu.([feats[n]], feats, numNN=11)
+		ff = feats[n].reshape((1, feats.shape[1]))
+		idx = nnu.find_nn(ff, feats, numNN=11)
 		idx = idx[0][1:]
 		nnIdx.append(idx)
 	oFile = pths.exp.nn.net % netName
