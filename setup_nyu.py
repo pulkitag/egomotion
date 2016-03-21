@@ -386,14 +386,36 @@ def save_nn_indexes_all():
 		print (n)
 		save_nn_indexes(n)
 
-def vis_nn_indexes():
-	plt.ion()
+def load_nn_indexes(netName):
+	pths    = get_paths()
+	netFile = pths.exp.nn.net % netName
+	dat     = pickle.load(open(netFile, 'r'))
+	nnIdx   = dat['nn']
+	return testIdx
+
+def vis_nn():
+	#Chose the test images for which visualization needs to be made
+	randState = np.random.RandomState(13)
+	testIdx = get_set_index('test')
+	perm    = np.random.permutation(len(testIdx))
+	testIdx = [testIdx[p] for p in perm]
+	testIdx = testIdx[0:10]
+	#Load the nn data	
+	netNames = ['caffe_alex_pool5', 'caffe_alex_fc7',
+              'torch_pose_fc6', 'caffe_street_fc6']
+	nnIdx = edict()
+	for net in netNames:
+		nnIdx[net] = load_nn_indexes(net)
+	#Create the figures
 	fig = plt.figure()
-	ax  = []
-	count = 1
-	for i in range(7):
-		ax.append(fig.add_subplot(1,7, count))
-	
+	ax  = edict()
+	for net in netNames:
+		ax[net] = []
+		for i in range(7):
+			axs = fig.add_subplot(1,7,i+1)
+			ax[net].append(fig.add_subplot(1,7, i+1))
+
+
 
 def save_nn_results(netName):
 	pths    = get_paths()
