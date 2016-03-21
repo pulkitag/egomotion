@@ -28,6 +28,11 @@ def get_paths():
 	pth.exp.snapshot    = edict()
 	pth.exp.snapshot.dr = osp.join(pth.exp.dr, 'snapshot')
 	ou.mkdir(pth.exp.snapshot.dr)
+	#Nearest Neighbor experiments
+	pth.exp.nn   = edict()
+	pth.exp.nn.dr  = osp.join(pth.exp.dr, 'nn')
+	#Nearesest neigbor using netName %s
+	pth.exp.nn.net = osp.join(pth.exp.nn.dr, 'net_%s.pkl') 
 	#Get the label-stats
 	pth.exp.labelStats  = osp.join(pth.exp.dr, 'label_stats.pkl')
 	#Normal centers
