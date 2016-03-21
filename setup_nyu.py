@@ -408,6 +408,12 @@ def vis_nn():
 		nnIdx[net] = load_nn_indexes(net)
 	#Create the figures
 	fig = plt.figure()
+	plt.tick_params(
+    axis='x',          # changes apply to the x-axis
+    which='both',      # both major and minor ticks are affected
+    bottom='off',      # ticks along the bottom edge are off
+    top='off',         # ticks along the top edge are off
+    labelbottom='off'
 	ax  = edict()
 	for net in netNames:
 		ax[net] = []
@@ -416,7 +422,7 @@ def vis_nn():
 			ax[net].append(fig.add_subplot(1,7, i+1))
 
 
-
+#Save nearest neighbor results for a certain net
 def save_nn_results(netName):
 	pths    = get_paths()
 	netFile = pths.exp.nn.net % netName
@@ -435,8 +441,27 @@ def save_nn_results(netName):
 	print (netName)
 	print (np.median(thetas), np.min(thetas), np.max(thetas))
 
+#Save nearest neighbor results for all the nets
 def save_nn_results_all():
 	netName = get_all_netnames()
 	for n in netName:
 		print (n)
 		save_nn_results(n)
+
+#Read the nearest neighbor results for a certain net
+def read_nn_results(netName):
+	pths  = get_paths()
+	oFile = pths.exp.nn.results % netName
+	dat   = pickle.load(open(oFile, 'r'))
+	theta = np.array(dat['thetas'])
+	print (theta.shape, len(theta)/(426 * 560))
+	md    = np.median(theta)
+	N     = len(theta)
+	err11 = np.sum(theta <= 11.25)/float(N)
+	err22 = np.sum(theta <= 22.5)/float(N)
+	err30 = np.sum(theta <=30)/float(N)
+	print ('%s, %.2f, %.2f, %.2f, %.2f' % (netName, md, err11, err22, err30))
+
+def read_nn_results_all():
+	for n in get_all_netnames():
+		read_nn_results(n)
