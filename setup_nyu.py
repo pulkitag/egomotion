@@ -340,7 +340,9 @@ def load_features_all(netName):
 		#The features are stored in matlab indexing
 		fName = pths.exp.nn.feats % (n+1)
 		dat   = pickle.load(open(fName, 'r'))
-		feats.append(dat[netName])
+		ff    = dat[netName].flatten()
+		ff = ff.reshape((1, ff.shape[0]))
+		feats.append(ff)
 	feats = np.concatenate(feats)
 	return feats
 
@@ -352,10 +354,20 @@ def save_nn_indexes(netName='caffe_street_fc6', feats=None):
 	nnIdx = []
 	N     = 1449
 	for n in range(N):
-		ff = feats[n].reshape((1, feats.shape[1]))
+		ff = feats[n].flatten()
+		ff = ff.reshape((1, ff.shape[0]))
 		idx = nnu.find_nn(ff, feats, numNN=11)
 		idx = idx[0][1:]
 		nnIdx.append(idx)
 	oFile = pths.exp.nn.net % netName
 	ou.mkdir(osp.dirname(oFile))
 	pickle.dump({'nn': nnIdx}, open(oFile, 'w'))
+
+def save_nn_indexes_all():
+	netName = ['caffe_lsm_conv5', 'caffe_video_fc7',
+            'caffe_alex_pool5', 'caffe_alex_fc7',
+             'caffe_pose_fc5' , 'torch_pose_fc6',
+             'caffe_street_fc6', 'caffe_PoseMatch_fc5']
+	for n in netName:
+		print (n)
+		save_nn_indexes(n)
