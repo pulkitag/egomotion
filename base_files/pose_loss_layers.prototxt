@@ -27,9 +27,14 @@ layer {
 }
 layer {
   name: "pose_loss"
-  type: "EuclideanLoss"
+  type: "Python"
   bottom: "pose_fc"
   bottom: "pose_label"
   top: "pose_loss"
-	loss_weight: 1.0
+	python_param{
+		module: "python_loss_layers"
+		layer: "L2LossWithIgnoreLayer"
+		param_str: "--loss_weight 10.0"
+	}
+	loss_weight: 1
 }

@@ -2,6 +2,7 @@ from easydict import EasyDict as edict
 import street_config as cfg
 import my_exp_config as mec
 from transforms3d.transforms3d import euler as t3eu
+from transforms3d.transforms3d import quaternions as t3qt
 import numpy as np
 from scipy import linalg as linalg
 import math
@@ -97,7 +98,11 @@ def get_pose_delta(lbInfo, rot1, rot2, pt1=None, pt2=None,
 	elif lbInfo['angleType'] == 'quat':
 		quat = t3eu.euler2quat(pitch, yaw, roll, axes=rotOrder)
 		q1, q2, q3, q4 = quat
-		lb = (q1, q2, q3, q4)
+		rotQuat = (q1, q2, q3, q4)
+		if lbInfo['dof'] == 3:
+			lb = rotQuat
+		else:
+			lb = rotQuat + (dx, dy, dz)
 	else:
 		raise Exception('Type not recognized')
 	if not debugMode:	
@@ -138,30 +143,36 @@ def get_normalized_pose_delta(lbInfo, rot1, rot2, **kwargs):
 
 #Will return None if the rotation is more than maxRot 
 def get_pose_delta_clip(lbInfo, rot1, rot2, **kwargs):
-	assert lbInfo['angleType'] == 'euler'
 	#Get the label
 	lb = get_pose_delta(lbInfo, rot1, rot2, **kwargs)
 	#Clip by max rotation
 	if lbInfo['maxRot'] is not None:
 		if lbInfo['simpleRot']:
+			assert lbInfo['angleType'] == 'euler'
 			maxRot = np.max(lb[0:lbInfo['numRot']])	
 			if maxRot > math.radians(lbInfo['maxRot']):
 				return None
 		else:
-			#Find yaw and pitch
-			if lbInfo['numRot'] == 2:
-				yaw, pitch = lb[0:2]
+			if lbInfo['angleType'] == 'euler':
+				#Find yaw and pitch
+				if lbInfo['numRot'] == 2:
+					yaw, pitch = lb[0:2]
+				else:
+					yaw, pitch, roll = lb[0:3]
+				#Get the rotation order
+				if lbInfo['rotOrder'] is None:
+					rotOrder = 'szxy'
+				else:
+					rotOrder = lbInfo['rotOrder']
+				_, thRot  = t3eu.euler2axangle(pitch, yaw, roll, rotOrder)
+			elif lbInfo['angleType'] == 'quat':
+				_, thRot = t3qt.quat2axangle(lb[0:4])
 			else:
-				yaw, pitch, roll = lb[0:3]
-			#Get the rotation order
-			if lbInfo['rotOrder'] is None:
-				rotOrder = 'szxy'
-			else:
-				rotOrder = lbInfo['rotOrder']
-			_, thRot  = t3eu.euler2axangle(pitch, yaw, roll, rotOrder)
+				raise Exception('Angle type not recognized')
 			#Figure out if the rotation is within or outside the limits
 			if lbInfo.maxRot is not None:
-				if (np.abs(thRot)) > lbInfo.maxRot:
+				if (np.abs(thRot)) > math.radians(lbInfo.maxRot):
+					#print (math.degrees(thRot))
 					return None
 	#If the label is valid return it
 	return lb
@@ -205,5 +216,10 @@ class PosePrms(LabelPrms):
 	def get_lbsz(self):
 		if self.lb.angleType == 'euler':
 			return self.lb.dof
+		elif self.lb.angleType == 'quat':
+			if self.lb.dof <= 3:
+				return 4
+			else:
+				return 7
 		else:
 			raise Exception('Angle Type %s not recognized' % self.lb.angleType)

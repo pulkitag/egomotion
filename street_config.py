@@ -21,7 +21,7 @@ def get_paths(hostName=None):
 		#pths.mainDataDr = '/scratch/pulkitag/data_sets/streetview'
 		#pths.expDir     = '/scratch/pulkitag/streetview/exp'
 		pths.data0      = '/data/shared/pulkitag'
-	elif 'ivb' in hostName:
+	elif 'ivb' in hostName or 'hsw' in hostName:
 		HOST_STR = 'nvCluster'
 		pths.mainDataDr = '/dev/shm/pulkitag/data_sets/streetview'
 		pths.expDir     = '/data/shared/pulkitag/streetview/exp'

@@ -348,17 +348,34 @@ def get_exp(expNum):
 		exp = mepg.simple_euler_dof5_dcv2_doublefcv1(gradClip=30,
            stepsize=60000, gamma=0.1, base_lr=0.001)
 		numIter = 82000
+	#5DOF experiment, with l2 loss
+	elif expNum == 9:
+		exp = mepg.simple_euler_dof5_dcv2_doublefcv1_l2loss(gradClip=30,
+           stepsize=60000, gamma=0.1, base_lr=0.001)
+		numIter = 82000
+	#5DOF experiment, with l2 loss but 84000 iterations - to measure noise level
+	elif expNum == 10:
+		exp = mepg.simple_euler_dof5_dcv2_doublefcv1_l2loss(gradClip=30,
+           stepsize=60000, gamma=0.1, base_lr=0.001)
+		numIter = 84000
+	#5DOF experiment, with l2 loss but 80000 iterations - to measure noise level
+	elif expNum == 11:
+		exp = mepg.simple_euler_dof5_dcv2_doublefcv1_l2loss(gradClip=30,
+           stepsize=60000, gamma=0.1, base_lr=0.001)
+		numIter = 80000
+
 	return exp, numIter
 
 def eval_multiple_models(deviceId=0, forceWrite=False):
-	for i in range(8,9):
+	for i in range(10,12):
+		print (i)
 		exp, numIter = get_exp(i)
 		run_test(exp, numIter, forceWrite=forceWrite, deviceId=deviceId)
 
 def get_multiple_results():
 	mdErrs, counts = [], []
 	#for i in range(2):
-	for i in range(7,9):
+	for i in range(9,12):
 		exp, numIter = get_exp(i)
 		mdErr, count = get_rotation_performance(exp, numIter)
 		mdErrs.append(mdErr)
