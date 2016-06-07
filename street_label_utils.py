@@ -22,6 +22,19 @@ class LabelPrms(object):
 		print (self.dbName)
 		return mec.get_sql_id(self.dbName, self.lb)
 
+#Jitter the roll
+def get_roll_jitter(maxJitter):
+	rx, ry = np.random.random(), np.random.random()
+	r1, r2 = rx * maxJitter, ry * maxJitter
+	if np.random.random() > 0.5:
+		r1 = -r1
+	if np.random.random() > 0.5:
+		r2 = -r2
+	#Make so that relative rotation is atmost maxJitter
+	r2 = r1 + r2
+	return r1, r2	
+
+
 def get_mat_dist(m1, m2):
 	return linalg.norm(linalg.logm(np.dot(np.transpose(m1), m2)), ord='fro')
 
@@ -71,7 +84,7 @@ def get_pose_delta(lbInfo, rot1, rot2, pt1=None, pt2=None,
 		elif lbInfo['dof'] == 5:
 			return tuple(theta[0:2]) + (dx, dy, dz) 
 		else:
-			return theta + (dx, dy, dz) 
+			return tuple(theta) + (dx, dy, dz) 
 	#Right way of doing rotations with rot-matrices
 	if not isInputRadian:
 		y1, x1, z1 = map(lambda x: x*np.pi/180., rot1)

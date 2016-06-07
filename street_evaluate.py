@@ -110,6 +110,7 @@ def save_amir_set_preds(exp, numIter):
 	outName = osp.join('./test-files/amir_test',
             exp.cPrms_.expStr, exp.dPrms_.expStr + '-numIter%d.txt')
 	outName = outName % numIter
+	print (outName)
 	ou.mkdir(osp.dirname(outName))
 	elms, _ = get_test_set_amir()
 	#open the file

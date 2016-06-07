@@ -86,6 +86,28 @@ def simple_euler_dof5_dcv2_doublefcv1(isRun=False,
 		exp.run() 
 	return exp 	 			
 
+def simple_euler_dof6_dcv2_doublefcv1_rolljitter(isRun=False,
+         gradClip=10, stepsize=20000, base_lr=0.001,
+         gamma=0.5, deviceId=0, readSingleGrp=False, ncpu=0, resumeIter=None,
+				 maxRollJitter=15):
+	posePrms = slu.PosePrms(maxRot=90, simpleRot=True, dof=6, nrmlz=True)
+	dPrms   =  sev2.get_data_prms(lbPrms=posePrms)
+	nwFn    = sev2.process_net_prms
+	nwArgs  = {'ncpu': ncpu, 'baseNetDefProto': 'doublefc-v1_window_siamese_fc6',
+             'readSingleGrp': readSingleGrp, 
+							'maxRollJitter': maxRollJitter}
+	solFn   = mec.get_default_solver_prms
+	solArgs = {'dbFile': DEF_DB % 'sol', 'clip_gradients': gradClip,
+             'stepsize': stepsize, 'base_lr':base_lr, 'gamma':gamma}
+	cPrms   = mec.get_caffe_prms(nwFn=nwFn, nwPrms=nwArgs,
+									 solFn=solFn, solPrms=solArgs, resumeIter=resumeIter)
+	exp     = mec.CaffeSolverExperiment(dPrms, cPrms,
+					  netDefFn=sev2.make_net_def, isLog=True)
+	if isRun:
+		exp.make(deviceId=deviceId)
+		exp.run() 
+	return exp 	 			
+
 
 def simple_euler_dof5_dcv2_doublefcv1_l2loss(isRun=False,
          gradClip=10, stepsize=20000, base_lr=0.001,

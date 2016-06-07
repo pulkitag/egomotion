@@ -184,6 +184,8 @@ def net_prms(dbFile=DEF_DB % 'net', **kwargs):
 		dArgs.batchSize = 128 
 	#The amount of jitter in both the images
 	dArgs.maxJitter = 0
+	#The amount of roll jitter to apply to the images
+	dArgs.maxRollJitter = None
 	#The size of crop that should be cropped from the image
 	dArgs.crpSz     = 192
 	#the size to which the cropped image should be resized
@@ -252,6 +254,7 @@ def make_data_layers_proto(dPrms, nPrms, **kwargs):
 							'crop_size'  : nPrms.crpSz,
 							'im_size'    : nPrms.ipImSz, 
               'jitter_amt' : nPrms.maxJitter,
+							'random_roll_max': nPrms.maxRollJitter,
 							'resume_iter': resumeIter, 
 							'mean_file': meanFile,
               'ncpu': nPrms.ncpu,
@@ -373,9 +376,11 @@ def make_group_list_file(dPrms=None):
 		pickle.dump({'grpFiles': grpFiles}, open(grpListFileName, 'w'))
 
 
-def save_pose_stats(dPrms=None):
+def save_pose_stats(dPrms=None, nPrms=None):
 	if dPrms is None:
 		dPrms = get_data_prms()
+	if nPrms is None:
+		nPrms = get_net_prms()
 	listName = dPrms['paths'].exp.other.grpList % 'val'
 	data     = pickle.load(open(listName, 'r'))	
 	grpDat   = []
@@ -407,8 +412,20 @@ def save_pose_stats(dPrms=None):
 				#Sample the same image rarely
 				if rd < 0.85:
 					continue
-			lb  = slu.get_pose_delta(dPrms['lbPrms'].lb, grp.data[l1].rots,
-            grp.data[l2].rots, grp.data[l1].pts.camera,
+			if nPrms.maxRollJitter is None:
+				grp1Rot, grp2Rot = grp.data[l1].rots, grp.data[l2].rots
+			else:
+				grp1Rot = copy.deepcopy(grp.data[l1].rots)
+				grp2Rot =  copy.deepcopy(grp.data[l2].rots)
+				rollJitter = slu.get_roll_jitter(nPrms.maxRollJitter)
+				#if t < 3:
+				#	import IPython; IPython.embed()
+				grp1Rot[2] = grp1Rot[2] + rollJitter[0]
+				grp2Rot[2] = grp2Rot[2] + rollJitter[1]
+				grp1Rot    = tuple(grp1Rot)
+				grp2Rot    = tuple(grp2Rot)
+			lb  = slu.get_pose_delta(dPrms['lbPrms'].lb, grp1Rot,
+            grp2Rot, grp.data[l1].pts.camera,
             grp.data[l2].pts.camera)
 			lb  = np.array(lb)
 			lbs.append(lb.reshape((1,)+lb.shape))
